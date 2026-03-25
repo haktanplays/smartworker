@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartWorker Hub</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f4;min-height:100vh}
+.topbar{background:linear-gradient(135deg,#1a6b5c,#0d4a3f);color:#fff;padding:24px;text-align:center}
+.topbar h1{font-size:24px;font-weight:600}
+.topbar small{font-size:10px;letter-spacing:3px;opacity:.5;text-transform:uppercase;display:block;margin-bottom:6px}
+.grid{max-width:900px;margin:32px auto;padding:0 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.app-card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s;display:block}
+.app-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.app-card h2{font-size:16px;font-weight:700;color:#1e293b;margin-bottom:6px}
+.app-card p{font-size:12px;color:#6b7280;line-height:1.5}
+.app-icon{font-size:28px;margin-bottom:10px;display:block}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-top:8px}
+.badge-main{background:#d1fae5;color:#065f46}
+.badge-tool{background:#e0e7ff;color:#3730a3}
+</style>
+</head>
+<body>
+<div class="topbar">
+<small>Raffles Istanbul</small>
+<h1>SmartWorker</h1>
+</div>
+
+<div class="grid">
+
+<a href="SmartWorker3.html" class="app-card">
+<span class="app-icon">&#128196;</span>
+<h2>SmartWorker</h2>
+<p>Mektuplar, Traces, PY, Inspector Radar, Butler Alert, Post-Departure, Pre-Arrival, Butler Did It, Shift Handoff</p>
+<span class="badge badge-main">Ana Uygulama</span>
+</a>
+
+<a href="Minibar.html" class="app-card">
+<span class="app-icon">&#127865;</span>
+<h2>Minibar Tracker</h2>
+<p>Aylik minibar veri girisi, analitik, hedefler, fiyat yonetimi, PDF okuma, XLSX rapor</p>
+<span class="badge badge-tool">Bagimsiz Modul</span>
+</a>
+
+<a href="Expense.html" class="app-card">
+<span class="app-icon">&#128176;</span>
+<h2>Expense Manager</h2>
+<p>Harcama takibi, fatura PDF okuma, makbuz girisi, butce kontrolu, XLSX rapor</p>
+<span class="badge badge-tool">Bagimsiz Modul</span>
+</a>
+
+<a href="Itinerary.html" class="app-card">
+<span class="app-icon">&#128197;</span>
+<h2>Itinerary Builder</h2>
+<p>Misafir programi olusturucu, gun/saat planlama, PPTX sunum indirme</p>
+<span class="badge badge-tool">Bagimsiz Modul</span>
+</a>
+
+<a href="NoteStandardizer.html" class="app-card">
+<span class="app-icon">&#128221;</span>
+<h2>Note Standardizer</h2>
+<p>Tercih formu, web notes standardizasyonu, sorun raporlama</p>
+<span class="badge badge-tool">Bagimsiz Modul</span>
+</a>
+
+</div>
+</body>
+</html>
