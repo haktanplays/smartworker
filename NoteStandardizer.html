@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartWorker - Note Standardizer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f4;min-height:100vh}
+.topbar{background:linear-gradient(135deg,#1a6b5c,#0d4a3f);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.topbar h1{font-size:18px;font-weight:600}
+.topbar small{font-size:10px;letter-spacing:2px;opacity:.5;text-transform:uppercase;display:block}
+.nav{display:flex;gap:0;background:#fff;border-bottom:2px solid #e5e7eb;padding:0 16px;overflow-x:auto}
+.nav-btn{padding:12px 20px;border:none;background:none;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.nav-btn.active{color:#1a6b5c;border-bottom-color:#1a6b5c}
+.nav-btn:hover{color:#1a6b5c}
+.page{display:none;max-width:1100px;margin:0 auto;padding:20px 16px}
+.page.active{display:block}
+.card{background:#fff;border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:16px}
+.card h2{font-size:15px;font-weight:600;color:#1e293b;margin-bottom:10px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.hint{font-size:12px;color:#6b7280}
+.btn{padding:7px 18px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;display:inline-block}
+.btn-primary{background:#1a6b5c;color:#fff}
+.btn-dark{background:#1e293b;color:#fff}
+.btn-dark:hover{background:#334155}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-sm{font-size:11px;padding:4px 10px;border:1px solid #d1d5db;border-radius:4px;cursor:pointer;background:#fff}
+.upload-area{border:2px dashed #d1d5db;border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s}
+.upload-area:hover,.upload-area.dragover{border-color:#1a6b5c;background:#f0f7f5}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:6px 8px;color:#6b7280;font-weight:600;font-size:11px;border-bottom:2px solid #e5e7eb;position:sticky;top:0;background:#fff}
+td{padding:6px 8px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+tr:nth-child(even){background:#fafbfc}
+td input,td select{padding:3px 5px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin:1px 2px}
+.badge-vvip{background:#fecaca;color:#991b1b}
+.badge-vip{background:#fef3c7;color:#92400e}
+.badge-equip{background:#dbeafe;color:#1e40af}
+.badge-deco{background:#f3e8ff;color:#7c3aed}
+.badge-minibar{background:#e0e7ff;color:#3730a3}
+.badge-pref{background:#f3e8ff;color:#6b21a8}
+.badge-new{background:#fef9c3;color:#854d0e}
+.badge-repeat{background:#d1fae5;color:#065f46}
+.badge-dueout{background:#fee2e2;color:#991b1b}
+.stats{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.stat{font-size:12px;color:#6b7280}.stat b{color:#1e293b}
+.trace-text{font-size:11px;color:#374151;line-height:1.4;max-width:400px}
+.kw-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;margin:2px;background:#f3f4f6;color:#374151}
+.kw-tag button{background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0 2px}
+.kw-input{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.kw-input input{padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;width:180px}
+.settings-segment{border-bottom:1px solid #e5e7eb}
+.settings-header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;cursor:pointer;user-select:none;background:#fafbfc;transition:background .15s}
+.settings-header:hover{background:#f1f5f9}
+.settings-header span:first-child{font-size:14px;font-weight:600;color:#1e293b}
+.settings-arrow{font-size:10px;color:#94a3b8;transition:transform .2s}
+.settings-header.open .settings-arrow{transform:rotate(180deg)}
+.settings-body{padding:0 18px 16px}
+.settings-info{margin:10px 0 14px;padding:10px 14px;background:#f0f9ff;border-left:3px solid #3b82f6;border-radius:0 6px 6px 0;font-size:11px;line-height:1.6;color:#1e40af}
+.section{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #f3f4f6}
+.section:last-child{border-bottom:none}
+.section h3{font-size:13px;font-weight:600;color:#374151;margin-bottom:8px}
+input[type="date"]{padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px}
+label{font-size:13px;font-weight:600;color:#374151}
+textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-family:monospace;resize:vertical;line-height:1.6}
+.rm-btn{background:none;border:none;color:#ef4444;cursor:pointer;font-size:15px}
+.hitap{font-size:11px;color:#6b7280;font-style:italic;white-space:nowrap}
+#guest-table-wrap,#trace-table-wrap,#equip-table-wrap{overflow-x:auto}
+.tabs{display:flex;gap:0;margin-bottom:12px}
+.tab{padding:8px 16px;border:1px solid #d1d5db;cursor:pointer;font-size:12px;font-weight:600;background:#fff;color:#6b7280}
+.tab:first-child{border-radius:6px 0 0 6px}
+.tab:last-child{border-radius:0 6px 6px 0}
+.tab.active{background:#1a6b5c;color:#fff;border-color:#1a6b5c}
+.actions{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
+#page-itinerary input::placeholder,#page-itinerary textarea::placeholder{color:#b0a898;font-style:italic;}
+</style>
+</style>
+</head>
+<body>
+<div class="topbar">
+<div><small>Raffles Istanbul</small><h1>SmartWorker — Note Standardizer</h1></div>
+<div style="display:flex;align-items:center;gap:10px">
+<a href="SmartWorker3.html" style="color:#fff;font-size:12px;text-decoration:none;opacity:.8">&#8592; Ana Sayfa</a>
+</div>
+</div>
+
+<!-- ===== PRE-ARRIVAL TAKIP PAGE ===== -->
+<div class="page active" id="page-preArr">
+
+<!-- Segment Tabs -->
+<div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e5e7eb">
+<button class="nav-btn active" onclick="switchNoteTab('pref')" data-ntab="pref" style="padding:10px 18px;border:none;background:none;font-size:12px;font-weight:600;color:#1a6b5c;cursor:pointer;border-bottom:3px solid #1a6b5c">Preference Form</button>
+<button class="nav-btn" onclick="switchNoteTab('wn')" data-ntab="wn" style="padding:10px 18px;border:none;background:none;font-size:12px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:3px solid transparent">Web Notes</button>
+<button class="nav-btn" onclick="switchNoteTab('issue')" data-ntab="issue" style="padding:10px 18px;border:none;background:none;font-size:12px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:3px solid transparent">Issue</button>
+</div>
+
+<!-- ===== SEGMENT 1: PREFERENCE FORM ===== -->
+<div id="noteTab-pref">
+<div class="card">
+<h2>Preference Form</h2>
+<p class="hint" style="margin-bottom:12px">Preference Form PDF yukleyin — isaretlenmis alanlari otomatik parse eder, departman bazli trace metni olusturur.</p>
+
+<!-- PDF drop zone -->
+<div class="upload-area" id="dropPreArrPDF" onclick="document.getElementById('preArrPdfInput').click()" style="margin-bottom:12px">
+<div style="font-size:24px;margin-bottom:6px">&#128203;</div>
+<div style="font-size:13px;font-weight:600;color:#374151">Preference Form PDF surukle veya tikla</div>
+<div style="font-size:11px;color:#6b7280;margin-top:4px">misafirin doldurdugu formu yukle</div>
+<input type="file" id="preArrPdfInput" accept=".pdf" style="display:none" onchange="handlePreArrPDF(this.files[0])">
+</div>
+<div id="preArrPdfStatus" style="font-size:12px;font-weight:600;color:#6b7280;margin-bottom:8px"></div>
+<div id="preArrDebug" style="display:none"></div>
+</div>
+
+<!-- Chips + Trace output (hidden until PDF loaded) -->
+<div id="noteParsedWrap" style="display:none">
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<h3 style="font-size:14px;color:#1a6b5c;margin:0">Algilanan Tercihler</h3>
+<span style="font-size:11px;color:#6b7280" id="noteParsedCount"></span>
+</div>
+<div id="noteParsedItems" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+
+<div style="display:flex;gap:8px;align-items:end;padding-top:12px;border-top:1px solid #e5e7eb;margin-bottom:10px">
+<div><label style="font-size:11px;display:block;margin-bottom:3px;color:#6b7280">Misafir Adi</label><input id="noteGuestName" type="text" placeholder="Mr. Smith" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;width:180px"></div>
+<div><label style="font-size:11px;display:block;margin-bottom:3px;color:#6b7280">Oda No</label><input id="noteRoomNo" type="text" placeholder="1305" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;width:80px"></div>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<button type="button" class="btn btn-primary" onclick="buildNoteTrace()">Trace Olustur</button>
+<button type="button" class="btn btn-dark" id="noteTraceCopyBtn" style="display:none" onclick="copyNoteTrace()">Kopyala</button>
+<button type="button" style="padding:5px 14px;border:1px solid #ef4444;border-radius:6px;background:#fff;color:#ef4444;font-size:12px;cursor:pointer" onclick="resetNoteForm()">Temizle</button>
+<span id="noteTraceCopyMsg" style="font-size:11px;color:#059669;display:none">Kopyalandi!</span>
+</div>
+
+<div id="noteTraceOutput" style="margin-top:14px;display:none">
+<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px;font-family:'Consolas',monospace;font-size:12px;line-height:1.9;white-space:pre-wrap" id="noteTraceText"></div>
+</div>
+</div>
+</div>
+
+<!-- Hidden compat elements for other modules that reference these IDs -->
+<div id="noteTagsCard" style="display:none"><div id="noteTagsWrap"></div></div>
+<div id="noteDeptOutput" style="display:none"></div>
+</div>
+
+<!-- ===== SEGMENT 2: WEB NOTES ===== -->
+<div id="noteTab-wn" style="display:none">
+<div class="card">
+<h2>Web Notes Düzenle</h2>
+<p class="hint" style="margin-bottom:10px">Pre/Post Arrival mail satirlarini toplar, preference keyword'lerini standart formata cevirir.</p>
+
+<!-- Arrival PDF drop zone -->
+<div id="wnDropZone" class="upload-area" onclick="document.getElementById('wnArrInput').click()" style="margin-bottom:12px;padding:16px 20px">
+<div style="font-size:20px;margin-bottom:4px">&#128196;</div>
+<div style="font-size:13px;font-weight:600;color:#374151">Arrival Report PDF surukle veya tikla</div>
+<div style="font-size:11px;color:#6b7280;margin-top:2px">res_detail formatinda — misafirleri yukler</div>
+<input type="file" id="wnArrInput" accept=".pdf" style="display:none" onchange="wnHandleArrPDF(this.files[0])">
+</div>
+<div id="wnArrStatus" style="font-size:12px;font-weight:600;color:#6b7280;margin-bottom:8px"></div>
+
+<!-- Guest dropdown (visible when arrival loaded) -->
+<div id="wnGuestRow" style="display:none;margin-bottom:10px">
+<label style="font-size:11px;display:block;margin-bottom:3px">Misafir Sec</label>
+<select id="wnGuestSelect" onchange="wnLoadGuest()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+<option value="">-- Misafir sec --</option>
+</select>
+</div>
+
+<textarea id="wnRawInput" placeholder="Arrival yuklu degilse buraya yapistirin...&#10;&#10;Ornek:&#10;Pre arr. mail has been sent on 03 01 2022 ** TB&#10;Pre Arrival Mail has not been on 18.03.2025**DK&#10;Head of Gaming RMG &amp; Console - EMEA&#10;* Extra water" style="width:100%;min-height:120px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.7;resize:vertical"></textarea>
+<div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+<button type="button" class="btn btn-primary" onclick="standardizeWebNotes()">Duzenle</button>
+<button type="button" class="btn btn-dark" id="wnCopyBtn" style="display:none" onclick="copyWebNotes()">Kopyala</button>
+<span id="wnCopyMsg" style="font-size:11px;color:#059669;display:none">Kopyalandi!</span>
+</div>
+<div id="wnOutput" style="margin-top:12px;display:none">
+<div id="wnLines" style="font-size:12px;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.9;background:#f8fafc;border:1px solid #e5e7eb;border-radius:7px;padding:12px"></div>
+</div>
+</div>
+</div>
+
+<!-- ===== SEGMENT 3: ISSUE ===== -->
+<div id="noteTab-issue" style="display:none">
+<div class="card">
+<h2>Issue Düzenle</h2>
+<p class="hint" style="margin-bottom:10px">Issue satirlarini yapistirin. Sistem parse eder, siz onemli kismi tikleyerek isaretlersiniz. Eski issue'lar tek satirda toplanir.</p>
+<textarea id="issueRawInput" placeholder="1- Leakage from the ceiling**05.09.22&#10;2- There was hair on the plate. 29.01.2023&#10;3- Food odor in the room.14.04.25**DK" style="width:100%;min-height:100px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.7;resize:vertical"></textarea>
+<div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+<button type="button" class="btn btn-primary" onclick="parseIssues()">Parse Et</button>
+<button type="button" class="btn btn-dark" id="issueBuildBtn" style="display:none" onclick="buildIssueOutput()">Olustur</button>
+<button type="button" class="btn btn-dark" id="issueCopyBtn" style="display:none" onclick="copyIssueOutput()">Kopyala</button>
+<span id="issueCopyMsg" style="font-size:11px;color:#059679;display:none">Kopyalandi!</span>
+</div>
+<div id="issueCardsWrap" style="margin-top:12px"></div>
+<div id="issueOutputWrap" style="margin-top:12px;display:none">
+<div id="issueOutputText" style="font-size:12px;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.9;background:#f8fafc;border:1px solid #e5e7eb;border-radius:7px;padding:12px;white-space:pre-wrap"></div>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<div class="page active" style="max-width:1100px;margin:0 auto;padding:0 16px 20px">
+<div class="card" style="margin-top:0">
+<h2>Ayarlar</h2>
+<div class="settings-segment">
+<div class="settings-header" onclick="toggleSettingsSection(this)">
+<span>&#9998; Note Standardizer / Cumle Sablonlari</span><span class="settings-arrow">&#9660;</span>
+</div>
+<div class="settings-body" style="display:none">
+<div class="settings-info" style="line-height:1.8">
+<div style="font-weight:700;font-size:12px;margin-bottom:6px">Bu ne ise yarar?</div>
+Misafirin doldurdugu <b>Preference Form PDF</b>'inden okunan secimler, Opera'ya girilecek <b>departman bazli trace cumlelerine</b> donusturulur. Ornegin misafir formda "Sparkling Water" ve "Still Water" secmisse, bu iki secim PBR departmanina ait MINIBAR kategorisine duser ve asagidaki sablona gore birlestirilerek tek bir cumle olusturulur.
+<div style="margin:10px 0;padding:8px 12px;background:#fff;border:1px solid #d1d5db;border-radius:6px;font-family:monospace;font-size:11px">
+<div style="color:#6b7280;margin-bottom:4px">Sablon: <b>Prefix</b> + Deger1 <b>Birlestirici</b> Deger2 <b>Suffix</b></div>
+<div style="color:#059669">Ornek: <b>Guest prefers</b> Sparkling Water<b>,</b> Still Water → "Guest prefers Sparkling Water, Still Water"</div>
+</div>
+<div style="font-weight:700;font-size:12px;margin:10px 0 6px">Nasil calisir?</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+<span style="background:#e0f2fe;color:#0c4a6e;padding:2px 8px;border-radius:10px;font-size:10px"><b>Prefix</b> — Cumlenin basi. Orn: "Guest prefers"</span>
+<span style="background:#fef3c7;color:#854d0e;padding:2px 8px;border-radius:10px;font-size:10px"><b>Birlestirici</b> — Birden fazla secim varsa araya giren metin. Orn: ", " veya " and "</span>
+<span style="background:#f3e8ff;color:#6b21a8;padding:2px 8px;border-radius:10px;font-size:10px"><b>Suffix</b> — Cumlenin sonu. Orn: " at Raffles Spa"</span>
+</div>
+Her kategori (MINIBAR, PILLOW TYPE, SPA TREATMENTS vs.) kendi sablonuna sahiptir. Asagidaki tablodan dilediginiz gibi duzenleyebilirsiniz — degisiklikler aninda kaydedilir.
+<div style="font-weight:700;font-size:12px;margin:10px 0 6px">Departman akisi</div>
+"Trace Olustur" butonuna bastiginizda, secimler departmanlara gruplanir ve her departman icin ayri bir trace metni uretilir:
+<div style="margin:6px 0;padding:6px 10px;background:#fff;border:1px solid #d1d5db;border-radius:6px;font-size:10px;font-family:monospace;line-height:1.9">
+<span style="color:#166534;font-weight:700">BUT</span> → Butler Preferences<br>
+<span style="color:#0c4a6e;font-weight:700">CON</span> → Concierge Preferences<br>
+<span style="color:#6b21a8;font-weight:700">SPA</span> → SPA Preferences<br>
+<span style="color:#991b1b;font-weight:700">FB</span> → F&amp;B Preferences<br>
+<span style="color:#854d0e;font-weight:700">PBR</span> → PBR Preferences (Minibar, Cay vs.)<br>
+<span style="color:#3730a3;font-weight:700">HSK</span> → Housekeeping Preferences (Yatak, Yastik, Temizlik vs.)
+</div>
+<div style="font-weight:700;font-size:12px;margin:10px 0 6px">Ipuclari</div>
+&#8226; Prefix'i bos birakirsaniz secimler direkt listelenir (orn: I WISH kategorisi).<br>
+&#8226; Suffix ile cumleyi kapatabilirsiniz (orn: SPA icin " at Raffles Spa").<br>
+&#8226; ↺ butonuyla istediginiz kategoriyi varsayilana dondurebilirsiniz.<br>
+&#8226; Her satirin altindaki <i style="color:#1a6b5c">ornek</i> satirinda canli onizleme gorursunuz.
+</div>
+<div id="templateSettingsTable"></div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function toggleSettingsSection(header){var body=header.nextElementSibling;if(body.style.display==="none"){body.style.display="block";header.classList.add("open")}else{body.style.display="none";header.classList.remove("open")}}
+
+// ===== PRE-ARRIVAL TAKIP MODULE =====
+var noteItems=[];  // [{dept, subcat, label}, ...]
+
+// Department categories for Pre-Arrival traces
+var DEPT_LABELS={BUT:"Butler Preferences",HSK:"Housekeeping Preferences",PBR:"PBR Preferences",FB:"F&B Preferences",SPA:"SPA Preferences",CON:"Concierge Preferences"};
+var DEPT_COLORS={BUT:"#1a6b5c",HSK:"#6366f1",PBR:"#ca8a04",FB:"#dc2626",SPA:"#9333ea",CON:"#0891b2"};
+
+// ===== STATIC FIELD MAP — built from form discovery =====
+// Checkbox fieldName → {dept, subcat, label}
+var FIELD_NAME_MAP={
+  // P1 — Special Occasion
+  "Check Box25":{dept:"BUT",subcat:"SPECIAL OCCASION",label:"Birthday"},
+  "Check Box90":{dept:"BUT",subcat:"SPECIAL OCCASION",label:"Honeymoon"},
+  "Check Box91":{dept:"BUT",subcat:"SPECIAL OCCASION",label:"Anniversary"},
+  // P1 — Art Tour
+  "Check Box111":{dept:"CON",subcat:"CURATED EXPERIENCES",label:"Raffles Art Tour 'The Dream of Istanbul'"},
+  // P1 — Illuminated Tours
+  "Check Box114":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Istanbul From the Domes of the Grand Bazaar"},
+  "Check Box115":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"A Cultural Mosaic: Fener and Balat"},
+  "Check Box116":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Maze of Stories: Galata - Karakoy"},
+  "Check Box117":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Center of Commerce: Spice Bazaar and Eminonu"},
+  "Check Box118":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"An Istanbul Classic: Buyukada"},
+  "Check Box119":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Upwards Istanbul"},
+  "Check Box120":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Jewish Culture in Istanbul"},
+  // P2 — Spa Treatments
+  "Check Box2":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Raffles Spa Journey Treatments"},
+  "Check Box3":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Facials"},
+  "Check Box4":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Body Treatments"},
+  "Check Box5":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Body Massages"},
+  "Check Box6":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Hammam Tradition"},
+  "Check Box7":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Wellness Program"},
+  "Check Box8":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Detox Program"},
+  "Check Box9":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Sound Therapy"},
+  // P2 — Butler Rituals
+  "Check Box10":{dept:"BUT",subcat:"BUTLER RITUALS",label:"Sleep Ritual"},
+  "Check Box11":{dept:"BUT",subcat:"BUTLER RITUALS",label:"Bath Ritual"},
+  "Check Box12":{dept:"BUT",subcat:"BUTLER RITUALS",label:"Chocolate Serenity"},
+  // P2 — Restaurants
+  "Check Box13":{dept:"FB",subcat:"RESTAURANTS",label:"Isokyo"},
+  "Check Box14":{dept:"FB",subcat:"RESTAURANTS",label:"Lavinia (Afternoon Tea)"},
+  // P2 — Dietary
+  "Check Box15":{dept:"FB",subcat:"DIETARY PREFERENCES",label:"Gluten Free"},
+  "Check Box17":{dept:"FB",subcat:"DIETARY PREFERENCES",label:"Sugar Free"},
+  "Check Box18":{dept:"FB",subcat:"DIETARY PREFERENCES",label:"Lactose Free"},
+  // P3 — Minibar left column
+  "Check Box122":{dept:"PBR",subcat:"MINIBAR",label:"Raffles Minibar (Full)"},
+  "Check Box123":{dept:"PBR",subcat:"MINIBAR",label:"Healthy Minibar"},
+  "Check Box124":{dept:"PBR",subcat:"MINIBAR",label:"Sparkling Water"},
+  "Check Box125":{dept:"PBR",subcat:"MINIBAR",label:"Still Water"},
+  // P3 — Minibar right column
+  "Check Box135":{dept:"PBR",subcat:"MINIBAR",label:"Non-Alcoholic Minibar"},
+  "Check Box136":{dept:"PBR",subcat:"MINIBAR",label:"Empty Minibar"},
+  "Check Box137":{dept:"PBR",subcat:"MINIBAR",label:"Caffeinated Nespresso Capsules"},
+  "Check Box138":{dept:"PBR",subcat:"MINIBAR",label:"Decaffeinated Nespresso Capsules"},
+  // P3 — Tea left column
+  "Check Box126":{dept:"PBR",subcat:"TEA SELECTION",label:"Raffles Signature Tea"},
+  "Check Box127":{dept:"PBR",subcat:"TEA SELECTION",label:"Sweet Dreams Tea"},
+  "Check Box128":{dept:"PBR",subcat:"TEA SELECTION",label:"Immune Power Tea"},
+  "Check Box129":{dept:"PBR",subcat:"TEA SELECTION",label:"Turkish Breakfast Tea"},
+  // P3 — Tea right column
+  "Check Box139":{dept:"PBR",subcat:"TEA SELECTION",label:"Earl Grey Tea"},
+  "Check Box140":{dept:"PBR",subcat:"TEA SELECTION",label:"Turkish Green Tea"},
+  "Check Box141":{dept:"PBR",subcat:"TEA SELECTION",label:"Beauty Tea"},
+  "Check Box142":{dept:"PBR",subcat:"TEA SELECTION",label:"Digesting Tea"},
+  // P3 — Bedding
+  "Check Box130":{dept:"HSK",subcat:"BEDDING",label:"Hard Mattress"},
+  "Check Box143":{dept:"HSK",subcat:"BEDDING",label:"Semi-Hard Mattress"},
+  "Check Box144":{dept:"HSK",subcat:"BEDDING",label:"Regular Mattress"},
+  // P3 — Pillow Type
+  "Check Box131":{dept:"HSK",subcat:"PILLOW TYPE",label:"Hard"},
+  "Check Box132":{dept:"HSK",subcat:"PILLOW TYPE",label:"Latex"},
+  "Check Box145":{dept:"HSK",subcat:"PILLOW TYPE",label:"Semi-hard"},
+  "Check Box146":{dept:"HSK",subcat:"PILLOW TYPE",label:"Buckwheat"},
+  "Check Box147":{dept:"HSK",subcat:"PILLOW TYPE",label:"Memory Foam"},
+  "Check Box148":{dept:"HSK",subcat:"PILLOW TYPE",label:"Pregnancy"},
+  "Check Box149":{dept:"HSK",subcat:"PILLOW TYPE",label:"Ecological"},
+  "Check Box150":{dept:"HSK",subcat:"PILLOW TYPE",label:"Anti-aging"},
+  // P3 — Room Amenities
+  "Check Box133":{dept:"HSK",subcat:"ROOM AMENITIES",label:"Yoga Mat"},
+  "Check Box134":{dept:"HSK",subcat:"ROOM AMENITIES",label:"Room Fragrance"},
+  // P4 — Service
+  "Check Box24":{dept:"BUT",subcat:"SERVICE REQUIREMENTS",label:"Packing/Unpacking service"},
+  // P4 — Daily Cleaning
+  "Check Box26":{dept:"HSK",subcat:"DAILY CLEANING",label:"8:00am - 10:00am"},
+  "Check Box32":{dept:"HSK",subcat:"DAILY CLEANING",label:"10:00am - 12:00pm"},
+  "Check Box34":{dept:"HSK",subcat:"DAILY CLEANING",label:"12:00pm - 2:00pm"},
+  "Check Box27":{dept:"HSK",subcat:"DAILY CLEANING",label:"2:00pm - 4:00pm"},
+  "Check Box33":{dept:"HSK",subcat:"DAILY CLEANING",label:"4:00pm - 6:00pm"},
+  // P4 — Turndown
+  "Check Box28":{dept:"HSK",subcat:"TURNDOWN",label:"6:00pm - 7:00pm"},
+  "Check Box31":{dept:"HSK",subcat:"TURNDOWN",label:"7:00pm - 8:00pm"},
+  "Check Box35":{dept:"HSK",subcat:"TURNDOWN",label:"8:00pm - 9:00pm"}
+};
+
+// Text field fieldName → {dept, subcat} — label comes from the typed value
+var TEXT_FIELD_MAP={
+  "Metin96":{dept:"BUT",subcat:"SPECIAL OCCASION"},
+  "Metin95":{dept:"BUT",subcat:"KIDS",prefix:"Child name/age: "},
+  "Metin97":{dept:"BUT",subcat:"KIDS",prefix:"Favourites: "},
+  "Metin112":{dept:"CON",subcat:"CURATED EXPERIENCES",prefix:"Art Tour date/time: "},
+  "Metin1":{dept:"SPA",subcat:"SPA TREATMENTS",prefix:"Spa appointment: "},
+  "Metin19":{dept:"FB",subcat:"RESTAURANTS",prefix:"Isokyo reservation: "},
+  "Metin20":{dept:"FB",subcat:"RESTAURANTS",prefix:"Lavinia reservation: "},
+  "Metin21":{dept:"FB",subcat:"RESTAURANTS",prefix:"Number of people: "},
+  "Metin23":{dept:"FB",subcat:"DIETARY PREFERENCES"},
+  "Metin94":{dept:"HSK",subcat:"TURNDOWN",prefix:"Other time: "},
+  "Metin36":{dept:"BUT",subcat:"SERVICE REQUIREMENTS",prefix:"Other: "},
+  "Metin37":{dept:"BUT",subcat:"I WISH"}
+};
+
+var SUBCAT_TEMPLATES={
+  "SPECIAL OCCASION":{prefix:"Guest is coming for ",join:" and ",suffix:""},
+  "CHILDREN":{prefix:"Guest is travelling with ",join:", ",suffix:""},
+  "BUTLER RITUALS":{prefix:"Guest requests ",join:" and ",suffix:""},
+  "SERVICE REQUIREMENTS":{prefix:"Guest requests ",join:" and ",suffix:""},
+  "I WISH":{prefix:"",join:". ",suffix:""},
+  "CURATED EXPERIENCES":{prefix:"Guest is interested in ",join:". Also interested in ",suffix:""},
+  "ILLUMINATED TOURS":{prefix:"Guest is interested in ",join:", ",suffix:""},
+  "SPA TREATMENTS":{prefix:"Guest requests ",join:", ",suffix:" at Raffles Spa"},
+  "RESTAURANTS":{prefix:"Guest requests reservation at ",join:" and ",suffix:""},
+  "DIETARY PREFERENCES":{prefix:"",join:", ",suffix:""},
+  "MINIBAR":{prefix:"Guest prefers ",join:", ",suffix:""},
+  "TEA SELECTION":{prefix:"Guest prefers ",join:" and ",suffix:""},
+  "BEDDING":{prefix:"Guest prefers ",join:" / ",suffix:""},
+  "PILLOW TYPE":{prefix:"Guest prefers ",join:" and ",suffix:" pillow"},
+  "ROOM AMENITIES":{prefix:"Guest requests ",join:" and ",suffix:""},
+  "DAILY CLEANING":{prefix:"Guest prefers daily cleaning at ",join:" or ",suffix:""},
+  "TURNDOWN":{prefix:"Guest prefers turndown at ",join:" or ",suffix:""},
+  "OTHER":{prefix:"",join:". ",suffix:""}
+};
+
+// Load any saved overrides from localStorage
+(function(){
+  var saved=localStorage.getItem("subcatTemplates");
+  if(saved){try{var o=JSON.parse(saved);for(var k in o)SUBCAT_TEMPLATES[k]=o[k];}catch(e){}}
+})();
+
+// Render template settings table
+function renderTemplateSettings(){
+  var el=document.getElementById("templateSettingsTable");
+  if(!el)return;
+  var h='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  h+='<thead><tr style="background:#f1f5f9">';
+  h+='<th style="padding:6px 8px;text-align:left;border:1px solid #e2e8f0;width:22%">Kategori</th>';
+  h+='<th style="padding:6px 8px;text-align:left;border:1px solid #e2e8f0;width:30%">Prefix <span style="color:#9ca3af;font-weight:400">(başlangıç)</span></th>';
+  h+='<th style="padding:6px 8px;text-align:left;border:1px solid #e2e8f0;width:18%">Birleştirici</th>';
+  h+='<th style="padding:6px 8px;text-align:left;border:1px solid #e2e8f0;width:22%">Suffix <span style="color:#9ca3af;font-weight:400">(son ek)</span></th>';
+  h+='<th style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;width:8%">Sıfırla</th>';
+  h+='</tr></thead><tbody>';
+  var defaults={
+    "SPECIAL OCCASION":{prefix:"Guest is coming for ",join:" and ",suffix:""},
+    "CHILDREN":{prefix:"Guest is travelling with ",join:", ",suffix:""},
+    "BUTLER RITUALS":{prefix:"Guest requests ",join:" and ",suffix:""},
+    "SERVICE REQUIREMENTS":{prefix:"Guest requests ",join:" and ",suffix:""},
+    "I WISH":{prefix:"",join:". ",suffix:""},
+    "CURATED EXPERIENCES":{prefix:"Guest is interested in ",join:". Also interested in ",suffix:""},
+    "ILLUMINATED TOURS":{prefix:"Guest is interested in ",join:", ",suffix:""},
+    "SPA TREATMENTS":{prefix:"Guest requests ",join:", ",suffix:" at Raffles Spa"},
+    "RESTAURANTS":{prefix:"Guest requests reservation at ",join:" and ",suffix:""},
+    "DIETARY PREFERENCES":{prefix:"",join:", ",suffix:""},
+    "MINIBAR":{prefix:"Guest prefers ",join:", ",suffix:""},
+    "TEA SELECTION":{prefix:"Guest prefers ",join:" and ",suffix:""},
+    "BEDDING":{prefix:"Guest prefers ",join:" / ",suffix:""},
+    "PILLOW TYPE":{prefix:"Guest prefers ",join:" and ",suffix:" pillow"},
+    "ROOM AMENITIES":{prefix:"Guest requests ",join:" and ",suffix:""},
+    "DAILY CLEANING":{prefix:"Guest prefers daily cleaning at ",join:" or ",suffix:""},
+    "TURNDOWN":{prefix:"Guest prefers turndown at ",join:" or ",suffix:""},
+    "OTHER":{prefix:"",join:". ",suffix:""}
+  };
+  var keys=Object.keys(SUBCAT_TEMPLATES);
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i];var t=SUBCAT_TEMPLATES[k];
+    var bg=i%2===0?"#fff":"#f8fafc";
+    h+='<tr style="background:'+bg+'">';
+    h+='<td style="padding:5px 8px;border:1px solid #e2e8f0;font-weight:600;color:#374151">'+esc(k)+'</td>';
+    h+='<td style="padding:4px 6px;border:1px solid #e2e8f0"><input data-key="'+esc(k)+'" data-field="prefix" value="'+esc(t.prefix)+'" onchange="saveTmpl(this)" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>';
+    h+='<td style="padding:4px 6px;border:1px solid #e2e8f0"><input data-key="'+esc(k)+'" data-field="join" value="'+esc(t.join)+'" onchange="saveTmpl(this)" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>';
+    h+='<td style="padding:4px 6px;border:1px solid #e2e8f0"><input data-key="'+esc(k)+'" data-field="suffix" value="'+esc(t.suffix)+'" onchange="saveTmpl(this)" style="width:100%;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>';
+    h+='<td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center"><button class="btn-sm" onclick="resetTmpl(\''+esc(k)+'\')" title="Varsayılana dön" style="font-size:10px;padding:2px 6px">↺</button></td>';
+    h+='</tr>';
+    // Preview row
+    h+='<tr style="background:'+bg+'"><td colspan="5" style="padding:2px 8px 6px 8px;border:1px solid #e2e8f0;border-top:none">';
+    h+='<span style="color:#6b7280;font-size:10px">Örnek: </span><span id="tmpl-preview-'+i+'" style="font-size:11px;color:#1a6b5c;font-style:italic">'+esc(k)+': '+esc(t.prefix)+'Değer 1'+esc(t.join)+'Değer 2'+esc(t.suffix)+'.</span>';
+    h+='</td></tr>';
+  }
+  h+='</tbody></table>';
+  el.innerHTML=h;
+  window._tmplDefaults=defaults;
+  window._tmplKeys=keys;
+}
+
+function saveTmpl(inp){
+  var k=inp.getAttribute("data-key");
+  var f=inp.getAttribute("data-field");
+  if(!SUBCAT_TEMPLATES[k])return;
+  SUBCAT_TEMPLATES[k][f]=inp.value;
+  // Persist all
+  var toSave={};
+  var keys=Object.keys(SUBCAT_TEMPLATES);
+  for(var i=0;i<keys.length;i++)toSave[keys[i]]=SUBCAT_TEMPLATES[keys[i]];
+  localStorage.setItem("subcatTemplates",JSON.stringify(toSave));
+  // Update preview
+  renderTemplateSettings();
+}
+
+function resetTmpl(k){
+  if(!window._tmplDefaults||!window._tmplDefaults[k])return;
+  SUBCAT_TEMPLATES[k]=JSON.parse(JSON.stringify(window._tmplDefaults[k]));
+  var toSave={};
+  var keys=Object.keys(SUBCAT_TEMPLATES);
+  for(var i=0;i<keys.length;i++)toSave[keys[i]]=SUBCAT_TEMPLATES[keys[i]];
+  localStorage.setItem("subcatTemplates",JSON.stringify(toSave));
+  renderTemplateSettings();
+}
+
+function switchNoteTab(tab){
+  var tabs=["pref","wn","issue"];
+  for(var i=0;i<tabs.length;i++){
+    var el=document.getElementById("noteTab-"+tabs[i]);
+    if(el)el.style.display=tabs[i]===tab?"block":"none";
+  }
+  var btns=document.querySelectorAll("[data-ntab]");
+  for(var i=0;i<btns.length;i++){
+    var active=btns[i].getAttribute("data-ntab")===tab;
+    btns[i].style.color=active?"#1a6b5c":"#6b7280";
+    btns[i].style.borderBottomColor=active?"#1a6b5c":"transparent";
+  }
+}
+
+async function handlePreArrPDF(file){
+  if(!file)return;
+  var st=document.getElementById("preArrPdfStatus");
+  st.textContent="Okunuyor...";st.style.color="#6b7280";
+  try{
+    var buf=await file.arrayBuffer();
+    var pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    var items=[];var seen={};var debugRows=[];
+    function add(dept,subcat,label){
+      var k=dept+"|"+subcat+"|"+label;
+      if(seen[k])return;seen[k]=true;
+      items.push({dept:dept,subcat:subcat,label:label});
+    }
+    for(var p=1;p<=pdf.numPages;p++){
+      var page=await pdf.getPage(p);
+      var annots=await page.getAnnotations({intent:"display"});
+      for(var a=0;a<annots.length;a++){
+        var an=annots[a];
+        var fn=an.fieldName||"";
+        var fv=an.fieldValue;
+        if(fv===null||fv===undefined)fv="";
+        fv=String(fv);
+        var fType=an.fieldType||an.subtype||"";
+        var isBtn=(fType==="Btn"||an.checkBox||an.radioButton);
+        var isTx=(fType==="Tx"||fType==="Ch");
+        // Robust checkbox detection — PDF.js 3.x can store state in multiple places
+        var checkState="";
+        if(isBtn){
+          if(an.appearanceState)checkState=String(an.appearanceState);
+          else if(fv)checkState=fv;
+          else if(an.buttonValue)checkState=String(an.buttonValue);
+          else if(an.exportValue)checkState=String(an.exportValue);
+          else if(an.defaultFieldValue)checkState=String(an.defaultFieldValue);
+        }
+
+        // Debug — log every form field
+        if(fn)debugRows.push({page:p,name:fn,type:fType,value:fv,isBtn:isBtn,isTx:isTx,as:an.appearanceState||"",ev:an.exportValue||"",checked:isBtn?(checkState&&checkState!=="Off"&&checkState!=="0"):"-",mapped:!!(FIELD_NAME_MAP[fn]||TEXT_FIELD_MAP[fn])});
+
+        // Checkboxes / Radio
+        if(isBtn){
+          var checked=checkState&&checkState!=="Off"&&checkState!==""&&checkState!=="0"&&checkState!=="false"&&checkState!=="null";
+          if(checked&&FIELD_NAME_MAP[fn]){var m=FIELD_NAME_MAP[fn];add(m.dept,m.subcat,m.label);}
+        }
+        // Text / Choice fields
+        else if(isTx||(!isBtn&&fv.trim())){
+          var txt=fv.trim();
+          if(!txt&&an.defaultFieldValue)txt=String(an.defaultFieldValue).trim();
+          if(txt&&TEXT_FIELD_MAP[fn]){
+            var m=TEXT_FIELD_MAP[fn];
+            var label=(m.prefix||"")+txt;
+            add(m.dept,m.subcat,label);
+          }
+        }
+      }
+    }
+    noteItems=items;
+    // Debug panel — always show for diagnostics
+    var dbg=document.getElementById("preArrDebug");
+    if(debugRows.length>0){
+      dbg.style.display="block";
+      var dh='<div style="margin-top:10px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:11px">';
+      dh+='<div style="cursor:pointer;font-weight:600" onclick="var b=this.nextElementSibling;b.style.display=b.style.display===\'none\'?\'block\':\'none\'">&#128270; Debug: '+debugRows.length+' form alani, '+items.length+' eslesti (tikla ac/kapa)</div>';
+      dh+='<div style="max-height:250px;overflow:auto;margin-top:6px;display:none"><table style="width:100%;border-collapse:collapse;font-size:10px">';
+      dh+='<tr style="background:#f3f4f6"><th style="padding:2px 4px;border:1px solid #e5e7eb">Pg</th><th style="padding:2px 4px;border:1px solid #e5e7eb">fieldName</th><th style="padding:2px 4px;border:1px solid #e5e7eb">Type</th><th style="padding:2px 4px;border:1px solid #e5e7eb">Value</th><th style="padding:2px 4px;border:1px solid #e5e7eb">AS</th><th style="padding:2px 4px;border:1px solid #e5e7eb">EV</th><th style="padding:2px 4px;border:1px solid #e5e7eb">Chk</th><th style="padding:2px 4px;border:1px solid #e5e7eb">Map</th></tr>';
+      for(var d=0;d<debugRows.length;d++){var dr=debugRows[d];var rowBg=dr.checked===true?"#dcfce7":dr.checked===false?"#fef2f2":"#fff";dh+='<tr style="background:'+rowBg+'"><td style="padding:2px 4px;border:1px solid #e5e7eb">'+dr.page+'</td><td style="padding:2px 4px;border:1px solid #e5e7eb;font-family:monospace;font-size:9px">'+esc(dr.name)+'</td><td style="padding:2px 4px;border:1px solid #e5e7eb">'+esc(dr.type)+'</td><td style="padding:2px 4px;border:1px solid #e5e7eb;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(dr.value)+'</td><td style="padding:2px 4px;border:1px solid #e5e7eb;font-size:9px">'+esc(dr.as)+'</td><td style="padding:2px 4px;border:1px solid #e5e7eb;font-size:9px">'+esc(dr.ev)+'</td><td style="padding:2px 4px;border:1px solid #e5e7eb;text-align:center">'+(dr.checked===true?'<span style="color:green">&#10003;</span>':dr.checked===false?'<span style="color:#ccc">&#10005;</span>':'-')+'</td><td style="padding:2px 4px;border:1px solid #e5e7eb;text-align:center">'+(dr.mapped?'<span style="color:green">&#10003;</span>':'<span style="color:red">&#10005;</span>')+'</td></tr>';}
+      dh+='</table></div></div>';
+      dbg.innerHTML=dh;
+    }else{
+      dbg.style.display="block";
+      dbg.innerHTML='<div style="margin-top:10px;padding:10px;background:#fee2e2;border:1px solid #fecaca;border-radius:6px;font-size:11px"><b>Debug:</b> PDF\'de hic form alani bulunamadi. Bu dosya doldurulmus bir preference formu mu?</div>';
+    }
+    renderNoteOutput();
+    st.innerHTML='<span style="color:#059669">&#10003; '+items.length+' preference alindi \u2014 '+esc(file.name)+'</span>';
+    saveNotePatterns();
+  }catch(e){st.textContent="Hata: "+e.message;st.style.color="#dc2626";console.error(e);}
+}
+
+// (field map lookup handled inline in handlePreArrPDF)
+
+// ===== RENDER: Highlighted Tags + Department Trace Cards =====
+
+// Chip colors per dept
+var CHIP_COLORS={
+  BUT:"background:#dcfce7;color:#166534",
+  CON:"background:#e0f2fe;color:#0c4a6e",
+  SPA:"background:#f3e8ff;color:#6b21a8",
+  FB:"background:#fee2e2;color:#991b1b",
+  PBR:"background:#fef9c3;color:#854d0e",
+  HSK:"background:#e0e7ff;color:#3730a3"
+};
+
+function renderNoteOutput(){
+  // chips UI
+  var wrap=document.getElementById("noteParsedWrap");
+  var cont=document.getElementById("noteParsedItems");
+  if(!noteItems.length){wrap.style.display="none";return;}
+  wrap.style.display="block";
+  document.getElementById("noteParsedCount").textContent=noteItems.length+" alan";
+  var h="";
+  for(var i=0;i<noteItems.length;i++){
+    var it=noteItems[i];
+    var col=CHIP_COLORS[it.dept]||"background:#f3f4f6;color:#374151";
+    h+='<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500;'+col+'">';
+    h+='<b style="font-size:9px;opacity:.65">'+it.dept+'</b> '+esc(it.subcat===it.label?it.label:it.subcat+': '+it.label);
+    h+='<span style="cursor:pointer;margin-left:2px;opacity:.6" onclick="removeNoteItem('+i+')">&times;</span></span>';
+  }
+  cont.innerHTML=h;
+  document.getElementById("noteTraceOutput").style.display="none";
+  document.getElementById("noteTraceCopyBtn").style.display="none";
+}
+
+function removeNoteItem(idx){
+  noteItems.splice(idx,1);
+  renderNoteOutput();
+}
+
+function buildNoteTrace(){
+  if(!noteItems.length)return alert("Algilanan tercih yok. Once PDF yukleyin.");
+  var guest=document.getElementById("noteGuestName").value.trim()||"Guest";
+  var room=document.getElementById("noteRoomNo").value.trim();
+  var r=room?" (Room "+room+")":"";
+
+  // Group by dept
+  var deptOrder=["BUT","CON","SPA","FB","PBR","HSK"];
+  var grouped={};
+  for(var i=0;i<noteItems.length;i++){
+    var it=noteItems[i];
+    if(!grouped[it.dept])grouped[it.dept]={};
+    if(!grouped[it.dept][it.subcat])grouped[it.dept][it.subcat]=[];
+    grouped[it.dept][it.subcat].push(it.label);
+  }
+
+  var lines=[];
+  var NP="No preferences";
+  for(var di=0;di<deptOrder.length;di++){
+    var dk=deptOrder[di];
+    var deptLabel=DEPT_LABELS[dk]||dk;
+    lines.push("\u2550\u2550\u2550 "+deptLabel.toUpperCase()+" \u2550\u2550\u2550");
+    if(!grouped[dk]){
+      // show "No preferences" for main subcats
+      lines.push(NP);
+    }else{
+      var subcats=Object.keys(grouped[dk]);
+      for(var si=0;si<subcats.length;si++){
+        var sc=subcats[si];
+        var labels=grouped[dk][sc];
+        var tmpl=SUBCAT_TEMPLATES[sc]||{prefix:"",join:", ",suffix:""};
+        var sentence=tmpl.prefix+labels.join(tmpl.join)+(tmpl.suffix||"");
+        sentence=sentence.replace(/\.\.+$/,".");
+        if(sentence.slice(-1)!==".")sentence+=".";
+        lines.push(sc+": "+sentence);
+      }
+    }
+  }
+
+  var header=guest+r+"\nPre-Arrival Preference Form Summary";
+  document.getElementById("noteTraceText").textContent=header+"\n\n"+lines.join("\n");
+  document.getElementById("noteTraceOutput").style.display="block";
+  document.getElementById("noteTraceCopyBtn").style.display="inline-block";
+}
+
+function copyNoteTrace(){
+  var txt=document.getElementById("noteTraceText").textContent;
+  if(!txt)return;
+  navigator.clipboard.writeText(txt).then(function(){
+    var msg=document.getElementById("noteTraceCopyMsg");
+    msg.style.display="inline";
+    setTimeout(function(){msg.style.display="none"},2000);
+  });
+}
+
+function resetNoteForm(){
+  noteItems=[];
+  document.getElementById("noteParsedWrap").style.display="none";
+  document.getElementById("preArrPdfStatus").textContent="";
+  document.getElementById("noteGuestName").value="";
+  document.getElementById("noteRoomNo").value="";
+}
+
+
+// ===== WEB NOTES STANDARDIZER =====
+
+function todayStr(){
+  var d=new Date();
+  return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear();
+}
+
+function parseNoteDate(raw){
+  raw=(raw||"").trim();
+  var m=raw.match(/^(\d{1,2})\s+(\d{1,2})\s+(\d{2,4})$/);
+  if(m){var y=m[3].length===2?"20"+m[3]:m[3];return m[1].padStart(2,"0")+"."+m[2].padStart(2,"0")+"."+y;}
+  m=raw.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})$/);
+  if(m){var y=m[3].length===2?"20"+m[3]:m[3];return m[1].padStart(2,"0")+"."+m[2].padStart(2,"0")+"."+y;}
+  return raw;
+}
+
+function dateVal(s){
+  var p=s.split(".");
+  if(p.length!==3)return 0;
+  return parseInt(p[2],10)*10000+parseInt(p[1],10)*100+parseInt(p[0],10);
+}
+
+function extractDate(line){
+  // Space-separated: require 4-digit year to avoid matching "22 2 13" as date
+  var m=line.match(/(\d{2})\s+(\d{2})\s+(\d{4})/);
+  if(m)return parseNoteDate(m[0]);
+  m=line.match(/(\d{1,2})[.\-](\d{1,2})[.\-](\d{2,4})/);
+  if(m)return parseNoteDate(m[0]);
+  return null;
+}
+
+// Populate dropdown when arrival is loaded (called from feedAllModules OR wnHandleArrPDF)
+function wnPopulateDropdown(){
+  var row=document.getElementById("wnGuestRow");
+  var sel=document.getElementById("wnGuestSelect");
+  var st=document.getElementById("wnArrStatus");
+  if(!allGuests||!allGuests.length){row.style.display="none";return;}
+  row.style.display="block";
+  var h='<option value="">-- Misafir sec ('+allGuests.length+' kisi) --</option>';
+  for(var i=0;i<allGuests.length;i++){
+    var g=allGuests[i];
+    var name=(g.title?g.title+" ":"")+(g.firstName||"")+" "+(g.lastName||"");
+    var room=g.roomNo?" ("+g.roomNo+")":"";
+    h+='<option value="'+i+'">'+esc(name.trim()+room)+'</option>';
+  }
+  sel.innerHTML=h;
+  // If status is empty, show that data was loaded from another module
+  if(st&&(!st.textContent||!st.textContent.trim())){
+    st.innerHTML='<span style="color:#059669">&#10003; '+allGuests.length+' misafir mevcut (diger modulden yuklendi)</span>';
+  }
+}
+
+// Arrival PDF dropped directly on Web Notes section
+async function wnHandleArrPDF(file){
+  if(!file)return;
+  var st=document.getElementById("wnArrStatus");
+  st.textContent="Okunuyor...";
+  try{
+    var buf=await file.arrayBuffer();
+    var parsed=await parseResDetail(buf);
+    if(!parsed||!parsed.length){
+      st.innerHTML='<span style="color:#dc2626">Misafir bulunamadi. res_detail formati mi?</span>';
+      return;
+    }
+    allGuests=parsed;
+    wnPopulateDropdown();
+    st.innerHTML='<span style="color:#059669">&#10003; '+parsed.length+' misafir yuklendi \u2014 '+esc(file.name)+'</span>';
+  }catch(e){
+    st.innerHTML='<span style="color:#dc2626">PDF okunamadi: '+esc(e.message)+'</span>';
+  }
+}
+
+// Drag-drop for wnDropZone & vacDropZone
+// Drag-drop for wnDropZone & vacDropZone
+setupDrop("wnDropZone",wnHandleArrPDF);
+setupDrop("vacDropZone",handleVacPDF);
+
+function wnLoadGuest(){
+  var idx=parseInt(document.getElementById("wnGuestSelect").value,10);
+  if(isNaN(idx)||!allGuests[idx])return;
+  var g=allGuests[idx];
+  var raw=(g.webNotes||"").trim();
+  // webNotes is stored as single string with spaces — split on known separators
+  // Lines often separated by multiple spaces or specific patterns
+  var lines=raw.split(/\s{2,}|\n/).map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+  document.getElementById("wnRawInput").value=lines.join("\n");
+  // Reset output
+  document.getElementById("wnOutput").style.display="none";
+  document.getElementById("wnCopyBtn").style.display="none";
+}
+
+// Keyword → preference mapping for free-text parsing
+var PREF_KW=[
+  // PILLOW TYPE
+  {re:/memory\s*foam/i,sc:"PILLOW TYPE",lb:"Memory Foam"},
+  {re:/latex/i,sc:"PILLOW TYPE",lb:"Latex"},
+  {re:/buckwheat/i,sc:"PILLOW TYPE",lb:"Buckwheat"},
+  {re:/ecological|eco[\s-]*pillow/i,sc:"PILLOW TYPE",lb:"Ecological"},
+  {re:/anti[\s-]*aging/i,sc:"PILLOW TYPE",lb:"Anti-aging"},
+  {re:/pregnancy|hamile/i,sc:"PILLOW TYPE",lb:"Pregnancy"},
+  {re:/semi[\s-]*hard\s*(pillow|yast)/i,sc:"PILLOW TYPE",lb:"Semi-hard"},
+  {re:/hard\s*(pillow|yast)|sert\s*yast/i,sc:"PILLOW TYPE",lb:"Hard"},
+  // MINIBAR
+  {re:/non[\s-]*alcohol|alkols[uü]z|no\s*alcohol|alcohol[\s-]*free/i,sc:"MINIBAR",lb:"Non-Alcoholic Minibar"},
+  {re:/empty\s*minibar|bo[sş]\s*minibar/i,sc:"MINIBAR",lb:"Empty Minibar"},
+  {re:/healthy\s*minibar/i,sc:"MINIBAR",lb:"Healthy Minibar"},
+  {re:/full\s*minibar/i,sc:"MINIBAR",lb:"Raffles Minibar (Full)"},
+  {re:/sparkling\s*water|soda|gazl[iı]\s*su/i,sc:"MINIBAR",lb:"Sparkling Water"},
+  {re:/still\s*water|su\s*istiy/i,sc:"MINIBAR",lb:"Still Water"},
+  {re:/decaf/i,sc:"MINIBAR",lb:"Decaffeinated Nespresso Capsules"},
+  {re:/nespresso|caffein/i,sc:"MINIBAR",lb:"Caffeinated Nespresso Capsules"},
+  // BEDDING
+  {re:/semi[\s-]*hard\s*mattress/i,sc:"BEDDING",lb:"Semi-Hard Mattress"},
+  {re:/hard\s*mattress|sert\s*yatak/i,sc:"BEDDING",lb:"Hard Mattress"},
+  {re:/regular\s*mattress|normal\s*yatak/i,sc:"BEDDING",lb:"Regular Mattress"},
+  // DIETARY
+  {re:/gluten[\s-]*free|[cç][oö]lyak/i,sc:"DIETARY PREFERENCES",lb:"Gluten Free"},
+  {re:/lactose[\s-]*free|laktozsuz/i,sc:"DIETARY PREFERENCES",lb:"Lactose Free"},
+  {re:/sugar[\s-]*free|[sş]ekersiz/i,sc:"DIETARY PREFERENCES",lb:"Sugar Free"},
+  {re:/vegan/i,sc:"DIETARY PREFERENCES",lb:"Vegan"},
+  {re:/vegetarian|vejetaryen/i,sc:"DIETARY PREFERENCES",lb:"Vegetarian"},
+  {re:/halal|helal/i,sc:"DIETARY PREFERENCES",lb:"Halal"},
+  {re:/nut[\s-]*(free|allerg)|f[iı]nd[iı]k\s*alerj/i,sc:"DIETARY PREFERENCES",lb:"Nut Allergy"},
+  {re:/allerg/i,sc:"DIETARY PREFERENCES",lb:"Allergy (check details)"},
+  // TEA
+  {re:/earl\s*grey/i,sc:"TEA SELECTION",lb:"Earl Grey Tea"},
+  {re:/sweet\s*dream/i,sc:"TEA SELECTION",lb:"Sweet Dreams Tea"},
+  {re:/beauty\s*tea/i,sc:"TEA SELECTION",lb:"Beauty Tea"},
+  {re:/digest/i,sc:"TEA SELECTION",lb:"Digesting Tea"},
+  {re:/immune/i,sc:"TEA SELECTION",lb:"Immune Power Tea"},
+  {re:/signature\s*tea|raffles\s*tea/i,sc:"TEA SELECTION",lb:"Raffles Signature Tea"},
+  {re:/breakfast\s*tea|t[uü]rk\s*[cç]ay/i,sc:"TEA SELECTION",lb:"Turkish Breakfast Tea"},
+  {re:/green\s*tea|ye[sş]il\s*[cç]ay/i,sc:"TEA SELECTION",lb:"Turkish Green Tea"},
+  // SPA
+  {re:/body\s*massage|masaj/i,sc:"SPA TREATMENTS",lb:"Body Massages"},
+  {re:/body\s*treatment/i,sc:"SPA TREATMENTS",lb:"Body Treatments"},
+  {re:/facial/i,sc:"SPA TREATMENTS",lb:"Facials"},
+  {re:/hammam|hamam/i,sc:"SPA TREATMENTS",lb:"Hammam Tradition"},
+  {re:/wellness/i,sc:"SPA TREATMENTS",lb:"Wellness Program"},
+  {re:/detox/i,sc:"SPA TREATMENTS",lb:"Detox Program"},
+  {re:/sound\s*therapy/i,sc:"SPA TREATMENTS",lb:"Sound Therapy"},
+  {re:/spa\s*journey|raffles\s*spa/i,sc:"SPA TREATMENTS",lb:"Raffles Spa Journey Treatments"},
+  // RESTAURANTS
+  {re:/isokyo/i,sc:"RESTAURANTS",lb:"Isokyo"},
+  {re:/lavinia|afternoon\s*tea/i,sc:"RESTAURANTS",lb:"Lavinia (Afternoon Tea)"},
+  // ROOM AMENITIES
+  {re:/room\s*fragrance|oda\s*koku/i,sc:"ROOM AMENITIES",lb:"Room Fragrance"},
+  {re:/yoga\s*mat/i,sc:"ROOM AMENITIES",lb:"Yoga Mat"},
+  {re:/extra\s*(towel|havlu)/i,sc:"ROOM AMENITIES",lb:"Extra Towels"},
+  {re:/iron\b|[uü]t[uü]/i,sc:"ROOM AMENITIES",lb:"Iron & Ironing Board"},
+  {re:/humidifier|nemlendirici/i,sc:"ROOM AMENITIES",lb:"Humidifier"},
+  // BUTLER RITUALS
+  {re:/sleep\s*ritual/i,sc:"BUTLER RITUALS",lb:"Sleep Ritual"},
+  {re:/bath\s*ritual/i,sc:"BUTLER RITUALS",lb:"Bath Ritual"},
+  {re:/chocolate\s*serenity/i,sc:"BUTLER RITUALS",lb:"Chocolate Serenity"},
+  // TURNDOWN — sentence override (no time from free text)
+  {re:/turn[\s-]*down/i,sc:"TURNDOWN",lb:"",snt:"Guest requests turndown service."},
+  // DAILY CLEANING
+  {re:/daily\s*clean|housekeep|temizlik/i,sc:"DAILY CLEANING",lb:"",snt:"Guest requests daily cleaning service."},
+  // SPECIAL OCCASION
+  {re:/birthday|do[gğ]um\s*g[uü]n/i,sc:"SPECIAL OCCASION",lb:"Birthday"},
+  {re:/honeymoon|bal[\s-]*ay/i,sc:"SPECIAL OCCASION",lb:"Honeymoon"},
+  {re:/anniversary|y[iı]l[\s-]*d[oö]n[uü]m/i,sc:"SPECIAL OCCASION",lb:"Anniversary"},
+  {re:/wedding|d[uü][gğ][uü]n/i,sc:"SPECIAL OCCASION",lb:"Wedding"},
+  // SERVICE
+  {re:/pack.*unpack|unpacking|packing/i,sc:"SERVICE REQUIREMENTS",lb:"Packing/Unpacking service"},
+  {re:/airport|transfer|limousin|car\s*service/i,sc:"SERVICE REQUIREMENTS",lb:"Airport Transfer"},
+  // CHILDREN
+  {re:/child|children|[cç]ocuk|kids?\b|baby\b|bebek|infant/i,sc:"CHILDREN",lb:"with children"}
+];
+
+function parsePrefText(text){
+  // Subcat → Dept mapping (matches PDF form structure)
+  var SC_DEPT={
+    "SPECIAL OCCASION":"BUT","CHILDREN":"BUT","BUTLER RITUALS":"BUT","SERVICE REQUIREMENTS":"BUT","I WISH":"BUT",
+    "CURATED EXPERIENCES":"CON","ILLUMINATED TOURS":"CON",
+    "SPA TREATMENTS":"SPA",
+    "DIETARY PREFERENCES":"FB","RESTAURANTS":"FB",
+    "MINIBAR":"PBR","TEA SELECTION":"PBR",
+    "BEDDING":"HSK","PILLOW TYPE":"HSK","ROOM AMENITIES":"HSK","DAILY CLEANING":"HSK","TURNDOWN":"HSK"
+  };
+
+  // Phase 1: Extract shorthand *DC/*TD/*notes line by line BEFORE splitting
+  var lines=text.split(/\r?\n/).map(function(l){return l.trim()}).filter(function(l){return l.length>0});
+  var sentences={};// sc → sentence
+  var matched={};// sc → [labels]
+  var remaining=[];
+
+  for(var i=0;i<lines.length;i++){
+    var l=lines[i];
+    var dcM=l.match(/^\*?\s*DC\s+(.+)/i);
+    if(dcM){sentences["DAILY CLEANING"]="Guest prefers daily cleaning at "+dcM[1].trim()+".";continue;}
+    var tdM=l.match(/^\*?\s*TD\s+(.+)/i);
+    if(tdM){sentences["TURNDOWN"]="Guest prefers turndown at "+tdM[1].trim()+".";continue;}
+    if(/^\*/.test(l)){remaining.push(l.replace(/^\*\s*/,""));continue;}
+    remaining.push(l);
+  }
+
+  // Phase 2: Keyword match on remaining text
+  var freeText=remaining.join(", ");
+  var segments=freeText.split(/[,;\n]|\.\s/i).map(function(s){return s.trim()}).filter(function(s){return s.length>2});
+  var unmatched=[];
+
+  for(var i=0;i<segments.length;i++){
+    var seg=segments[i];
+    var found=false;
+    for(var k=0;k<PREF_KW.length;k++){
+      if(PREF_KW[k].re.test(seg)){
+        var sc=PREF_KW[k].sc,lb=PREF_KW[k].lb;
+        if(PREF_KW[k].snt){sentences[sc]=PREF_KW[k].snt;}
+        else{
+          if(!matched[sc])matched[sc]=[];
+          if(matched[sc].indexOf(lb)<0)matched[sc].push(lb);
+        }
+        found=true;break;
+      }
+    }
+    if(!found&&seg.length>3)unmatched.push(seg);
+  }
+
+  // Phase 3: Group by department — same order as buildNoteTrace
+  var deptOrder=["BUT","CON","SPA","FB","PBR","HSK"];
+  var NP="No preferences";
+  var formatted=[];
+
+  // Collect all active subcats by dept
+  var deptSubs={};
+  for(var sc in sentences){var dk=SC_DEPT[sc]||"BUT";if(!deptSubs[dk])deptSubs[dk]=[];deptSubs[dk].push(sc);}
+  for(var sc in matched){if(sentences[sc])continue;var dk=SC_DEPT[sc]||"BUT";if(!deptSubs[dk])deptSubs[dk]=[];deptSubs[dk].push(sc);}
+
+  for(var di=0;di<deptOrder.length;di++){
+    var dk=deptOrder[di];
+    if(!deptSubs[dk])continue;
+    var deptLabel=DEPT_LABELS[dk]||dk;
+    formatted.push({text:"\u2550\u2550\u2550 "+deptLabel.toUpperCase()+" \u2550\u2550\u2550",changed:false,isHeader:true});
+    var subs=deptSubs[dk];
+    for(var si=0;si<subs.length;si++){
+      var sc=subs[si];
+      if(sentences[sc]){
+        formatted.push({text:sc+": "+sentences[sc],changed:true});
+      } else if(matched[sc]){
+        var tmpl=SUBCAT_TEMPLATES[sc]||{prefix:"",join:", ",suffix:""};
+        var sentence=tmpl.prefix+matched[sc].join(tmpl.join)+(tmpl.suffix||"");
+        sentence=sentence.replace(/\.\.+$/,".");
+        if(sentence.slice(-1)!==".")sentence+=".";
+        formatted.push({text:sc+": "+sentence,changed:true});
+      }
+    }
+  }
+
+  return{formatted:formatted,unmatched:unmatched};
+}
+
+function standardizeWebNotes(){
+  var raw=document.getElementById("wnRawInput").value;
+  var lines=raw.split(/\r?\n/).map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+  var today=todayStr();
+  var suffix=" ** "+today+" HD";
+
+  var rePreArr=/(repeat\s+)?pre[\s\-]*arr(ival)?\s+(e[\-]?mail|mail)/i;
+  var rePostDep=/post[\s\-]*dep(arture)?\s+mail/i;
+
+  var preArrDates=[];
+  var postDepDates=[];
+  var other=[];
+
+  for(var i=0;i<lines.length;i++){
+    var l=lines[i];
+    var isPreArr=rePreArr.test(l)&&!/\bnot\s+(been|sent)/i.test(l);
+    if(isPreArr){
+      var d=extractDate(l);
+      if(d&&preArrDates.indexOf(d)<0)preArrDates.push(d);
+    } else if(rePostDep.test(l)){
+      var d=extractDate(l);
+      if(d&&postDepDates.indexOf(d)<0)postDepDates.push(d);
+    } else {
+      other.push(l);
+    }
+  }
+
+  preArrDates.sort(function(a,b){return dateVal(b)-dateVal(a);});
+  postDepDates.sort(function(a,b){return dateVal(b)-dateVal(a);});
+
+  var result=[];
+  if(preArrDates.length>0){
+    result.push({text:"Pre Arrival mail has been sent on "+preArrDates.join(", ")+"."+suffix, changed:true});
+  }
+  if(postDepDates.length>0){
+    result.push({text:"Post Departure mail has been sent on "+postDepDates.join(", ")+"."+suffix, changed:true});
+  }
+
+  // Parse preferences from "other" lines
+  var otherText=other.join("\n");
+  var prefResult=parsePrefText(otherText);
+  for(var i=0;i<prefResult.formatted.length;i++){
+    result.push(prefResult.formatted[i]);
+  }
+  if(prefResult.unmatched.length>0){
+    result.push({text:"\u2550\u2550\u2550 OTHER NOTES \u2550\u2550\u2550",changed:false,isHeader:true});
+    for(var i=0;i<prefResult.unmatched.length;i++){
+      result.push({text:prefResult.unmatched[i], changed:false});
+    }
+  }
+
+  // Render
+  var html="";
+  var plain=[];
+  for(var i=0;i<result.length;i++){
+    var item=result[i];
+    var style;
+    if(item.isHeader)style="color:#6b7280;font-weight:700;font-size:10px;padding:6px 0 2px;letter-spacing:1px";
+    else if(item.changed)style="color:#1a6b5c;font-weight:500";
+    else style="color:#374151";
+    html+='<div style="padding:2px 0;'+style+'">'+esc(item.text)+'</div>';
+    plain.push(item.text);
+  }
+
+  var outDiv=document.getElementById("wnOutput");
+  document.getElementById("wnLines").innerHTML=html||'<span style="color:#6b7280">Sonuc yok.</span>';
+  outDiv.style.display="block";
+  outDiv.dataset.plain=plain.join("\n");
+  document.getElementById("wnCopyBtn").style.display="inline-block";
+}
+
+function copyWebNotes(){
+  var text=document.getElementById("wnOutput").dataset.plain||"";
+  if(!text)return;
+  navigator.clipboard.writeText(text).then(function(){
+    var msg=document.getElementById("wnCopyMsg");
+    msg.style.display="inline";
+    setTimeout(function(){msg.style.display="none"},2000);
+  });
+}
+
+function saveNotePatterns(){
+  var patterns=[];var grouped={};
+  for(var i=0;i<noteItems.length;i++){var it=noteItems[i];if(!grouped[it.dept])grouped[it.dept]={};if(!grouped[it.dept][it.subcat])grouped[it.dept][it.subcat]=[];grouped[it.dept][it.subcat].push(it.label);}
+  for(var dk in grouped){for(var sc in grouped[dk]){var labels=grouped[dk][sc];var tmpl=SUBCAT_TEMPLATES[sc]||{prefix:"",join:", "};patterns.push(sc+": "+tmpl.prefix+labels.join(tmpl.join)+(tmpl.suffix||"")+".");}}
+  localStorage.setItem("preArrPatterns",JSON.stringify(patterns));
+}
+function getPreArrPatterns(){return JSON.parse(localStorage.getItem("preArrPatterns")||"[]");}
+
+// ===== ISSUE STANDARDIZER =====
+var issueItems=[];
+var issueSelState={}; // idx → {start,end} word indices
+
+function parseIssueDate(text){
+  // Remove trailing periods/dots
+  text=text.replace(/\.?\s*$/,"").trim();
+  // Extract date from end of text, various formats
+  var m=text.match(/(\d{1,2})[.\-\/\s](\d{1,2})[.\-\/\s](\d{2,4})\s*$/);
+  if(!m){
+    // Try "on DD.MM.YYYY" in middle
+    m=text.match(/\bon\s+(\d{1,2})[.\-\/\s](\d{1,2})[.\-\/\s](\d{2,4})/);
+  }
+  if(!m)return{date:"",year:0,cleaned:text};
+  var d=m[1].padStart(2,"0"),mo=m[2].padStart(2,"0"),y=m[3];
+  if(y.length===2)y="20"+y;
+  var dateStr=d+"."+mo+"."+y;
+  var cleaned=text.substring(0,text.indexOf(m[0])).trim();
+  // Clean "on" at end of cleaned text
+  cleaned=cleaned.replace(/\s+on\s*$/i,"").trim();
+  return{date:dateStr,year:parseInt(y,10),cleaned:cleaned};
+}
+
+function parseIssues(){
+  var raw=document.getElementById("issueRawInput").value;
+  var lines=raw.split(/\r?\n/).map(function(l){return l.trim()}).filter(function(l){return l.length>0});
+  issueItems=[];
+  issueSelState={};
+
+  for(var i=0;i<lines.length;i++){
+    var l=lines[i];
+    // Strip leading number: "1-", "1)", "1.", "1 -"
+    l=l.replace(/^\d+\s*[-.)]\s*/,"");
+
+    // Extract initials: various patterns
+    var initials="";
+    // Pattern: **XX at end
+    var iniM=l.match(/\*\*\s*([A-Za-z\u00C7\u011E\u0130\u00D6\u015E\u00DC\u00E7\u011F\u0131\u00F6\u015F\u00FC]{2,3})\s*$/);
+    if(iniM){initials=iniM[1].toUpperCase();l=l.substring(0,l.lastIndexOf("**")).trim();}
+    else{
+      // Pattern: date then space then XX at end (no **)
+      var iniM2=l.match(/(\d{2,4})\s+([A-Z\u00C7\u011E\u0130\u00D6\u015E\u00DC]{2,3})\s*$/);
+      if(iniM2){initials=iniM2[2];l=l.replace(/\s+[A-Z\u00C7\u011E\u0130\u00D6\u015E\u00DC]{2,3}\s*$/,"").trim();}
+      else{
+        // Pattern: **DD.MM.YYYY XX at end
+        var iniM3=l.match(/\*\*\s*\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4}\s+([A-Z\u00C7\u011E\u0130\u00D6\u015E\u00DC]{2,3})\s*$/);
+        if(iniM3){initials=iniM3[1];}
+      }
+    }
+
+    // Now strip ALL remaining ** markers
+    l=l.replace(/\*\*/g," ").replace(/\s{2,}/g," ").trim();
+
+    // Strip trailing dots/periods
+    l=l.replace(/\.?\s*$/,"").trim();
+
+    // Extract date
+    var dr=parseIssueDate(l);
+    var desc=dr.cleaned||l;
+
+    // Clean description
+    desc=desc.replace(/\.?\s*$/,"").trim();
+    if(!desc)continue;
+
+    // Capitalize first letter
+    desc=desc.charAt(0).toUpperCase()+desc.slice(1);
+
+    var words=desc.split(/\s+/);
+
+    issueItems.push({
+      idx:issueItems.length,
+      raw:desc,
+      date:dr.date,
+      year:dr.year,
+      initials:initials,
+      words:words,
+    });
+  }
+
+  if(!issueItems.length){
+    document.getElementById("issueCardsWrap").innerHTML='<p style="color:#6b7280;text-align:center;padding:12px">Issue bulunamadi.</p>';
+    return;
+  }
+  document.getElementById("issueBuildBtn").style.display="inline-block";
+  renderIssueCards();
+}
+
+function renderIssueCards(){
+  var threshYear=new Date().getFullYear()-2;
+  var h="";
+  for(var i=0;i<issueItems.length;i++){
+    var it=issueItems[i];
+    var isOld=it.year>0&&it.year<threshYear;
+    var sel=issueSelState[i]||{start:-1,end:-1};
+    var borderCol=isOld?"#f59e0b":"#3b82f6";
+    var bgCol=isOld?"#fffbeb":"#eff6ff";
+    var badge=isOld?'<span style="font-size:9px;padding:1px 6px;border-radius:3px;background:#fef3c7;color:#92400e;font-weight:700">ESKİ</span>':'<span style="font-size:9px;padding:1px 6px;border-radius:3px;background:#dbeafe;color:#1e40af;font-weight:700">GÜNCEL</span>';
+
+    h+='<div style="border:1px solid '+borderCol+';border-left:4px solid '+borderCol+';border-radius:6px;padding:10px 12px;margin-bottom:8px;background:'+bgCol+'">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+    h+='<div style="display:flex;gap:6px;align-items:center">'+badge;
+    if(it.date)h+=' <span style="font-size:10px;color:#6b7280">'+esc(it.date)+'</span>';
+    if(it.initials)h+=' <span style="font-size:10px;color:#6b7280">**'+esc(it.initials)+'</span>';
+    h+='</div>';
+    if(sel.start>=0)h+='<span style="font-size:9px;color:#059669;font-weight:600">✓ Seçildi</span>';
+    h+='</div>';
+
+    h+='<div style="font-size:12px;line-height:2;user-select:none">';
+    for(var w=0;w<it.words.length;w++){
+      var inSel=sel.start>=0&&sel.end>=0&&w>=sel.start&&w<=sel.end;
+      var wStyle=inSel?"background:#fbbf24;color:#1a1a1a;padding:2px 1px;border-radius:2px;font-weight:600":"padding:2px 1px;cursor:pointer;border-radius:2px";
+      var hover=inSel?"":"onmouseenter=\"this.style.background='#e5e7eb'\" onmouseleave=\"this.style.background='transparent'\"";
+      h+='<span style="'+wStyle+'" onclick="issueWordClick('+i+','+w+')" '+hover+'>'+esc(it.words[w])+'</span> ';
+    }
+    h+='</div>';
+
+    if(isOld&&sel.start<0){
+      h+='<div style="font-size:10px;color:#92400e;margin-top:4px;font-style:italic">↑ Özet için önemli kelimeleri tıklayarak seçin (ilk tık = başlangıç, ikinci tık = bitiş)</div>';
+    }
+    h+='</div>';
+  }
+  document.getElementById("issueCardsWrap").innerHTML=h;
+}
+
+function issueWordClick(issueIdx,wordIdx){
+  var sel=issueSelState[issueIdx];
+  if(!sel||sel.end>=0){
+    // No selection yet or re-selecting: start fresh
+    issueSelState[issueIdx]={start:wordIdx,end:-1};
+  } else {
+    // Have start, now set end
+    var s=sel.start,e=wordIdx;
+    if(e<s){var tmp=s;s=e;e=tmp;}
+    issueSelState[issueIdx]={start:s,end:e};
+  }
+  renderIssueCards();
+}
+
+function getIssueHighlight(it,sel){
+  if(sel&&sel.start>=0&&sel.end>=0){
+    return it.words.slice(sel.start,sel.end+1).join(" ");
+  }
+  return it.raw;
+}
+
+function buildIssueOutput(){
+  var threshYear=new Date().getFullYear()-2;
+  var oldItems=[];
+  var oldYears=[];
+  var currentItems=[];
+
+  for(var i=0;i<issueItems.length;i++){
+    var it=issueItems[i];
+    var sel=issueSelState[i]||{start:-1,end:-1};
+    var highlight=getIssueHighlight(it,sel);
+    // Ensure first letter lowercase for old list, uppercase for current
+    var isOld=it.year>0&&it.year<threshYear;
+
+    if(isOld){
+      var h=highlight.charAt(0).toLowerCase()+highlight.slice(1);
+      // Remove trailing period
+      h=h.replace(/\.\s*$/,"");
+      oldItems.push(h);
+      if(it.year&&oldYears.indexOf(it.year)<0)oldYears.push(it.year);
+    } else {
+      var h=highlight.charAt(0).toUpperCase()+highlight.slice(1);
+      if(h.slice(-1)!==".")h+=".";
+      var line="Issue: "+h;
+      if(it.date)line+=" "+it.date;
+      if(it.initials)line+=" **"+it.initials;
+      currentItems.push(line);
+    }
+  }
+
+  var output=[];
+  if(oldItems.length>0){
+    oldYears.sort();
+    var yearRange=oldYears[0]+(oldYears.length>1?"-"+oldYears[oldYears.length-1]:"");
+    output.push("Past issues: "+oldItems.join(", ")+". **"+yearRange);
+  }
+  for(var i=0;i<currentItems.length;i++){
+    output.push(currentItems[i]);
+  }
+
+  var text=output.join("\n");
+  var outDiv=document.getElementById("issueOutputWrap");
+  document.getElementById("issueOutputText").innerHTML="";
+  // Render with colors
+  var html="";
+  for(var i=0;i<output.length;i++){
+    var isOldLine=output[i].indexOf("Past issues:")===0;
+    var style=isOldLine?"color:#92400e;font-weight:500":"color:#1e40af;font-weight:500";
+    html+='<div style="'+style+'">'+esc(output[i])+'</div>';
+  }
+  document.getElementById("issueOutputText").innerHTML=html;
+  outDiv.style.display="block";
+  outDiv.dataset.plain=text;
+  document.getElementById("issueCopyBtn").style.display="inline-block";
+}
+
+function copyIssueOutput(){
+  var text=document.getElementById("issueOutputWrap").dataset.plain||"";
+  if(!text)return;
+  navigator.clipboard.writeText(text).then(function(){
+    var msg=document.getElementById("issueCopyMsg");
+    msg.style.display="inline";
+    setTimeout(function(){msg.style.display="none"},2000);
+  });
+}
+
+// ===== PROFILE CHANGES REPORT (stub — parser TBD after sample PDF) =====
+var changesData={};
+
+async function handleChangesPDF(file){
+  if(!file)return;
+  var st=document.getElementById("changesPdfStatus");
+  st.innerHTML='<span style="color:#ca8a04">&#9888; Changes report parser henuz hazir degil. Ornek PDF gonderildiginde aktif edilecek.</span>';
+}
+
+
+</script>
+</body>
+</html>
