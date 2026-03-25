@@ -264,6 +264,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <button id="bdiViewMonth" class="tab" style="font-size:10px;padding:4px 10px" onclick="setBdiView('month')">Ay</button>
 <button id="bdiViewYear" class="tab" style="font-size:10px;padding:4px 10px" onclick="setBdiView('year')">Yil</button>
 <button id="bdiViewCustom" class="tab" style="font-size:10px;padding:4px 10px" onclick="setBdiView('custom')">Ozel</button>
+<button id="bdiViewPerf" class="tab" style="font-size:10px;padding:4px 10px;border-left:2px solid #e5e7eb;margin-left:4px" onclick="setBdiView('perf')">Performans</button>
 </div>
 <span id="bdiCustomRange" style="display:none;font-size:11px;color:#374151">
 <input type="date" id="bdiRangeStart" style="padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" onchange="renderBdiPeriod()">
@@ -275,6 +276,13 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <button class="btn-sm" style="color:#ef4444;border-color:#ef4444" onclick="if(confirm('Bugunku tum loglari sil?')){bdiLogs=[];saveBdiLogs();renderBdiLog()}">Temizle</button>
 </div></div>
 <div class="stats" id="bdiStats"></div>
+<div id="bdiFilters" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+  <select id="bdiFilterButler" onchange="renderBdiFiltered()" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"><option value="">Tum Butlerlar</option></select>
+  <select id="bdiFilterAction" onchange="renderBdiFiltered()" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"><option value="">Tum Islemler</option></select>
+  <input id="bdiFilterRoom" placeholder="Oda No" oninput="renderBdiFiltered()" style="width:70px;padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+  <button class="btn-sm" onclick="clearBdiFilters()" style="font-size:10px;padding:3px 8px">Temizle</button>
+  <span id="bdiFilterCount" style="font-size:10px;color:#6b7280"></span>
+</div>
 <div id="bdi-log-wrap" style="overflow-x:auto"><p class="hint">Henuz kayit yok.</p></div>
 </div>
 </div>
@@ -1539,33 +1547,7 @@ function addManuelDidIt(){
 }
 
 function renderBdiLog(){
-  if(!bdiLogs.length){
-    document.getElementById("bdi-log-wrap").innerHTML='<p class="hint">Henuz kayit yok.</p>';
-    document.getElementById("bdiLogCount").textContent="Gunluk Log";
-    document.getElementById("bdiStats").innerHTML="";
-    return;
-  }
-  document.getElementById("bdiLogCount").textContent=bdiLogs.length+" Kayit";
-  // Stats: total touches, per butler breakdown
-  var bc={};
-  for(var i=0;i<bdiLogs.length;i++){var b=bdiLogs[i].butler;bc[b]=(bc[b]||0)+1}
-  var sh='<span class="stat"><b>'+bdiLogs.length+'</b> touch</span>';
-  for(var name in bc)sh+='<span class="stat"><b>'+bc[name]+'</b> '+esc(name)+'</span>';
-  document.getElementById("bdiStats").innerHTML=sh;
-  // Table
-  var h='<table><thead><tr><th>Saat</th><th>Butler</th><th>Oda</th><th>Misafir</th><th>Islem</th><th>Detay</th><th></th></tr></thead><tbody>';
-  for(var i=bdiLogs.length-1;i>=0;i--){
-    var l=bdiLogs[i];
-    h+='<tr><td style="white-space:nowrap;font-weight:600">'+esc(l.time)+'</td>';
-    h+='<td>'+esc(l.butler)+'</td>';
-    h+='<td style="font-weight:700;text-align:center">'+esc(l.room)+'</td>';
-    h+='<td style="font-size:11px;color:#af8d69">'+esc(l.guest||"")+'</td>';
-    h+='<td><span class="badge" style="background:#dbeafe;color:#1e40af">'+esc(l.action)+'</span>'+(l.manual?' <span style="font-size:8px;color:#9ca3af;background:#f3f4f6;padding:1px 4px;border-radius:3px">M</span>':'')+'</td>';
-    h+='<td class="trace-text" style="max-width:350px">'+esc(l.sentence)+(l.note?' <i style="color:#9ca3af">['+esc(l.note)+']</i>':"")+'</td>';
-    h+='<td><button class="rm-btn" onclick="removeBdiLog('+i+')">\u00d7</button></td></tr>';
-  }
-  h+='</tbody></table>';
-  document.getElementById("bdi-log-wrap").innerHTML=h;
+  renderBdiFiltered();
 }
 
 // ===== BDI DATE RANGE VIEWS =====
@@ -1573,13 +1555,13 @@ var bdiViewMode="day"; // day | week | month | year | custom
 
 function setBdiView(mode){
   bdiViewMode=mode;
-  ["Day","Week","Month","Year","Custom"].forEach(function(m){
+  ["Day","Week","Month","Year","Custom","Perf"].forEach(function(m){
     var el=document.getElementById("bdiView"+m);
     if(el)el.classList.toggle("active",mode===m.toLowerCase());
   });
   document.getElementById("bdiCustomRange").style.display=mode==="custom"?"inline":"none";
+  document.getElementById("bdiFilters").style.display=mode==="perf"?"none":"flex";
   if(mode==="custom"){
-    // Default custom range: last 7 days
     var ds=document.getElementById("bdiDate").value||new Date().toISOString().split("T")[0];
     if(!document.getElementById("bdiRangeStart").value){
       var s=new Date(ds+"T00:00:00");s.setDate(s.getDate()-6);
@@ -1587,8 +1569,9 @@ function setBdiView(mode){
       document.getElementById("bdiRangeEnd").value=ds;
     }
   }
-  if(mode==="day"){loadBdiLogs();renderBdiLog()}
-  else{renderBdiPeriod()}
+  if(mode==="perf"){renderBdiPerformance();return}
+  if(mode==="day"){loadBdiLogs()}
+  renderBdiFiltered();
 }
 
 function getBdiDateRange(){
@@ -1668,45 +1651,124 @@ function getBdiPeriodLabel(){
 }
 
 function renderBdiPeriod(){
-  var logs=loadBdiRangeLogs();
-  var periodLabel=getBdiPeriodLabel();
+  renderBdiFiltered();
+}
 
+// ===== BDI FILTERS =====
+var _bdiAllLogs=[]; // unfiltered logs for current view
+
+function getBdiCurrentLogs(){
+  if(bdiViewMode==="day")return bdiLogs.map(function(l){l._date=document.getElementById("bdiDate").value;return l});
+  return loadBdiRangeLogs();
+}
+
+function populateBdiFilters(logs){
+  var butlers={},actions={};
+  for(var i=0;i<logs.length;i++){
+    if(logs[i].butler)butlers[logs[i].butler]=1;
+    if(logs[i].action)actions[logs[i].action]=1;
+  }
+  var bSel=document.getElementById("bdiFilterButler");
+  var curB=bSel.value;
+  bSel.innerHTML='<option value="">Tum Butlerlar</option>';
+  Object.keys(butlers).sort().forEach(function(b){bSel.innerHTML+='<option value="'+esc(b)+'">'+esc(b)+'</option>'});
+  bSel.value=curB;
+
+  var aSel=document.getElementById("bdiFilterAction");
+  var curA=aSel.value;
+  aSel.innerHTML='<option value="">Tum Islemler</option>';
+  Object.keys(actions).sort().forEach(function(a){aSel.innerHTML+='<option value="'+esc(a)+'">'+esc(a)+'</option>'});
+  aSel.value=curA;
+}
+
+function applyBdiFilters(logs){
+  var fb=document.getElementById("bdiFilterButler").value;
+  var fa=document.getElementById("bdiFilterAction").value;
+  var fr=document.getElementById("bdiFilterRoom").value.trim();
+  var filtered=logs;
+  if(fb)filtered=filtered.filter(function(l){return l.butler===fb});
+  if(fa)filtered=filtered.filter(function(l){return l.action===fa});
+  if(fr)filtered=filtered.filter(function(l){return String(l.room).indexOf(fr)>=0});
+  var countEl=document.getElementById("bdiFilterCount");
+  if(fb||fa||fr){countEl.textContent=filtered.length+"/"+logs.length+" gosteriliyor"}
+  else{countEl.textContent=""}
+  return filtered;
+}
+
+function renderBdiFiltered(){
+  if(bdiViewMode==="perf"){renderBdiPerformance();return}
+  _bdiAllLogs=getBdiCurrentLogs();
+  populateBdiFilters(_bdiAllLogs);
+  var filtered=applyBdiFilters(_bdiAllLogs);
+  if(bdiViewMode==="day")renderBdiLogWithData(filtered);
+  else renderBdiPeriodWithData(filtered,_bdiAllLogs);
+}
+
+function clearBdiFilters(){
+  document.getElementById("bdiFilterButler").value="";
+  document.getElementById("bdiFilterAction").value="";
+  document.getElementById("bdiFilterRoom").value="";
+  document.getElementById("bdiFilterCount").textContent="";
+  renderBdiFiltered();
+}
+
+function renderBdiLogWithData(logs){
   if(!logs.length){
+    document.getElementById("bdi-log-wrap").innerHTML='<p class="hint">Henuz kayit yok.</p>';
+    document.getElementById("bdiLogCount").textContent="Gunluk Log";
+    document.getElementById("bdiStats").innerHTML="";
+    return;
+  }
+  document.getElementById("bdiLogCount").textContent=logs.length+" Kayit";
+  var bc={};
+  for(var i=0;i<logs.length;i++){var b=logs[i].butler;bc[b]=(bc[b]||0)+1}
+  var sh='<span class="stat"><b>'+logs.length+'</b> touch</span>';
+  for(var name in bc)sh+='<span class="stat"><b>'+bc[name]+'</b> '+esc(name)+'</span>';
+  document.getElementById("bdiStats").innerHTML=sh;
+  var h='<table><thead><tr><th>Saat</th><th>Butler</th><th>Oda</th><th>Misafir</th><th>Islem</th><th>Detay</th><th></th></tr></thead><tbody>';
+  for(var i=logs.length-1;i>=0;i--){
+    var l=logs[i];
+    h+='<tr><td style="white-space:nowrap;font-weight:600">'+esc(l.time)+'</td>';
+    h+='<td>'+esc(l.butler)+'</td>';
+    h+='<td style="font-weight:700;text-align:center">'+esc(l.room)+'</td>';
+    h+='<td style="font-size:11px;color:#af8d69">'+esc(l.guest||"")+'</td>';
+    h+='<td><span class="badge" style="background:#dbeafe;color:#1e40af">'+esc(l.action)+'</span>'+(l.manual?' <span style="font-size:8px;color:#9ca3af;background:#f3f4f6;padding:1px 4px;border-radius:3px">M</span>':'')+'</td>';
+    h+='<td class="trace-text" style="max-width:350px">'+esc(l.sentence)+(l.note?' <i style="color:#9ca3af">['+esc(l.note)+']</i>':"")+'</td>';
+    h+='<td><button class="rm-btn" onclick="removeBdiLog('+i+')">\u00d7</button></td></tr>';
+  }
+  h+='</tbody></table>';
+  document.getElementById("bdi-log-wrap").innerHTML=h;
+}
+
+function renderBdiPeriodWithData(filtered,allLogs){
+  var periodLabel=getBdiPeriodLabel();
+  if(!filtered.length){
     document.getElementById("bdi-log-wrap").innerHTML='<p class="hint">'+esc(periodLabel)+' icin kayit bulunamadi.</p>';
     document.getElementById("bdiLogCount").textContent=periodLabel||"Log";
     document.getElementById("bdiStats").innerHTML="";
     return;
   }
-
-  document.getElementById("bdiLogCount").textContent=periodLabel+" — "+logs.length+" Kayit";
-
-  // Stats
+  document.getElementById("bdiLogCount").textContent=periodLabel+" — "+filtered.length+" Kayit";
   var bc={},ac={},dc={};
-  for(var i=0;i<logs.length;i++){
-    var l=logs[i];
+  for(var i=0;i<filtered.length;i++){
+    var l=filtered[i];
     bc[l.butler]=(bc[l.butler]||0)+1;
     ac[l.action]=(ac[l.action]||0)+1;
     dc[l._date]=(dc[l._date]||0)+1;
   }
   var dayCount=Object.keys(dc).length;
-  var avgPerDay=Math.round(logs.length/dayCount*10)/10;
-
-  var sh='<span class="stat"><b>'+logs.length+'</b> toplam touch</span>';
+  var avgPerDay=Math.round(filtered.length/dayCount*10)/10;
+  var sh='<span class="stat"><b>'+filtered.length+'</b> toplam touch</span>';
   sh+='<span class="stat"><b>'+dayCount+'</b> gun</span>';
   sh+='<span class="stat"><b>'+avgPerDay+'</b> ort/gun</span>';
   for(var name in bc)sh+='<span class="stat"><b>'+bc[name]+'</b> '+esc(name)+'</span>';
   document.getElementById("bdiStats").innerHTML=sh;
 
-  // Table grouped by date
-  var h='';
-  var currentDate="";
+  var h='';var currentDate="";
   h+='<table><thead><tr><th>Tarih</th><th>Saat</th><th>Butler</th><th>Oda</th><th>Misafir</th><th>Islem</th><th>Detay</th></tr></thead><tbody>';
-  for(var i=0;i<logs.length;i++){
-    var l=logs[i];
-    var showDate=l._date!==currentDate;
-    currentDate=l._date;
-    var dd=new Date(l._date+"T00:00:00");
-    var fmtD=("0"+dd.getDate()).slice(-2)+"."+("0"+(dd.getMonth()+1)).slice(-2)+"."+dd.getFullYear();
+  for(var i=0;i<filtered.length;i++){
+    var l=filtered[i];var showDate=l._date!==currentDate;currentDate=l._date;
+    var dd=new Date(l._date+"T00:00:00");var fmtD=("0"+dd.getDate()).slice(-2)+"."+("0"+(dd.getMonth()+1)).slice(-2)+"."+dd.getFullYear();
     h+='<tr'+(showDate?' style="border-top:2px solid #d1d5db"':'')+'>';
     h+='<td style="font-size:10px;color:#6b7280;white-space:nowrap">'+(showDate?'<b>'+fmtD+'</b>':'')+'</td>';
     h+='<td style="white-space:nowrap;font-weight:600">'+esc(l.time)+'</td>';
@@ -1719,21 +1781,141 @@ function renderBdiPeriod(){
   }
   h+='</tbody></table>';
 
-  // Action breakdown
+  var akeys=Object.keys(ac).sort(function(a,b){return ac[b]-ac[a]});
   h+='<div style="margin-top:16px;padding:12px;background:#f9fafb;border-radius:8px">';
   h+='<h3 style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px">Islem Dagilimi</h3>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
-  var akeys=Object.keys(ac).sort(function(a,b){return ac[b]-ac[a]});
-  for(var k=0;k<akeys.length;k++){
-    h+='<span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:11px;padding:3px 10px">'+esc(akeys[k])+': <b>'+ac[akeys[k]]+'</b></span>';
-  }
+  for(var k=0;k<akeys.length;k++){h+='<span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:11px;padding:3px 10px">'+esc(akeys[k])+': <b>'+ac[akeys[k]]+'</b></span>'}
   h+='</div></div>';
+  document.getElementById("bdi-log-wrap").innerHTML=h;
+}
+
+// ===== BDI PERFORMANCE DASHBOARD =====
+function renderBdiPerformance(){
+  var logs=loadBdiRangeLogs();
+  var periodLabel=getBdiPeriodLabel();
+  if(!logs.length){
+    document.getElementById("bdi-log-wrap").innerHTML='<p class="hint">'+esc(periodLabel)+' icin kayit bulunamadi.</p>';
+    document.getElementById("bdiLogCount").textContent="Performans — "+periodLabel;
+    document.getElementById("bdiStats").innerHTML="";
+    return;
+  }
+  document.getElementById("bdiLogCount").textContent="Performans — "+periodLabel;
+  document.getElementById("bdiStats").innerHTML="";
+
+  // Compute per-butler metrics
+  var butlers={},actions={},dc={},rooms={};
+  for(var i=0;i<logs.length;i++){
+    var l=logs[i];
+    if(!butlers[l.butler])butlers[l.butler]={total:0,actions:{},rooms:{},days:{}};
+    var b=butlers[l.butler];
+    b.total++;
+    b.actions[l.action]=(b.actions[l.action]||0)+1;
+    b.rooms[l.room]=1;
+    b.days[l._date]=1;
+    actions[l.action]=(actions[l.action]||0)+1;
+    dc[l._date]=(dc[l._date]||0)+1;
+    rooms[l.room]=(rooms[l.room]||0)+1;
+  }
+  var totalDays=Object.keys(dc).length;
+  var bNames=Object.keys(butlers).sort(function(a,b){return butlers[b].total-butlers[a].total});
+  var maxTouch=bNames.length?butlers[bNames[0]].total:1;
+
+  var h='';
+
+  // Butler comparison cards
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px">';
+  for(var i=0;i<bNames.length;i++){
+    var name=bNames[i],b=butlers[name];
+    var topAction="";var topCount=0;
+    for(var a in b.actions){if(b.actions[a]>topCount){topCount=b.actions[a];topAction=a}}
+    var roomCount=Object.keys(b.rooms).length;
+    var dayCount2=Object.keys(b.days).length;
+    var avg=Math.round(b.total/dayCount2*10)/10;
+    var pct=Math.round(b.total/maxTouch*100);
+
+    h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+    h+='<span style="font-size:14px;font-weight:700;color:#1e293b">'+esc(name)+'</span>';
+    h+='<span style="font-size:20px;font-weight:800;color:#af8d69">'+b.total+'</span>';
+    h+='</div>';
+    h+='<div style="background:#f3f4f6;border-radius:4px;height:8px;margin-bottom:10px"><div style="background:linear-gradient(90deg,#af8d69,#d4b896);height:100%;border-radius:4px;width:'+pct+'%"></div></div>';
+    h+='<div style="font-size:11px;color:#6b7280;display:grid;grid-template-columns:1fr 1fr;gap:4px">';
+    h+='<div>&#128197; <b>'+dayCount2+'</b> gun aktif</div>';
+    h+='<div>&#127970; <b>'+roomCount+'</b> farkli oda</div>';
+    h+='<div>&#128200; <b>'+avg+'</b> ort/gun</div>';
+    h+='<div>&#11088; <b>'+esc(topAction)+'</b></div>';
+    h+='</div></div>';
+  }
+  h+='</div>';
+
+  // Butler × Action heatmap
+  var aNames=Object.keys(actions).sort(function(a,b){return actions[b]-actions[a]});
+  h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:16px;overflow-x:auto">';
+  h+='<h3 style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">Butler × Islem Matrisi</h3>';
+  h+='<table style="font-size:11px"><thead><tr><th style="text-align:left;min-width:100px">Butler</th>';
+  for(var j=0;j<aNames.length;j++){h+='<th style="text-align:center;font-size:9px;writing-mode:vertical-rl;height:80px;padding:4px 2px">'+esc(aNames[j])+'</th>'}
+  h+='<th style="text-align:center;font-weight:800">TOPLAM</th></tr></thead><tbody>';
+  for(var i=0;i<bNames.length;i++){
+    var name=bNames[i],b=butlers[name];
+    h+='<tr><td style="font-weight:600">'+esc(name)+'</td>';
+    for(var j=0;j<aNames.length;j++){
+      var cnt=b.actions[aNames[j]]||0;
+      var bg=cnt===0?"#fff":cnt<=2?"#dbeafe":cnt<=5?"#93c5fd":"#3b82f6";
+      var clr=cnt>5?"#fff":"#1e293b";
+      h+='<td style="text-align:center;background:'+bg+';color:'+clr+';font-weight:'+(cnt?'700':'400')+';border:1px solid #f3f4f6">'+(cnt||'')+'</td>';
+    }
+    h+='<td style="text-align:center;font-weight:800;background:#fef3c7;color:#92400e">'+b.total+'</td></tr>';
+  }
+  // Total row
+  h+='<tr style="border-top:2px solid #d1d5db"><td style="font-weight:800">TOPLAM</td>';
+  for(var j=0;j<aNames.length;j++){h+='<td style="text-align:center;font-weight:800;background:#f0fdf4;color:#065f46">'+actions[aNames[j]]+'</td>'}
+  h+='<td style="text-align:center;font-weight:900;background:#af8d69;color:#fff;font-size:13px">'+logs.length+'</td></tr>';
+  h+='</tbody></table></div>';
+
+  // Daily trend (horizontal bars)
+  var dates=Object.keys(dc).sort();
+  var maxDay=1;for(var d in dc){if(dc[d]>maxDay)maxDay=dc[d]}
+  h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:16px">';
+  h+='<h3 style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">Gunluk Trend ('+dates.length+' gun)</h3>';
+  for(var i=0;i<dates.length;i++){
+    var dd=new Date(dates[i]+"T00:00:00");
+    var fD3=("0"+dd.getDate()).slice(-2)+"."+("0"+(dd.getMonth()+1)).slice(-2);
+    var pct2=Math.round(dc[dates[i]]/maxDay*100);
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">';
+    h+='<span style="font-size:10px;color:#6b7280;min-width:40px;text-align:right">'+fD3+'</span>';
+    h+='<div style="flex:1;background:#f3f4f6;border-radius:3px;height:16px"><div style="background:linear-gradient(90deg,#af8d69,#d4b896);height:100%;border-radius:3px;width:'+pct2+'%;min-width:2px"></div></div>';
+    h+='<span style="font-size:11px;font-weight:700;min-width:20px;color:#374151">'+dc[dates[i]]+'</span>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // Top rooms
+  var rKeys=Object.keys(rooms).sort(function(a,b){return rooms[b]-rooms[a]}).slice(0,10);
+  if(rKeys.length){
+    h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px">';
+    h+='<h3 style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">En Cok Hizmet Verilen Odalar</h3>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    for(var i=0;i<rKeys.length;i++){
+      h+='<div style="background:#fef3c7;border-radius:8px;padding:8px 14px;text-align:center">';
+      h+='<div style="font-size:16px;font-weight:800;color:#92400e">'+esc(rKeys[i])+'</div>';
+      h+='<div style="font-size:10px;color:#b45309">'+rooms[rKeys[i]]+' touch</div></div>';
+    }
+    h+='</div></div>';
+  }
 
   document.getElementById("bdi-log-wrap").innerHTML=h;
 }
 
+// ===== BDI FILTERED LOGS FOR DOWNLOAD =====
+function getBdiFilteredLogs(){
+  if(bdiViewMode==="perf")return loadBdiRangeLogs();
+  var all=getBdiCurrentLogs();
+  return applyBdiFilters(all);
+}
+
 function downloadDidIt(){
-  var logs=(bdiViewMode==="day")?bdiLogs:loadBdiRangeLogs();
+  var logs=getBdiFilteredLogs();
   if(!logs.length)return alert("Kayit yok!");
   var dateStr=getBdiPeriodLabel();
   var bc={},ac={};
@@ -1789,7 +1971,7 @@ function downloadDidIt(){
 }
 
 function downloadDidItXlsx(){
-  var logs=(bdiViewMode==="day")?bdiLogs:loadBdiRangeLogs();
+  var logs=getBdiFilteredLogs();
   if(!logs.length)return alert("Kayit yok!");
   var ds=document.getElementById("bdiDate").value;
   var dateStr=getBdiPeriodLabel();
@@ -4126,7 +4308,7 @@ function importHandoff(file){
   exportHandoff,
   filterRadar, handleArrPDF, handleChangesPDF,
   handleRadarPDF, handleResDetailPDF, handleTracePDF, handleVacPDF,
-  handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView,
+  handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters,
   parseManualAndRender,
   removeAlertReason, removeAlertRow, removeBdiLog, removeBlockedDate,
   removeGuest, removeKW, removeRadarKW,
