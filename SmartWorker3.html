@@ -316,16 +316,26 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 
-<!-- Guest Profiles -->
+<!-- Guest Library (CRM) -->
 <div class="card">
 <div class="card-header">
-  <h2>&#128100; Misafir Profilleri</h2>
+  <h2>&#128100; Misafir Kutuphanesi</h2>
   <div style="display:flex;gap:6px;align-items:center">
-    <button class="btn-sm" onclick="scanBdiGuests()">&#128269; Tara</button>
-    <button class="btn-sm" onclick="showBdiMergeMode()" id="bdiMergeBtn" style="display:none">&#128279; Birlestir</button>
+    <button class="btn btn-primary" style="font-size:11px;padding:5px 14px" onclick="scanBdiGuests()">&#128269; Tara / Guncelle</button>
+    <button class="btn-sm" onclick="showBdiMergeMode()" id="bdiMergeBtn" style="display:none">&#128279; Profil Birlestir</button>
   </div>
 </div>
-<p class="hint" id="bdiGuestHintText">Misafir profillerini gormek icin "Tara" butonuna basin. Tum BDI kayitlarindan misafir gecmisi olusturulur.</p>
+<!-- Search bar -->
+<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+  <input id="guestSearchName" type="text" placeholder="&#128269; Isim / Soyisim ara..." oninput="filterGuestLibrary()" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+  <input id="guestSearchRoom" type="text" placeholder="Oda No" oninput="filterGuestLibrary()" style="width:70px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+  <input id="guestSearchDateFrom" type="date" title="Baslangic tarihi" onchange="filterGuestLibrary()" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px">
+  <span style="font-size:11px;color:#9ca3af">—</span>
+  <input id="guestSearchDateTo" type="date" title="Bitis tarihi" onchange="filterGuestLibrary()" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px">
+  <button class="btn-sm" onclick="clearGuestSearch()" style="font-size:10px">Temizle</button>
+  <span id="guestSearchCount" style="font-size:10px;color:#6b7280"></span>
+</div>
+<p class="hint" id="bdiGuestHintText">Misafir kutuphanesini olusturmak icin "Tara / Guncelle" butonuna basin.</p>
 <div id="bdiGuestProfiles"></div>
 </div>
 <div class="page" id="page-radar">
@@ -2235,13 +2245,15 @@ function getCanonicalName(rawName){
   return rawName.trim();
 }
 
+var _guestLibrary=[]; // cached scan results
+
 function scanBdiGuests(){
   loadBdiMerges();
   var prefix="bdi_";
-  var guests={}; // canonicalName → {name, rooms:{}, dates:{}, touches:0, actions:{}, firstSeen:"", lastSeen:""}
+  var guests={};
   for(var i=0;i<localStorage.length;i++){
     var key=localStorage.key(i);
-    if(!key.startsWith(prefix)||key.indexOf("_occ_")>=0||key.indexOf("_guest_")>=0)continue;
+    if(!key.startsWith(prefix)||key.indexOf("_occ_")>=0||key.indexOf("_guest_")>=0||key.indexOf("_pm_")>=0)continue;
     var datePart=key.substring(prefix.length);
     if(datePart.length<10)continue;
     try{
@@ -2251,31 +2263,67 @@ function scanBdiGuests(){
         var l=items[j];
         if(!l.guest||!l.guest.trim())continue;
         var canonical=getCanonicalName(l.guest);
-        if(!guests[canonical])guests[canonical]={name:canonical,rawNames:{},rooms:{},dates:{},touches:0,actions:{},firstSeen:datePart,lastSeen:datePart};
+        if(!guests[canonical])guests[canonical]={name:canonical,rawNames:{},rooms:{},dates:{},touches:0,actions:{},butlers:{},logs:[],firstSeen:datePart,lastSeen:datePart};
         var g=guests[canonical];
         g.rawNames[l.guest.trim()]=1;
         g.rooms[l.room]=1;
         g.dates[datePart]=1;
         g.touches++;
         g.actions[l.action]=(g.actions[l.action]||0)+1;
+        g.butlers[l.butler]=(g.butlers[l.butler]||0)+1;
+        g.logs.push({date:datePart,time:l.time,butler:l.butler,room:l.room,action:l.action,sentence:l.sentence,note:l.note});
         if(datePart<g.firstSeen)g.firstSeen=datePart;
         if(datePart>g.lastSeen)g.lastSeen=datePart;
       }
     }catch(e){}
   }
-
-  var list=Object.values(guests).sort(function(a,b){return b.touches-a.touches});
-  var el=document.getElementById("bdiGuestProfiles");
-  var hintEl=document.getElementById("bdiGuestHintText");
-
-  if(!list.length){
-    el.innerHTML="";hintEl.textContent="Misafir ismi iceren kayit bulunamadi.";hintEl.style.display="block";return;
-  }
-  hintEl.style.display="none";
+  _guestLibrary=Object.values(guests).sort(function(a,b){return b.lastSeen>a.lastSeen?1:b.lastSeen<a.lastSeen?-1:b.touches-a.touches});
+  document.getElementById("bdiGuestHintText").style.display="none";
   document.getElementById("bdiMergeBtn").style.display="inline-block";
+  filterGuestLibrary();
+}
 
-  var h='<div style="font-size:11px;color:#6b7280;margin-bottom:8px">'+list.length+' farkli misafir bulundu</div>';
-  h+='<table style="font-size:11px"><thead><tr><th><input type="checkbox" id="bdiGuestSelAll" onchange="bdiToggleAllGuests(this.checked)"></th><th>Misafir</th><th>Odalar</th><th>Toplam Touch</th><th>Gun Sayisi</th><th>Ilk/Son Gorulme</th><th>En Sik Islem</th></tr></thead><tbody>';
+function filterGuestLibrary(){
+  if(!_guestLibrary.length){
+    document.getElementById("bdiGuestProfiles").innerHTML="";
+    document.getElementById("guestSearchCount").textContent="";
+    return;
+  }
+  var qName=(document.getElementById("guestSearchName").value||"").trim().toLowerCase();
+  var qRoom=(document.getElementById("guestSearchRoom").value||"").trim();
+  var qFrom=document.getElementById("guestSearchDateFrom").value||"";
+  var qTo=document.getElementById("guestSearchDateTo").value||"";
+
+  var filtered=_guestLibrary.filter(function(g){
+    if(qName&&g.name.toLowerCase().indexOf(qName)<0){
+      // Also check raw name variants
+      var found=false;
+      for(var rn in g.rawNames){if(rn.toLowerCase().indexOf(qName)>=0){found=true;break}}
+      if(!found)return false;
+    }
+    if(qRoom){var hasRoom=false;for(var r in g.rooms){if(String(r).indexOf(qRoom)>=0){hasRoom=true;break}}if(!hasRoom)return false}
+    if(qFrom&&g.lastSeen<qFrom)return false;
+    if(qTo&&g.firstSeen>qTo)return false;
+    return true;
+  });
+
+  document.getElementById("guestSearchCount").textContent=filtered.length+"/"+_guestLibrary.length+" misafir";
+  renderGuestLibrary(filtered);
+}
+
+function clearGuestSearch(){
+  document.getElementById("guestSearchName").value="";
+  document.getElementById("guestSearchRoom").value="";
+  document.getElementById("guestSearchDateFrom").value="";
+  document.getElementById("guestSearchDateTo").value="";
+  filterGuestLibrary();
+}
+
+function renderGuestLibrary(list){
+  var el=document.getElementById("bdiGuestProfiles");
+  if(!list.length){el.innerHTML='<p class="hint">Arama kriterine uygun misafir bulunamadi.</p>';return}
+
+  var h='<table style="font-size:11px"><thead><tr><th><input type="checkbox" id="bdiGuestSelAll" onchange="bdiToggleAllGuests(this.checked)"></th><th>Misafir</th><th>Odalar</th><th>Touch</th><th>Gun</th><th>Donem</th><th>En Sik</th><th></th></tr></thead><tbody>';
   for(var i=0;i<list.length;i++){
     var g=list[i];
     var roomList=Object.keys(g.rooms).sort().join(", ");
@@ -2288,20 +2336,57 @@ function scanBdiGuests(){
     var fmtL=("0"+ls.getDate()).slice(-2)+"."+("0"+(ls.getMonth()+1)).slice(-2)+"."+ls.getFullYear();
     var isRepeat=dayCount>1||Object.keys(g.rooms).length>1;
 
-    h+='<tr><td><input type="checkbox" class="bdiGuestSel" data-name="'+esc(g.name)+'"></td>';
+    h+='<tr style="cursor:pointer" onclick="toggleGuestDetail('+i+')">';
+    h+='<td onclick="event.stopPropagation()"><input type="checkbox" class="bdiGuestSel" data-name="'+esc(g.name)+'"></td>';
     h+='<td style="font-weight:600">';
     if(isRepeat)h+='<span class="badge badge-repeat" style="font-size:8px;margin-right:4px">REPEAT</span>';
     h+=esc(g.name);
-    if(hasVariants)h+=' <span style="font-size:9px;color:#9ca3af" title="'+esc(rawNameList.join(", '))+'">('+ rawNameList.length+' varyant)</span>';
+    if(hasVariants)h+=' <span style="font-size:9px;color:#9ca3af" title="'+esc(rawNameList.join(", "))+'">('+ rawNameList.length+' varyant)</span>';
     h+='</td>';
     h+='<td style="font-size:10px">'+esc(roomList)+'</td>';
     h+='<td style="text-align:center;font-weight:700;color:#af8d69">'+g.touches+'</td>';
     h+='<td style="text-align:center">'+dayCount+'</td>';
     h+='<td style="font-size:10px;color:#6b7280">'+fmtF+(g.firstSeen!==g.lastSeen?' — '+fmtL:'')+'</td>';
-    h+='<td><span class="badge" style="background:#dbeafe;color:#1e40af;font-size:9px">'+esc(topAction)+' ('+topCnt+')</span></td></tr>';
+    h+='<td><span class="badge" style="background:#dbeafe;color:#1e40af;font-size:9px">'+esc(topAction)+' ('+topCnt+')</span></td>';
+    h+='<td style="font-size:10px;color:#9ca3af">&#9660;</td></tr>';
+
+    // Expandable detail row (hidden by default)
+    h+='<tr id="guestDetail_'+i+'" style="display:none"><td colspan="8" style="padding:10px 14px;background:#fafbfc;border-left:3px solid #af8d69">';
+    // Butler breakdown
+    h+='<div style="margin-bottom:8px"><b style="font-size:11px;color:#374151">Butlerlar:</b> ';
+    for(var bn in g.butlers){h+='<span class="badge" style="background:#f3f4f6;font-size:10px;margin:1px">'+esc(bn)+': '+g.butlers[bn]+'</span> '}
+    h+='</div>';
+    // Action breakdown
+    h+='<div style="margin-bottom:8px"><b style="font-size:11px;color:#374151">Islemler:</b> ';
+    var aList=Object.keys(g.actions).sort(function(a,b){return g.actions[b]-g.actions[a]});
+    for(var ai=0;ai<aList.length;ai++){h+='<span class="badge" style="background:#dbeafe;color:#1e40af;font-size:10px;margin:1px">'+esc(aList[ai])+': '+g.actions[aList[ai]]+'</span> '}
+    h+='</div>';
+    // Timeline
+    h+='<div><b style="font-size:11px;color:#374151">Gecmis:</b></div>';
+    h+='<table style="font-size:10px;margin-top:4px"><thead><tr><th>Tarih</th><th>Saat</th><th>Butler</th><th>Oda</th><th>Islem</th><th>Detay</th></tr></thead><tbody>';
+    var logs=g.logs.sort(function(a,b){return a.date>b.date?-1:a.date<b.date?1:0});
+    for(var li=0;li<logs.length;li++){
+      var log=logs[li];
+      var ld=new Date(log.date+"T00:00:00");
+      var fD=("0"+ld.getDate()).slice(-2)+"."+("0"+(ld.getMonth()+1)).slice(-2)+"."+ld.getFullYear();
+      h+='<tr><td style="white-space:nowrap;color:#6b7280">'+fD+'</td>';
+      h+='<td style="white-space:nowrap">'+esc(log.time)+'</td>';
+      h+='<td>'+esc(log.butler)+'</td>';
+      h+='<td style="font-weight:700;text-align:center">'+esc(log.room)+'</td>';
+      h+='<td><span class="badge" style="background:#dbeafe;color:#1e40af;font-size:9px">'+esc(log.action)+'</span></td>';
+      h+='<td style="color:#6b7280;max-width:300px">'+esc(log.sentence||"")+(log.note?' <i>['+esc(log.note)+']</i>':'')+'</td></tr>';
+    }
+    h+='</tbody></table>';
+    h+='</td></tr>';
   }
   h+='</tbody></table>';
   el.innerHTML=h;
+}
+
+function toggleGuestDetail(idx){
+  var row=document.getElementById("guestDetail_"+idx);
+  if(!row)return;
+  row.style.display=row.style.display==="none"?"table-row":"none";
 }
 
 function bdiToggleAllGuests(checked){
@@ -4729,7 +4814,7 @@ function importHandoff(file){
   filterRadar, handleArrPDF, handleChangesPDF,
   handleRadarPDF, handleResDetailPDF, handleTracePDF, handleVacPDF,
   handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters, toggleBdiCompare,
-  saveBdiOccupied, renderBdiCoverage, scanBdiGuests, showBdiMergeMode, bdiToggleAllGuests,
+  saveBdiOccupied, renderBdiCoverage, scanBdiGuests, showBdiMergeMode, bdiToggleAllGuests, filterGuestLibrary, clearGuestSearch, toggleGuestDetail,
   addPmRoom, removePmRoom,
   parseManualAndRender,
   removeAlertReason, removeAlertRow, removeBdiLog, removeBlockedDate,
