@@ -2045,7 +2045,7 @@ function renderBdiPerformance(){
     return;
   }
   document.getElementById("bdiLogCount").textContent="Performans — "+periodLabel;
-  document.getElementById("bdiStats").innerHTML="";
+  document.getElementById("bdiStats").innerHTML='<button class="btn btn-primary" style="font-size:10px;padding:4px 12px" onclick="downloadPerfPdf()">&#x2B07; PDF</button> <button class="btn btn-dark" style="font-size:10px;padding:4px 12px" onclick="downloadPerfXlsx()">&#x2B07; Excel</button>';
 
   // Compute per-butler metrics
   var butlers={},actions={},dc={},rooms={};
@@ -2449,6 +2449,8 @@ function renderGuestLibrary(list){
     var aList=Object.keys(g.actions).sort(function(a,b){return g.actions[b]-g.actions[a]});
     for(var ai=0;ai<aList.length;ai++){h+='<span class="badge" style="background:#dbeafe;color:#1e40af;font-size:10px;margin:1px">'+esc(aList[ai])+': '+g.actions[aList[ai]]+'</span> '}
     h+='</div>';
+    // Export button
+    h+='<div style="margin-bottom:8px"><button class="btn-sm" style="font-size:10px;background:#fef3c7;color:#92400e;border-color:#fbbf24" onclick="event.stopPropagation();exportGuestProfile(\''+esc(g.name).replace(/'/g,"\\'")+'\')">&#x2B07; Profil Indir (PDF)</button></div>';
     // Guest notes
     var noteId="guestNote_"+btoa(unescape(encodeURIComponent(g.name)));
     var savedNote=getGuestNote(g.name);
@@ -2600,6 +2602,189 @@ function downloadDidItXlsx(){
   XLSX.writeFile(wb,"ButlerDidIt_"+dateStr.replace(/[\.\s—\/]/g,"_").replace(/_+/g,"_")+".xlsx");
 }
 
+// ===== PERFORMANCE DASHBOARD EXPORT =====
+function downloadPerfPdf(){
+  var logs=loadBdiRangeLogs();
+  if(!logs.length)return alert("Kayit yok!");
+  var periodLabel=getBdiPeriodLabel();
+  var butlers={},actions={},dc={},rooms={};
+  for(var i=0;i<logs.length;i++){
+    var l=logs[i];
+    if(!butlers[l.butler])butlers[l.butler]={total:0,actions:{},rooms:{},days:{}};
+    var b=butlers[l.butler];b.total++;b.actions[l.action]=(b.actions[l.action]||0)+1;b.rooms[l.room]=1;b.days[l._date]=1;
+    actions[l.action]=(actions[l.action]||0)+1;dc[l._date]=(dc[l._date]||0)+1;rooms[l.room]=(rooms[l.room]||0)+1;
+  }
+  var totalDays=Object.keys(dc).length;
+  var bNames=Object.keys(butlers).sort(function(a,b2){return butlers[b2].total-butlers[a].total});
+  var aNames=Object.keys(actions).sort(function(a,b2){return actions[b2]-actions[a]});
+
+  var css='@page{size:A4 landscape;margin:12mm 15mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Segoe UI",Arial,sans-serif;color:#1e293b;font-size:10pt}';
+  css+='.page{max-width:290mm;margin:0 auto;padding:12mm 15mm;background:#fff}';
+  css+='.header{text-align:center;margin-bottom:8mm;padding-bottom:5mm;border-bottom:2px solid #af8d69}';
+  css+='.header h1{font-size:22pt;font-weight:300;color:#1e293b}.header h1 b{font-weight:700;color:#af8d69}';
+  css+='.header .sub{font-size:10pt;color:#6b7280;margin-top:2mm}';
+  css+='.cards{display:flex;gap:10px;flex-wrap:wrap;margin:6mm 0}';
+  css+='.bcard{border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;min-width:140px;flex:1}';
+  css+='.bcard .nm{font-size:12pt;font-weight:700}.bcard .num{font-size:20pt;font-weight:800;color:#af8d69}';
+  css+='.bcard .det{font-size:8pt;color:#6b7280;margin-top:4px}';
+  css+='table{width:100%;border-collapse:collapse;font-size:9pt;margin-top:5mm}';
+  css+='th{padding:3mm 4mm;text-align:center;font-size:8pt;font-weight:700;border-bottom:2px solid #af8d69;color:#af8d69}';
+  css+='td{padding:2mm 4mm;text-align:center;border:1px solid #f3f4f6}';
+  css+='.tot{font-weight:800;background:#fef3c7;color:#92400e}';
+  css+='.toolbar{position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#af8d69,#8a6e47);color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100}';
+  css+='.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:#fff;color:#8a6e47}';
+  css+='@media print{.toolbar{display:none!important}}@media screen{body{background:#e5e7eb;padding:60px 10px 20px}}';
+
+  var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>BDI Performance - '+esc(periodLabel)+'</title><style>'+css+'</style></head><body>';
+  h+='<div class="toolbar"><button onclick="window.print()">PDF Olarak Kaydet</button><span style="font-size:13px;opacity:.8">Butler Did It — Performans Raporu — '+esc(periodLabel)+'</span></div>';
+  h+='<div class="page">';
+  h+='<div class="header"><h1>Butler Did It — <b>Performans</b></h1><div class="sub">Raffles Istanbul — '+esc(periodLabel)+' — '+logs.length+' touch / '+totalDays+' gun</div></div>';
+
+  // Butler cards
+  h+='<div class="cards">';
+  for(var i=0;i<bNames.length;i++){
+    var nm=bNames[i],bt=butlers[nm];
+    var topA="";var topC=0;for(var a in bt.actions){if(bt.actions[a]>topC){topC=bt.actions[a];topA=a}}
+    var avg=Math.round(bt.total/Object.keys(bt.days).length*10)/10;
+    h+='<div class="bcard"><div class="nm">'+esc(nm)+'</div><div class="num">'+bt.total+'</div>';
+    h+='<div class="det">'+Object.keys(bt.days).length+' gun / '+Object.keys(bt.rooms).length+' oda / '+avg+' ort/gun<br>En sik: '+esc(topA)+' ('+topC+')</div></div>';
+  }
+  h+='</div>';
+
+  // Heatmap table
+  h+='<h3 style="font-size:11pt;margin-top:6mm;color:#374151">Butler × Islem Matrisi</h3>';
+  h+='<table><thead><tr><th style="text-align:left">Butler</th>';
+  for(var j=0;j<aNames.length;j++)h+='<th>'+esc(aNames[j])+'</th>';
+  h+='<th class="tot">TOPLAM</th></tr></thead><tbody>';
+  for(var i=0;i<bNames.length;i++){
+    var nm=bNames[i],bt=butlers[nm];
+    h+='<tr><td style="text-align:left;font-weight:600">'+esc(nm)+'</td>';
+    for(var j=0;j<aNames.length;j++){var c=bt.actions[aNames[j]]||0;h+='<td style="'+(c?'font-weight:700':'color:#d1d5db')+'">'+c+'</td>'}
+    h+='<td class="tot">'+bt.total+'</td></tr>';
+  }
+  h+='<tr style="border-top:2px solid #af8d69"><td style="text-align:left;font-weight:800">TOPLAM</td>';
+  for(var j=0;j<aNames.length;j++)h+='<td style="font-weight:800">'+actions[aNames[j]]+'</td>';
+  h+='<td class="tot" style="font-size:12pt">'+logs.length+'</td></tr>';
+  h+='</tbody></table>';
+
+  // Top rooms
+  var rKeys=Object.keys(rooms).sort(function(a,b2){return rooms[b2]-rooms[a]}).slice(0,15);
+  if(rKeys.length){
+    h+='<h3 style="font-size:11pt;margin-top:6mm;color:#374151">En Cok Hizmet Verilen Odalar</h3>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3mm">';
+    for(var i=0;i<rKeys.length;i++)h+='<span style="padding:4px 12px;background:#fef3c7;border-radius:6px;font-weight:700;color:#92400e">'+esc(rKeys[i])+' ('+rooms[rKeys[i]]+')</span>';
+    h+='</div>';
+  }
+
+  h+='</div></body></html>';
+  dl(h,"BDI_Performans_"+periodLabel.replace(/[\.\s—\/]/g,"_").replace(/_+/g,"_")+".html");
+}
+
+function downloadPerfXlsx(){
+  var logs=loadBdiRangeLogs();
+  if(!logs.length)return alert("Kayit yok!");
+  var periodLabel=getBdiPeriodLabel();
+  var butlers={},actions={};
+  for(var i=0;i<logs.length;i++){
+    var l=logs[i];
+    if(!butlers[l.butler])butlers[l.butler]={total:0,actions:{},rooms:{},days:{}};
+    var b=butlers[l.butler];b.total++;b.actions[l.action]=(b.actions[l.action]||0)+1;b.rooms[l.room]=1;b.days[l._date]=1;
+    actions[l.action]=(actions[l.action]||0)+1;
+  }
+  var bNames=Object.keys(butlers).sort(function(a,b2){return butlers[b2].total-butlers[a].total});
+  var aNames=Object.keys(actions).sort(function(a,b2){return actions[b2]-actions[a]});
+
+  // Summary sheet
+  var sumData=bNames.map(function(nm){
+    var bt=butlers[nm];var topA="";var topC=0;for(var a in bt.actions){if(bt.actions[a]>topC){topC=bt.actions[a];topA=a}}
+    return{Butler:nm,"Total Touches":bt.total,"Active Days":Object.keys(bt.days).length,"Unique Rooms":Object.keys(bt.rooms).length,"Avg/Day":Math.round(bt.total/Object.keys(bt.days).length*10)/10,"Top Action":topA+" ("+topC+")"};
+  });
+  var ws1=XLSX.utils.json_to_sheet(sumData);
+  ws1["!cols"]=[{wch:14},{wch:12},{wch:10},{wch:12},{wch:8},{wch:24}];
+
+  // Heatmap sheet
+  var heatData=[];
+  for(var i=0;i<bNames.length;i++){
+    var row={Butler:bNames[i]};
+    for(var j=0;j<aNames.length;j++)row[aNames[j]]=butlers[bNames[i]].actions[aNames[j]]||0;
+    row["TOPLAM"]=butlers[bNames[i]].total;
+    heatData.push(row);
+  }
+  // Total row
+  var totalRow={Butler:"TOPLAM"};
+  for(var j=0;j<aNames.length;j++)totalRow[aNames[j]]=actions[aNames[j]];
+  totalRow["TOPLAM"]=logs.length;
+  heatData.push(totalRow);
+  var ws2=XLSX.utils.json_to_sheet(heatData);
+
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws1,"Butler Summary");
+  XLSX.utils.book_append_sheet(wb,ws2,"Action Heatmap");
+  XLSX.writeFile(wb,"BDI_Performans_"+periodLabel.replace(/[\.\s—\/]/g,"_").replace(/_+/g,"_")+".xlsx");
+}
+
+// ===== GUEST PROFILE EXPORT =====
+function exportGuestProfile(guestName){
+  var g=null;
+  for(var i=0;i<_guestLibrary.length;i++){if(_guestLibrary[i].name===guestName){g=_guestLibrary[i];break}}
+  if(!g)return alert("Profil bulunamadi.");
+  var note=getGuestNote(g.name);
+  var roomList=Object.keys(g.rooms).sort().join(", ");
+  var dayCount=Object.keys(g.dates).length;
+  var fs=new Date(g.firstSeen+"T00:00:00"),ls=new Date(g.lastSeen+"T00:00:00");
+  var fmtF=("0"+fs.getDate()).slice(-2)+"."+("0"+(fs.getMonth()+1)).slice(-2)+"."+fs.getFullYear();
+  var fmtL=("0"+ls.getDate()).slice(-2)+"."+("0"+(ls.getMonth()+1)).slice(-2)+"."+ls.getFullYear();
+
+  var css='@page{size:A4;margin:15mm 20mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Segoe UI",Arial,sans-serif;color:#1e293b;font-size:10.5pt}';
+  css+='.page{max-width:210mm;margin:0 auto;padding:15mm 20mm;background:#fff}';
+  css+='.header{border-bottom:2px solid #af8d69;padding-bottom:5mm;margin-bottom:6mm}';
+  css+='.header h1{font-size:20pt;font-weight:300;color:#af8d69}.header h1 b{font-weight:700}';
+  css+='.meta{display:flex;gap:20px;margin:4mm 0;flex-wrap:wrap;font-size:10pt;color:#6b7280}';
+  css+='.meta b{color:#1e293b}';
+  css+='.section{margin:5mm 0}.section h3{font-size:11pt;font-weight:700;color:#374151;border-bottom:1px solid #e5e7eb;padding-bottom:2mm;margin-bottom:3mm}';
+  css+='.badge{display:inline-block;padding:1mm 3mm;border-radius:3mm;font-size:8.5pt;background:#dbeafe;color:#1e40af;font-weight:600;margin:1px}';
+  css+='.notes{padding:8px 12px;background:#fefce8;border-left:3px solid #eab308;border-radius:0 6px 6px 0;font-size:10pt;white-space:pre-wrap;margin:3mm 0}';
+  css+='table{width:100%;border-collapse:collapse;font-size:9.5pt}th{text-align:left;padding:2mm 4mm;color:#af8d69;font-size:8pt;font-weight:600;border-bottom:2px solid #af8d69}td{padding:2mm 4mm;border-bottom:1px solid #f0ebe2}';
+  css+='.toolbar{position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#af8d69,#8a6e47);color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100}';
+  css+='.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:#fff;color:#8a6e47}';
+  css+='@media print{.toolbar{display:none!important}}@media screen{body{background:#e5e7eb;padding:60px 10px 20px}}';
+
+  var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Guest Profile - '+esc(g.name)+'</title><style>'+css+'</style></head><body>';
+  h+='<div class="toolbar"><button onclick="window.print()">PDF Olarak Kaydet</button><span style="font-size:13px;opacity:.8">'+esc(g.name)+' — Misafir Profili</span></div>';
+  h+='<div class="page">';
+  h+='<div class="header"><h1><b>'+esc(g.name)+'</b></h1></div>';
+  h+='<div class="meta"><div><b>Odalar:</b> '+esc(roomList)+'</div><div><b>Toplam Touch:</b> '+g.touches+'</div><div><b>Gun:</b> '+dayCount+'</div><div><b>Donem:</b> '+fmtF+(g.firstSeen!==g.lastSeen?' — '+fmtL:'')+'</div></div>';
+
+  // Notes
+  if(note){
+    h+='<div class="section"><h3>Notlar / Tercihler</h3><div class="notes">'+esc(note)+'</div></div>';
+  }
+
+  // Butlers
+  h+='<div class="section"><h3>Butler Dagilimi</h3>';
+  for(var bn in g.butlers)h+='<span class="badge" style="background:#f3f4f6;color:#374151">'+esc(bn)+': '+g.butlers[bn]+'</span> ';
+  h+='</div>';
+
+  // Actions
+  h+='<div class="section"><h3>Islem Dagilimi</h3>';
+  var aList=Object.keys(g.actions).sort(function(a,b){return g.actions[b]-g.actions[a]});
+  for(var ai=0;ai<aList.length;ai++)h+='<span class="badge">'+esc(aList[ai])+': '+g.actions[aList[ai]]+'</span> ';
+  h+='</div>';
+
+  // Full log
+  h+='<div class="section"><h3>Hizmet Gecmisi</h3>';
+  h+='<table><thead><tr><th>Tarih</th><th>Saat</th><th>Butler</th><th>Oda</th><th>Islem</th><th>Detay</th></tr></thead><tbody>';
+  var sortedLogs=g.logs.sort(function(a,b){return a.date>b.date?-1:a.date<b.date?1:0});
+  for(var li=0;li<sortedLogs.length;li++){
+    var log=sortedLogs[li];
+    var ld=new Date(log.date+"T00:00:00");
+    var fD=("0"+ld.getDate()).slice(-2)+"."+("0"+(ld.getMonth()+1)).slice(-2)+"."+ld.getFullYear();
+    h+='<tr><td>'+fD+'</td><td>'+esc(log.time)+'</td><td>'+esc(log.butler)+'</td><td style="font-weight:700">'+esc(log.room)+'</td><td><span class="badge">'+esc(log.action)+'</span></td><td>'+esc(log.sentence||"")+'</td></tr>';
+  }
+  h+='</tbody></table></div>';
+  h+='</div></body></html>';
+  dl(h,"GuestProfile_"+g.name.replace(/\s+/g,"_")+".html");
+}
 
 function toggleSettingsSection(header){
   var body=header.nextElementSibling;
@@ -4921,7 +5106,7 @@ function importHandoff(file){
   handleRadarPDF, handleResDetailPDF, handleTracePDF, handleVacPDF,
   handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters, toggleBdiCompare,
   saveBdiOccupied, renderBdiCoverage, scanBdiGuests, showBdiMergeMode, bdiToggleAllGuests, filterGuestLibrary, clearGuestSearch, toggleGuestDetail,
-  addPmRoom, removePmRoom, switchBdiTab, saveGuestNote,
+  addPmRoom, removePmRoom, switchBdiTab, saveGuestNote, downloadPerfPdf, downloadPerfXlsx, exportGuestProfile,
   parseManualAndRender,
   removeAlertReason, removeAlertRow, removeBdiLog, removeBlockedDate,
   removeGuest, removeKW, removeRadarKW,
