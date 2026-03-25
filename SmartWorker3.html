@@ -258,12 +258,19 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div class="card" id="bdiLogCard">
 <div class="card-header"><h2 id="bdiLogCount">Gunluk Log</h2>
 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-<div style="display:flex;gap:0;margin-right:8px">
-<button id="bdiViewDay" class="tab active" style="font-size:11px;padding:5px 12px" onclick="setBdiView('day')">Gun</button>
-<button id="bdiViewMonth" class="tab" style="font-size:11px;padding:5px 12px" onclick="setBdiView('month')">Ay</button>
-<button id="bdiViewYear" class="tab" style="font-size:11px;padding:5px 12px" onclick="setBdiView('year')">Yil</button>
+<div style="display:flex;gap:0;margin-right:4px">
+<button id="bdiViewDay" class="tab active" style="font-size:10px;padding:4px 10px" onclick="setBdiView('day')">Gun</button>
+<button id="bdiViewWeek" class="tab" style="font-size:10px;padding:4px 10px" onclick="setBdiView('week')">Hafta</button>
+<button id="bdiViewMonth" class="tab" style="font-size:10px;padding:4px 10px" onclick="setBdiView('month')">Ay</button>
+<button id="bdiViewYear" class="tab" style="font-size:10px;padding:4px 10px" onclick="setBdiView('year')">Yil</button>
+<button id="bdiViewCustom" class="tab" style="font-size:10px;padding:4px 10px" onclick="setBdiView('custom')">Ozel</button>
 </div>
-<button class="btn btn-primary" onclick="downloadDidIt()">&#x2B07; PDF Rapor</button>
+<span id="bdiCustomRange" style="display:none;font-size:11px;color:#374151">
+<input type="date" id="bdiRangeStart" style="padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" onchange="renderBdiPeriod()">
+<span style="margin:0 4px">—</span>
+<input type="date" id="bdiRangeEnd" style="padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" onchange="renderBdiPeriod()">
+</span>
+<button class="btn btn-primary" onclick="downloadDidIt()">&#x2B07; PDF</button>
 <button class="btn btn-dark" onclick="downloadDidItXlsx()">&#x2B07; Excel</button>
 <button class="btn-sm" style="color:#ef4444;border-color:#ef4444" onclick="if(confirm('Bugunku tum loglari sil?')){bdiLogs=[];saveBdiLogs();renderBdiLog()}">Temizle</button>
 </div></div>
@@ -1561,46 +1568,75 @@ function renderBdiLog(){
   document.getElementById("bdi-log-wrap").innerHTML=h;
 }
 
-// ===== BDI MONTH/YEAR VIEWS =====
-var bdiViewMode="day"; // day | month | year
+// ===== BDI DATE RANGE VIEWS =====
+var bdiViewMode="day"; // day | week | month | year | custom
 
 function setBdiView(mode){
   bdiViewMode=mode;
-  document.getElementById("bdiViewDay").classList.toggle("active",mode==="day");
-  document.getElementById("bdiViewMonth").classList.toggle("active",mode==="month");
-  document.getElementById("bdiViewYear").classList.toggle("active",mode==="year");
+  ["Day","Week","Month","Year","Custom"].forEach(function(m){
+    var el=document.getElementById("bdiView"+m);
+    if(el)el.classList.toggle("active",mode===m.toLowerCase());
+  });
+  document.getElementById("bdiCustomRange").style.display=mode==="custom"?"inline":"none";
+  if(mode==="custom"){
+    // Default custom range: last 7 days
+    var ds=document.getElementById("bdiDate").value||new Date().toISOString().split("T")[0];
+    if(!document.getElementById("bdiRangeStart").value){
+      var s=new Date(ds+"T00:00:00");s.setDate(s.getDate()-6);
+      document.getElementById("bdiRangeStart").value=s.toISOString().split("T")[0];
+      document.getElementById("bdiRangeEnd").value=ds;
+    }
+  }
   if(mode==="day"){loadBdiLogs();renderBdiLog()}
   else{renderBdiPeriod()}
 }
 
-function loadBdiPeriodLogs(mode){
+function getBdiDateRange(){
   var ds=document.getElementById("bdiDate").value;
-  if(!ds)return [];
+  if(!ds)return null;
   var d=new Date(ds+"T00:00:00");
+  var start,end;
+  if(bdiViewMode==="day"){
+    start=ds;end=ds;
+  }else if(bdiViewMode==="week"){
+    var s=new Date(d);var day=s.getDay();var diff=s.getDate()-day+(day===0?-6:1); // Monday
+    s.setDate(diff);start=s.toISOString().split("T")[0];
+    var e=new Date(s);e.setDate(e.getDate()+6);end=e.toISOString().split("T")[0];
+  }else if(bdiViewMode==="month"){
+    start=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-01";
+    var last=new Date(d.getFullYear(),d.getMonth()+1,0);
+    end=last.toISOString().split("T")[0];
+  }else if(bdiViewMode==="year"){
+    start=d.getFullYear()+"-01-01";
+    end=d.getFullYear()+"-12-31";
+  }else if(bdiViewMode==="custom"){
+    start=document.getElementById("bdiRangeStart").value;
+    end=document.getElementById("bdiRangeEnd").value;
+    if(!start||!end)return null;
+  }
+  return {start:start,end:end};
+}
+
+function loadBdiRangeLogs(){
+  var range=getBdiDateRange();
+  if(!range)return [];
   var prefix="bdi_";
-  var matchYear=d.getFullYear();
-  var matchMonth=("0"+(d.getMonth()+1)).slice(-2);
   var all=[];
   for(var i=0;i<localStorage.length;i++){
     var key=localStorage.key(i);
     if(!key.startsWith(prefix))continue;
-    var datePart=key.substring(prefix.length); // e.g. "2026-03-25"
+    var datePart=key.substring(prefix.length);
     if(datePart.length<10)continue;
-    var keyYear=datePart.substring(0,4);
-    var keyMonth=datePart.substring(5,7);
-    var match=false;
-    if(mode==="month"&&keyYear==matchYear&&keyMonth===matchMonth)match=true;
-    if(mode==="year"&&keyYear==matchYear)match=true;
-    if(!match)continue;
-    try{
-      var items=JSON.parse(localStorage.getItem(key));
-      if(Array.isArray(items)){
-        for(var j=0;j<items.length;j++){items[j]._date=datePart}
-        all=all.concat(items);
-      }
-    }catch(e){}
+    if(datePart>=range.start&&datePart<=range.end){
+      try{
+        var items=JSON.parse(localStorage.getItem(key));
+        if(Array.isArray(items)){
+          for(var j=0;j<items.length;j++){items[j]._date=datePart}
+          all=all.concat(items);
+        }
+      }catch(e){}
+    }
   }
-  // Sort by date then time
   all.sort(function(a,b){
     if(a._date!==b._date)return a._date>b._date?-1:1;
     return (b.ts||0)-(a.ts||0);
@@ -1608,23 +1644,43 @@ function loadBdiPeriodLogs(mode){
   return all;
 }
 
-function renderBdiPeriod(){
-  var logs=loadBdiPeriodLogs(bdiViewMode);
+// Keep backward compat alias
+function loadBdiPeriodLogs(){ return loadBdiRangeLogs() }
+
+function getBdiPeriodLabel(){
+  var range=getBdiDateRange();
+  if(!range)return "";
+  var TR_MONTHS=["Ocak","Subat","Mart","Nisan","Mayis","Haziran","Temmuz","Agustos","Eylul","Ekim","Kasim","Aralik"];
   var ds=document.getElementById("bdiDate").value;
   var d=new Date(ds+"T00:00:00");
-  var TR_MONTHS=["Ocak","Subat","Mart","Nisan","Mayis","Haziran","Temmuz","Agustos","Eylul","Ekim","Kasim","Aralik"];
-  var periodLabel=bdiViewMode==="month"?TR_MONTHS[d.getMonth()]+" "+d.getFullYear():d.getFullYear()+" Yili";
+  if(bdiViewMode==="day")return ("0"+d.getDate()).slice(-2)+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+d.getFullYear();
+  if(bdiViewMode==="week"){
+    var s=new Date(range.start+"T00:00:00"),e=new Date(range.end+"T00:00:00");
+    return ("0"+s.getDate()).slice(-2)+"."+("0"+(s.getMonth()+1)).slice(-2)+" — "+("0"+e.getDate()).slice(-2)+"."+("0"+(e.getMonth()+1)).slice(-2)+"."+e.getFullYear();
+  }
+  if(bdiViewMode==="month")return TR_MONTHS[d.getMonth()]+" "+d.getFullYear();
+  if(bdiViewMode==="year")return d.getFullYear()+" Yili";
+  if(bdiViewMode==="custom"){
+    var s2=new Date(range.start+"T00:00:00"),e2=new Date(range.end+"T00:00:00");
+    return ("0"+s2.getDate()).slice(-2)+"."+("0"+(s2.getMonth()+1)).slice(-2)+"."+s2.getFullYear()+" — "+("0"+e2.getDate()).slice(-2)+"."+("0"+(e2.getMonth()+1)).slice(-2)+"."+e2.getFullYear();
+  }
+  return "";
+}
+
+function renderBdiPeriod(){
+  var logs=loadBdiRangeLogs();
+  var periodLabel=getBdiPeriodLabel();
 
   if(!logs.length){
     document.getElementById("bdi-log-wrap").innerHTML='<p class="hint">'+esc(periodLabel)+' icin kayit bulunamadi.</p>';
-    document.getElementById("bdiLogCount").textContent=periodLabel;
+    document.getElementById("bdiLogCount").textContent=periodLabel||"Log";
     document.getElementById("bdiStats").innerHTML="";
     return;
   }
 
   document.getElementById("bdiLogCount").textContent=periodLabel+" — "+logs.length+" Kayit";
 
-  // Stats: per butler, per day count, action breakdown
+  // Stats
   var bc={},ac={},dc={};
   for(var i=0;i<logs.length;i++){
     var l=logs[i];
@@ -1641,7 +1697,7 @@ function renderBdiPeriod(){
   for(var name in bc)sh+='<span class="stat"><b>'+bc[name]+'</b> '+esc(name)+'</span>';
   document.getElementById("bdiStats").innerHTML=sh;
 
-  // Group by date
+  // Table grouped by date
   var h='';
   var currentDate="";
   h+='<table><thead><tr><th>Tarih</th><th>Saat</th><th>Butler</th><th>Oda</th><th>Misafir</th><th>Islem</th><th>Detay</th></tr></thead><tbody>';
@@ -1663,7 +1719,7 @@ function renderBdiPeriod(){
   }
   h+='</tbody></table>';
 
-  // Action breakdown summary
+  // Action breakdown
   h+='<div style="margin-top:16px;padding:12px;background:#f9fafb;border-radius:8px">';
   h+='<h3 style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px">Islem Dagilimi</h3>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
@@ -1677,13 +1733,9 @@ function renderBdiPeriod(){
 }
 
 function downloadDidIt(){
-  var logs=(bdiViewMode==="day")?bdiLogs:loadBdiPeriodLogs(bdiViewMode);
+  var logs=(bdiViewMode==="day")?bdiLogs:loadBdiRangeLogs();
   if(!logs.length)return alert("Kayit yok!");
-  var ds=document.getElementById("bdiDate").value;
-  var d=new Date(ds+"T00:00:00");
-  var TR_M2=["Ocak","Subat","Mart","Nisan","Mayis","Haziran","Temmuz","Agustos","Eylul","Ekim","Kasim","Aralik"];
-  var dateStr=(bdiViewMode==="day")?(("0"+d.getDate()).slice(-2)+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+d.getFullYear()):
-    (bdiViewMode==="month")?(TR_M2[d.getMonth()]+" "+d.getFullYear()):(d.getFullYear()+" Yili");
+  var dateStr=getBdiPeriodLabel();
   var bc={},ac={};
   for(var i=0;i<logs.length;i++){var b=logs[i].butler;bc[b]=(bc[b]||0)+1;var a=logs[i].action;ac[a]=(ac[a]||0)+1}
   var css='@page{size:A4;margin:15mm 20mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Lato",Arial,sans-serif;color:#2d2d2d}' +
@@ -1710,6 +1762,7 @@ function downloadDidIt(){
   h+='<div class="page">';
   h+='<div class="header"><h1>The <b>Butler</b> Did It.</h1><div class="date">Raffles Istanbul &mdash; '+dateStr+'</div></div>';
   // Summary
+  var ds=document.getElementById("bdiDate").value;
   var dayCount=1;
   if(bdiViewMode!=="day"){var dc={};for(var i=0;i<logs.length;i++){dc[logs[i]._date||ds]=1}dayCount=Object.keys(dc).length}
   var avgPerDay2=Math.round(logs.length/dayCount*10)/10;
@@ -1731,18 +1784,15 @@ function downloadDidIt(){
   h+='<div class="footer"><img src="'+RLOGO+'" alt="Raffles Istanbul"></div>';
   h+='</div>';
   h+='</body></html>';
-  var fn="ButlerDidIt_"+(bdiViewMode==="day"?dateStr.replace(/\./g,""):(bdiViewMode==="month"?TR_M2[d.getMonth()]+"_"+d.getFullYear():d.getFullYear()));
+  var fn="ButlerDidIt_"+dateStr.replace(/[\.\s—\/]/g,"_").replace(/_+/g,"_");
   dl(h,fn+".html");
 }
 
 function downloadDidItXlsx(){
-  var logs=(bdiViewMode==="day")?bdiLogs:loadBdiPeriodLogs(bdiViewMode);
+  var logs=(bdiViewMode==="day")?bdiLogs:loadBdiRangeLogs();
   if(!logs.length)return alert("Kayit yok!");
   var ds=document.getElementById("bdiDate").value;
-  var d=new Date(ds+"T00:00:00");
-  var TR_M3=["Ocak","Subat","Mart","Nisan","Mayis","Haziran","Temmuz","Agustos","Eylul","Ekim","Kasim","Aralik"];
-  var dateStr=(bdiViewMode==="day")?(("0"+d.getDate()).slice(-2)+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+d.getFullYear()):
-    (bdiViewMode==="month")?(TR_M3[d.getMonth()]+"_"+d.getFullYear()):(d.getFullYear()+"");
+  var dateStr=getBdiPeriodLabel();
   var data=logs.map(function(l){
     var row={};
     if(bdiViewMode!=="day"){var dd3=new Date((l._date||ds)+"T00:00:00");row.Date=("0"+dd3.getDate()).slice(-2)+"."+("0"+(dd3.getMonth()+1)).slice(-2)+"."+dd3.getFullYear()}
@@ -1754,7 +1804,7 @@ function downloadDidItXlsx(){
   ws["!cols"]=cols;
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Butler Did It");
-  XLSX.writeFile(wb,"ButlerDidIt_"+dateStr.replace(/[\.\s]/g,"")+".xlsx");
+  XLSX.writeFile(wb,"ButlerDidIt_"+dateStr.replace(/[\.\s—\/]/g,"_").replace(/_+/g,"_")+".xlsx");
 }
 
 
