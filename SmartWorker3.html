@@ -334,6 +334,20 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div id="bdiUntouchedList" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div>
 </div>
 </div>
+</div>
+
+<!-- Storage & Data Management -->
+<div class="card">
+<h2>&#128190; Depolama &amp; Veri Yonetimi</h2>
+<div id="storageDashboard" style="margin-bottom:12px"></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+  <button class="btn btn-primary" style="font-size:11px;padding:6px 16px" onclick="exportBdiBackup()">&#128190; Yedekle (JSON)</button>
+  <button class="btn btn-dark" style="font-size:11px;padding:6px 16px" onclick="document.getElementById('bdiImportInput').click()">&#128194; Iceri Aktar</button>
+  <input type="file" id="bdiImportInput" accept=".json" multiple style="display:none" onchange="importBdiBackup(this.files)">
+  <button class="btn-sm" style="font-size:11px;padding:6px 16px;background:#fef3c7;color:#92400e;border-color:#fbbf24" onclick="autoArchiveBdi()">&#128230; Arsivle (3+ ay oncesi)</button>
+</div>
+<div id="bdiImportStatus" style="margin-top:8px;font-size:11px;color:#6b7280"></div>
+</div>
 </div><!-- end bdiTab_coverage -->
 
 <!-- TAB: Guest Library -->
@@ -1612,7 +1626,7 @@ function switchBdiTab(tab){
     el.classList.toggle("active",i===(tab==="entry"?0:tab==="log"?1:tab==="coverage"?2:3));
   });
   if(tab==="log"){loadBdiLogs();renderBdiLog()}
-  if(tab==="coverage"){loadBdiOccupied();renderBdiCoverage();renderUntouchedRooms()}
+  if(tab==="coverage"){loadBdiOccupied();renderBdiCoverage();renderUntouchedRooms();renderStorageDashboard()}
   if(tab==="guests"){if(!_guestLibrary.length)scanBdiGuests();else filterGuestLibrary()}
 }
 
@@ -2310,6 +2324,221 @@ function renderBdiCoverage(){
   detail.textContent=served+"/"+occupied+" oda hizmet aldi";
 }
 
+// ===== STORAGE DASHBOARD =====
+function getStorageUsage(){
+  var total=0;var items=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    var size=(localStorage.getItem(key).length*2)/1024; // KB
+    items.push({key:key,kb:Math.round(size*10)/10});
+    total+=size;
+  }
+  items.sort(function(a,b){return b.kb-a.kb});
+  // Group by prefix
+  var groups={"bdi_":0,"mb_":0,"exp_":0,"kw_":0,"ir_":0};
+  var other=0;
+  for(var i=0;i<items.length;i++){
+    var matched=false;
+    for(var p in groups){if(items[i].key.startsWith(p)){groups[p]+=items[i].kb;matched=true;break}}
+    if(!matched)other+=items[i].kb;
+  }
+  groups["diger"]=other;
+  return {totalKB:Math.round(total),limitKB:5120,items:items,groups:groups};
+}
+
+function renderStorageDashboard(){
+  var u=getStorageUsage();
+  var pct=Math.min(100,Math.round(u.totalKB/u.limitKB*100));
+  var clr=pct>=90?"#dc2626":pct>=70?"#eab308":"#059669";
+  var h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
+  h+='<div style="flex:1;background:#f3f4f6;border-radius:4px;height:18px"><div style="height:100%;border-radius:4px;background:'+clr+';width:'+pct+'%;transition:width .3s"></div></div>';
+  h+='<span style="font-size:13px;font-weight:800;color:'+clr+';min-width:80px">'+u.totalKB+' KB / '+u.limitKB+' KB</span>';
+  h+='</div>';
+  if(pct>=90)h+='<div style="padding:6px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:11px;color:#991b1b;margin-bottom:8px">&#9888; Depolama neredeyse dolu! Yedekleme yapin ve eski verileri arsivleyin.</div>';
+  else if(pct>=70)h+='<div style="padding:6px 10px;background:#fefce8;border:1px solid #fde68a;border-radius:6px;font-size:11px;color:#92400e;margin-bottom:8px">&#9888; Depolama %'+pct+' dolu. Yedekleme yapmaniz onerilir.</div>';
+  // Breakdown
+  var labels={"bdi_":"BDI Kayitlari","mb_":"Minibar","exp_":"Expense","kw_":"Anahtar Kelimeler","ir_":"Radar Ayarlari","diger":"Diger"};
+  h+='<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px">';
+  for(var p in u.groups){
+    if(u.groups[p]<0.1)continue;
+    h+='<span style="padding:3px 10px;background:#f3f4f6;border-radius:6px">'+labels[p]+': <b>'+Math.round(u.groups[p])+' KB</b></span>';
+  }
+  h+='</div>';
+  document.getElementById("storageDashboard").innerHTML=h;
+}
+
+// ===== EXPORT (BACKUP) =====
+function exportBdiBackup(){
+  var backup={version:"BDI_BACKUP_v1",exportDate:new Date().toISOString(),data:{}};
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(key.startsWith("bdi_")){
+      try{backup.data[key]=JSON.parse(localStorage.getItem(key))}
+      catch(e){backup.data[key]=localStorage.getItem(key)}
+    }
+  }
+  var json=JSON.stringify(backup,null,2);
+  var blob=new Blob([json],{type:"application/json"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;
+  a.download="BDI_Yedek_"+new Date().toISOString().split("T")[0]+".json";
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  document.getElementById("bdiImportStatus").innerHTML='<span style="color:#059669">&#10003; Yedek dosyasi indirildi.</span>';
+}
+
+// ===== IMPORT WITH DEDUPLICATION =====
+function importBdiBackup(files){
+  if(!files||!files.length)return;
+  var totalNew=0,totalSkipped=0,fileCount=files.length,processed=0;
+
+  function processFile(file){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var imported=JSON.parse(e.target.result);
+        var data=imported.data||imported; // support both {data:{}} and raw format
+
+        for(var key in data){
+          if(!key.startsWith("bdi_"))continue;
+
+          // Handle non-array values (guest_notes, guest_merges, pm_rooms, occ_*)
+          if(key==="bdi_guest_notes"){
+            var existing={}; try{existing=JSON.parse(localStorage.getItem(key)||"{}")}catch(ex){}
+            var incoming=typeof data[key]==="string"?JSON.parse(data[key]):data[key];
+            for(var gn in incoming){
+              if(!existing[gn]||incoming[gn].length>existing[gn].length)existing[gn]=incoming[gn];
+            }
+            localStorage.setItem(key,JSON.stringify(existing));
+            continue;
+          }
+          if(key==="bdi_guest_merges"){
+            var existing2={}; try{existing2=JSON.parse(localStorage.getItem(key)||"{}")}catch(ex){}
+            var incoming2=typeof data[key]==="string"?JSON.parse(data[key]):data[key];
+            for(var mn in incoming2){if(!existing2[mn])existing2[mn]=incoming2[mn]}
+            localStorage.setItem(key,JSON.stringify(existing2));
+            continue;
+          }
+          if(key==="bdi_pm_rooms"){
+            var existingPm=[]; try{existingPm=JSON.parse(localStorage.getItem(key)||"[]")}catch(ex){}
+            var incomingPm=typeof data[key]==="string"?JSON.parse(data[key]):data[key];
+            if(Array.isArray(incomingPm)){
+              var pmRoomSet={};existingPm.forEach(function(r){pmRoomSet[r.room]=1});
+              incomingPm.forEach(function(r){if(!pmRoomSet[r.room]){existingPm.push(r)}});
+              localStorage.setItem(key,JSON.stringify(existingPm));
+            }
+            continue;
+          }
+          if(key.indexOf("_occ_")>=0||key.indexOf("_archive_")>=0){
+            // Occupied counts and archives: keep if not exists
+            if(!localStorage.getItem(key)){
+              localStorage.setItem(key,typeof data[key]==="string"?data[key]:JSON.stringify(data[key]));
+            }
+            continue;
+          }
+
+          // Daily log arrays: deduplicate by butler+room+action
+          var incoming3=data[key];
+          if(typeof incoming3==="string"){try{incoming3=JSON.parse(incoming3)}catch(ex){continue}}
+          if(!Array.isArray(incoming3))continue;
+
+          var existing3=[];
+          try{var s=localStorage.getItem(key);if(s)existing3=JSON.parse(s)}catch(ex){}
+
+          // Build dedup set from existing entries
+          var dedupSet={};
+          for(var j=0;j<existing3.length;j++){
+            var e=existing3[j];
+            dedupSet[e.butler+"|"+e.room+"|"+e.action]=1;
+          }
+
+          // Add non-duplicate entries
+          for(var j=0;j<incoming3.length;j++){
+            var entry=incoming3[j];
+            var dedupKey=entry.butler+"|"+entry.room+"|"+entry.action;
+            if(dedupSet[dedupKey]){totalSkipped++}
+            else{existing3.push(entry);dedupSet[dedupKey]=1;totalNew++}
+          }
+          localStorage.setItem(key,JSON.stringify(existing3));
+        }
+      }catch(err){
+        console.error("Import error:",err);
+        document.getElementById("bdiImportStatus").innerHTML='<span style="color:#dc2626">&#10007; Dosya okunamadi: '+esc(file.name)+' — '+esc(err.message)+'</span>';
+      }
+      processed++;
+      if(processed>=fileCount){
+        document.getElementById("bdiImportStatus").innerHTML='<span style="color:#059669">&#10003; '+fileCount+' dosya islendi: <b>'+totalNew+'</b> yeni kayit eklendi, <b>'+totalSkipped+'</b> tekrar atlandi.</span>';
+        renderStorageDashboard();
+        loadBdiLogs();renderBdiLog();
+        renderPmRooms();applyPmRooms();
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  for(var i=0;i<files.length;i++)processFile(files[i]);
+}
+
+// ===== AUTO-ARCHIVE =====
+function autoArchiveBdi(){
+  var now=new Date();
+  var threeMonthsAgo=new Date(now.getFullYear(),now.getMonth()-3,1);
+  var cutoff=threeMonthsAgo.toISOString().split("T")[0]; // e.g. "2025-12-01"
+  var prefix="bdi_";
+  var monthsToArchive={}; // "YYYYMM" → [{entry, date}]
+  var keysToDelete=[];
+
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!key.startsWith(prefix))continue;
+    var datePart=key.substring(prefix.length);
+    if(datePart.length<10||datePart>=cutoff)continue; // Skip recent or non-date keys
+    if(datePart.indexOf("archive")>=0||datePart.indexOf("occ")>=0||datePart.indexOf("guest")>=0||datePart.indexOf("pm")>=0)continue;
+
+    var ym=datePart.substring(0,4)+datePart.substring(5,7); // "202512"
+    try{
+      var items=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(items))continue;
+      if(!monthsToArchive[ym])monthsToArchive[ym]=[];
+      for(var j=0;j<items.length;j++){items[j]._date=datePart}
+      monthsToArchive[ym]=monthsToArchive[ym].concat(items);
+      keysToDelete.push(key);
+    }catch(e){}
+  }
+
+  if(!keysToDelete.length){
+    alert("Arsivlenecek eski veri bulunamadi (3 aydan eski kayit yok).");
+    return;
+  }
+
+  // Build archive summaries
+  var archiveCount=0;
+  for(var ym in monthsToArchive){
+    var logs=monthsToArchive[ym];
+    var summary={totalTouches:logs.length,butlers:{},actions:{},rooms:{},guests:{},dayCount:0,days:{}};
+    for(var i=0;i<logs.length;i++){
+      var l=logs[i];
+      summary.butlers[l.butler]=(summary.butlers[l.butler]||0)+1;
+      summary.actions[l.action]=(summary.actions[l.action]||0)+1;
+      summary.rooms[l.room]=(summary.rooms[l.room]||0)+1;
+      if(l.guest)summary.guests[l.guest]=(summary.guests[l.guest]||0)+1;
+      summary.days[l._date]=1;
+    }
+    summary.dayCount=Object.keys(summary.days).length;
+    delete summary.days;
+    localStorage.setItem("bdi_archive_"+ym,JSON.stringify(summary));
+    archiveCount++;
+  }
+
+  // Delete original daily keys
+  for(var i=0;i<keysToDelete.length;i++){
+    localStorage.removeItem(keysToDelete[i]);
+  }
+
+  var TR_AY=["","Ocak","Subat","Mart","Nisan","Mayis","Haziran","Temmuz","Agustos","Eylul","Ekim","Kasim","Aralik"];
+  alert(archiveCount+" ay arsivlendi, "+keysToDelete.length+" gunluk kayit sıkıştırıldı.\nMisafir kutuphanesi ve istatistikler korundu.");
+  renderStorageDashboard();
+}
+
 // ===== BDI GUEST PROFILES =====
 var bdiGuestMerges={}; // {normalizedName: canonicalName} - stored in localStorage
 
@@ -2339,10 +2568,62 @@ function scanBdiGuests(){
   loadBdiMerges();
   var prefix="bdi_";
   var guests={};
+
+  function addToGuest(guestName,room,action,butler,datePart,logEntry){
+    var canonical=getCanonicalName(guestName);
+    if(!guests[canonical])guests[canonical]={name:canonical,rawNames:{},rooms:{},dates:{},touches:0,actions:{},butlers:{},logs:[],firstSeen:datePart,lastSeen:datePart};
+    var g=guests[canonical];
+    g.rawNames[guestName.trim()]=1;
+    g.rooms[room]=1;
+    g.dates[datePart]=1;
+    g.touches++;
+    g.actions[action]=(g.actions[action]||0)+1;
+    if(butler)g.butlers[butler]=(g.butlers[butler]||0)+1;
+    if(logEntry)g.logs.push(logEntry);
+    if(datePart<g.firstSeen)g.firstSeen=datePart;
+    if(datePart>g.lastSeen)g.lastSeen=datePart;
+  }
+
   for(var i=0;i<localStorage.length;i++){
     var key=localStorage.key(i);
     if(!key.startsWith(prefix)||key.indexOf("_occ_")>=0||key.indexOf("_guest_")>=0||key.indexOf("_pm_")>=0)continue;
     var datePart=key.substring(prefix.length);
+
+    // Handle archive keys: bdi_archive_YYYYMM
+    if(datePart.startsWith("archive_")){
+      try{
+        var arch=JSON.parse(localStorage.getItem(key));
+        var ym=datePart.substring(8); // "202512"
+        var archDate=ym.substring(0,4)+"-"+ym.substring(4,6)+"-01";
+        // Add guest data from archive summary
+        if(arch.guests){
+          for(var gn in arch.guests){
+            if(!gn.trim())continue;
+            // We don't have per-entry detail from archives, so add summary-level data
+            var canonical=getCanonicalName(gn);
+            if(!guests[canonical])guests[canonical]={name:canonical,rawNames:{},rooms:{},dates:{},touches:0,actions:{},butlers:{},logs:[],firstSeen:archDate,lastSeen:archDate};
+            var g=guests[canonical];
+            g.rawNames[gn.trim()]=1;
+            g.touches+=arch.guests[gn];
+            g.dates[archDate]=1;
+            if(archDate<g.firstSeen)g.firstSeen=archDate;
+            if(archDate>g.lastSeen)g.lastSeen=archDate;
+            // Add an archive summary log entry
+            var TR_AY2=["","Ocak","Subat","Mart","Nisan","Mayis","Haziran","Temmuz","Agustos","Eylul","Ekim","Kasim","Aralik"];
+            var monthIdx=parseInt(ym.substring(4,6));
+            g.logs.push({date:archDate,time:"",butler:"(arsiv)",room:"—",action:"[Arsivlenmis]",sentence:TR_AY2[monthIdx]+" "+ym.substring(0,4)+" — "+arch.guests[gn]+" touch",note:""});
+          }
+          // Add room data from archive
+          if(arch.rooms)for(var r in arch.rooms){for(var cn in guests){if(guests[cn].dates[archDate])guests[cn].rooms[r]=1}}
+          // Add butler data from archive
+          if(arch.butlers)for(var b in arch.butlers){for(var cn in guests){if(guests[cn].dates[archDate])guests[cn].butlers[b]=(guests[cn].butlers[b]||0)}}
+          // Add action data from archive
+          if(arch.actions)for(var a in arch.actions){for(var cn in guests){if(guests[cn].dates[archDate])guests[cn].actions[a]=(guests[cn].actions[a]||0)}}
+        }
+      }catch(e){}
+      continue;
+    }
+
     if(datePart.length<10)continue;
     try{
       var items=JSON.parse(localStorage.getItem(key));
@@ -2350,18 +2631,7 @@ function scanBdiGuests(){
       for(var j=0;j<items.length;j++){
         var l=items[j];
         if(!l.guest||!l.guest.trim())continue;
-        var canonical=getCanonicalName(l.guest);
-        if(!guests[canonical])guests[canonical]={name:canonical,rawNames:{},rooms:{},dates:{},touches:0,actions:{},butlers:{},logs:[],firstSeen:datePart,lastSeen:datePart};
-        var g=guests[canonical];
-        g.rawNames[l.guest.trim()]=1;
-        g.rooms[l.room]=1;
-        g.dates[datePart]=1;
-        g.touches++;
-        g.actions[l.action]=(g.actions[l.action]||0)+1;
-        g.butlers[l.butler]=(g.butlers[l.butler]||0)+1;
-        g.logs.push({date:datePart,time:l.time,butler:l.butler,room:l.room,action:l.action,sentence:l.sentence,note:l.note});
-        if(datePart<g.firstSeen)g.firstSeen=datePart;
-        if(datePart>g.lastSeen)g.lastSeen=datePart;
+        addToGuest(l.guest,l.room,l.action,l.butler,datePart,{date:datePart,time:l.time,butler:l.butler,room:l.room,action:l.action,sentence:l.sentence,note:l.note});
       }
     }catch(e){}
   }
@@ -5107,6 +5377,7 @@ function importHandoff(file){
   handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters, toggleBdiCompare,
   saveBdiOccupied, renderBdiCoverage, scanBdiGuests, showBdiMergeMode, bdiToggleAllGuests, filterGuestLibrary, clearGuestSearch, toggleGuestDetail,
   addPmRoom, removePmRoom, switchBdiTab, saveGuestNote, downloadPerfPdf, downloadPerfXlsx, exportGuestProfile,
+  renderStorageDashboard, exportBdiBackup, importBdiBackup, autoArchiveBdi,
   parseManualAndRender,
   removeAlertReason, removeAlertRow, removeBdiLog, removeBlockedDate,
   removeGuest, removeKW, removeRadarKW,
