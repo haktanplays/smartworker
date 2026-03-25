@@ -227,6 +227,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div><label style="font-size:11px;display:block;margin-bottom:3px;color:#6b7280">Tarih</label><input type="date" id="bdiDate" onchange="loadBdiLogs();renderBdiLog()" style="width:100%;padding:7px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
 <div id="bdiGuestHint" style="font-size:11px;color:#af8d69;font-weight:600;padding-bottom:8px;min-height:14px"></div>
 </div>
+<div id="bdiTimeline" style="display:none;margin-bottom:10px;padding:10px 14px;background:#fefce8;border-left:3px solid #eab308;border-radius:0 6px 6px 0;font-size:11px;line-height:1.7;color:#713f12"></div>
 <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">
 <div><label style="font-size:11px;display:block;margin-bottom:3px;color:#6b7280">Islem</label><select id="bdiAction" onchange="toggleBdiCustom()" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#fff"></select></div>
 <div><label style="font-size:11px;display:block;margin-bottom:3px;color:#6b7280">Ek Not <span style="font-weight:400;color:#9ca3af">(opsiyonel)</span></label><input id="bdiNote" type="text" placeholder="" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"></div>
@@ -271,6 +272,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <span style="margin:0 4px">—</span>
 <input type="date" id="bdiRangeEnd" style="padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" onchange="renderBdiPeriod()">
 </span>
+<button class="btn-sm" style="background:#fef3c7;color:#92400e;border-color:#fbbf24;font-size:10px" onclick="toggleBdiCompare()">&#128200; Karsilastir</button>
 <button class="btn btn-primary" onclick="downloadDidIt()">&#x2B07; PDF</button>
 <button class="btn btn-dark" onclick="downloadDidItXlsx()">&#x2B07; Excel</button>
 <button class="btn-sm" style="color:#ef4444;border-color:#ef4444" onclick="if(confirm('Bugunku tum loglari sil?')){bdiLogs=[];saveBdiLogs();renderBdiLog()}">Temizle</button>
@@ -283,6 +285,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <button class="btn-sm" onclick="clearBdiFilters()" style="font-size:10px;padding:3px 8px">Temizle</button>
   <span id="bdiFilterCount" style="font-size:10px;color:#6b7280"></span>
 </div>
+<div id="bdiComparePanel" style="display:none;margin-bottom:12px;padding:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px"></div>
 <div id="bdi-log-wrap" style="overflow-x:auto"><p class="hint">Henuz kayit yok.</p></div>
 </div>
 </div>
@@ -1397,13 +1400,56 @@ async function handleVacPDF(file){
 function showVacGuest(){
   var room=document.getElementById("bdiRoom").value.trim();
   var hint=document.getElementById("bdiGuestHint");
+  var timeline=document.getElementById("bdiTimeline");
   if(room&&vacRooms[room]){
-    // Convert "LastName, FirstName" to "FirstName LastName"
     hint.textContent=vacNameFmt(room);
   }else{
     hint.textContent="";
   }
+  // Show timeline for this room
+  if(room&&room.length>=3){
+    renderBdiRoomTimeline(room);
+  }else{
+    timeline.style.display="none";
+  }
   updateBdiPreview();
+}
+
+function renderBdiRoomTimeline(room){
+  var timeline=document.getElementById("bdiTimeline");
+  var prefix="bdi_";
+  var days=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!key.startsWith(prefix))continue;
+    var datePart=key.substring(prefix.length);
+    if(datePart.length<10)continue;
+    try{
+      var items=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(items))continue;
+      var roomItems=items.filter(function(l){return String(l.room)===String(room)});
+      if(roomItems.length)days.push({date:datePart,items:roomItems});
+    }catch(e){}
+  }
+  if(!days.length){timeline.style.display="none";return}
+  days.sort(function(a,b){return a.date>b.date?1:-1});
+  var today=document.getElementById("bdiDate").value||new Date().toISOString().split("T")[0];
+  var totalTouches=0;
+  var h='<div style="font-weight:700;margin-bottom:4px">&#128197; Oda '+esc(room)+' — Konaklama Gecmisi</div>';
+  for(var i=0;i<days.length;i++){
+    var d=days[i];
+    var dd=new Date(d.date+"T00:00:00");
+    var fD=("0"+dd.getDate()).slice(-2)+"."+("0"+(dd.getMonth()+1)).slice(-2);
+    var isToday=d.date===today;
+    var actions=d.items.map(function(l){return l.action}).filter(function(v,i,a){return a.indexOf(v)===i});
+    totalTouches+=d.items.length;
+    h+='<div style="'+(isToday?'font-weight:700;color:#92400e':'')+'">'+
+      (i<days.length-1?'├':'└')+' <b>'+fD+'</b>'+(isToday?' (bugun)':'')+' — '+
+      d.items.length+' touch: '+actions.map(function(a){return esc(a)}).join(', ')+'</div>';
+  }
+  h+='<div style="margin-top:4px;font-weight:700;color:#b45309">Toplam: '+totalTouches+' touch / '+days.length+' gun</div>';
+  timeline.innerHTML=h;
+  timeline.style.display="block";
 }
 
 function vacNameFmt(room){
@@ -1905,6 +1951,132 @@ function renderBdiPerformance(){
   }
 
   document.getElementById("bdi-log-wrap").innerHTML=h;
+}
+
+// ===== BDI COMPARISON VIEW =====
+var bdiCompareVisible=false;
+
+function toggleBdiCompare(){
+  bdiCompareVisible=!bdiCompareVisible;
+  var panel=document.getElementById("bdiComparePanel");
+  if(!bdiCompareVisible){panel.style.display="none";return}
+  renderBdiCompare();
+}
+
+function getPreviousRange(){
+  var range=getBdiDateRange();
+  if(!range)return null;
+  var s=new Date(range.start+"T00:00:00");
+  var e=new Date(range.end+"T00:00:00");
+  var span=Math.round((e-s)/(1000*60*60*24))+1; // days in range
+  var prevEnd=new Date(s);prevEnd.setDate(prevEnd.getDate()-1);
+  var prevStart=new Date(prevEnd);prevStart.setDate(prevStart.getDate()-span+1);
+  return {start:prevStart.toISOString().split("T")[0],end:prevEnd.toISOString().split("T")[0]};
+}
+
+function loadBdiLogsForRange(range){
+  if(!range)return [];
+  var prefix="bdi_";var all=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!key.startsWith(prefix))continue;
+    var datePart=key.substring(prefix.length);
+    if(datePart.length<10)continue;
+    if(datePart>=range.start&&datePart<=range.end){
+      try{var items=JSON.parse(localStorage.getItem(key));
+        if(Array.isArray(items)){for(var j=0;j<items.length;j++){items[j]._date=datePart}all=all.concat(items)}
+      }catch(e){}
+    }
+  }
+  return all;
+}
+
+function computeBdiStats(logs){
+  var bc={},ac={},dc={},rooms={};
+  for(var i=0;i<logs.length;i++){
+    var l=logs[i];
+    bc[l.butler]=(bc[l.butler]||0)+1;
+    ac[l.action]=(ac[l.action]||0)+1;
+    dc[l._date||"?"]=1;
+    rooms[l.room]=1;
+  }
+  return {total:logs.length,butlers:bc,actions:ac,days:Object.keys(dc).length,rooms:Object.keys(rooms).length};
+}
+
+function fmtRange(range){
+  var s=new Date(range.start+"T00:00:00"),e=new Date(range.end+"T00:00:00");
+  var fs=("0"+s.getDate()).slice(-2)+"."+("0"+(s.getMonth()+1)).slice(-2);
+  var fe=("0"+e.getDate()).slice(-2)+"."+("0"+(e.getMonth()+1)).slice(-2)+"."+e.getFullYear();
+  return range.start===range.end?fe:fs+" — "+fe;
+}
+
+function renderBdiCompare(){
+  var panel=document.getElementById("bdiComparePanel");
+  var curRange=getBdiDateRange();
+  var prevRange=getPreviousRange();
+  if(!curRange||!prevRange){panel.innerHTML='<p style="font-size:11px;color:#92400e">Karsilastirma icin tarih araligini secin.</p>';panel.style.display="block";return}
+
+  var curLogs=loadBdiLogsForRange(curRange);
+  var prevLogs=loadBdiLogsForRange(prevRange);
+  var cur=computeBdiStats(curLogs);
+  var prev=computeBdiStats(prevLogs);
+
+  function arrow(cur,prev){
+    if(cur>prev)return '<span style="color:#059669">&#9650; +'+(cur-prev)+'</span>';
+    if(cur<prev)return '<span style="color:#dc2626">&#9660; '+(cur-prev)+'</span>';
+    return '<span style="color:#6b7280">— 0</span>';
+  }
+
+  var h='<div style="font-weight:700;font-size:12px;color:#92400e;margin-bottom:10px">&#128200; Donem Karsilastirmasi</div>';
+  h+='<table style="font-size:12px;width:100%;max-width:500px"><thead><tr>';
+  h+='<th style="text-align:left;padding:4px 8px"></th>';
+  h+='<th style="text-align:center;padding:4px 8px;font-size:10px;color:#6b7280">'+fmtRange(prevRange)+'</th>';
+  h+='<th style="text-align:center;padding:4px 8px;font-size:10px;color:#92400e;font-weight:700">'+fmtRange(curRange)+'</th>';
+  h+='<th style="text-align:center;padding:4px 8px;font-size:10px">Degisim</th>';
+  h+='</tr></thead><tbody>';
+
+  var rows=[
+    ["Toplam Touch",prev.total,cur.total],
+    ["Aktif Gun",prev.days,cur.days],
+    ["Farkli Oda",prev.rooms,cur.rooms],
+  ];
+  // Per butler comparison
+  var allButlers={};
+  for(var b in prev.butlers)allButlers[b]=1;
+  for(var b in cur.butlers)allButlers[b]=1;
+  var bList=Object.keys(allButlers).sort();
+  for(var i=0;i<bList.length;i++){
+    rows.push([esc(bList[i]),(prev.butlers[bList[i]]||0),(cur.butlers[bList[i]]||0)]);
+  }
+
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i];
+    var isSummary=i<3;
+    h+='<tr style="'+(isSummary?'font-weight:600':'')+(i===2?';border-bottom:2px solid #fde68a':'')+'"><td style="padding:4px 8px">'+r[0]+'</td>';
+    h+='<td style="text-align:center;padding:4px 8px;color:#6b7280">'+r[1]+'</td>';
+    h+='<td style="text-align:center;padding:4px 8px;font-weight:700">'+r[2]+'</td>';
+    h+='<td style="text-align:center;padding:4px 8px;font-size:11px">'+arrow(r[2],r[1])+'</td></tr>';
+  }
+  h+='</tbody></table>';
+
+  // Top action comparison
+  var allActions={};
+  for(var a in prev.actions)allActions[a]=1;
+  for(var a in cur.actions)allActions[a]=1;
+  var aList=Object.keys(allActions).sort(function(a,b){return (cur.actions[b]||0)-(cur.actions[a]||0)});
+  if(aList.length){
+    h+='<div style="margin-top:10px;font-size:11px"><b>Islem Karsilastirmasi:</b></div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">';
+    for(var i=0;i<aList.length;i++){
+      var a=aList[i],pc=cur.actions[a]||0,pp=prev.actions[a]||0;
+      var diff=pc-pp;var clr=diff>0?"#059669":diff<0?"#dc2626":"#6b7280";
+      h+='<span class="badge" style="background:#fff;border:1px solid #fde68a;font-size:10px;padding:2px 8px">'+esc(a)+': <b>'+pc+'</b> <span style="color:'+clr+';font-size:9px">'+(diff>0?'+':'')+diff+'</span></span>';
+    }
+    h+='</div>';
+  }
+
+  panel.innerHTML=h;
+  panel.style.display="block";
 }
 
 // ===== BDI FILTERED LOGS FOR DOWNLOAD =====
@@ -4308,7 +4480,7 @@ function importHandoff(file){
   exportHandoff,
   filterRadar, handleArrPDF, handleChangesPDF,
   handleRadarPDF, handleResDetailPDF, handleTracePDF, handleVacPDF,
-  handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters,
+  handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters, toggleBdiCompare,
   parseManualAndRender,
   removeAlertReason, removeAlertRow, removeBdiLog, removeBlockedDate,
   removeGuest, removeKW, removeRadarKW,
