@@ -207,10 +207,19 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 
 <!-- ===== BUTLER DID IT PAGE ===== -->
 <div class="page" id="page-didit">
-<div class="card">
-<h2>Vacant Rooms PDF Yukle</h2>
-<p class="hint" style="margin-bottom:10px">HSK01124 Vacant Rooms raporu — oda-misafir eslestirmesi icin.</p>
-<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+
+<!-- BDI Page Tabs -->
+<div class="tabs" style="margin-bottom:0">
+<div class="tab active" onclick="switchBdiTab('entry')">Kayit Girisi</div>
+<div class="tab" onclick="switchBdiTab('log')">Log &amp; Rapor</div>
+<div class="tab" onclick="switchBdiTab('coverage')">Kapsam</div>
+<div class="tab" onclick="switchBdiTab('guests')">Misafir Kutuphanesi</div>
+</div>
+
+<!-- TAB: Entry -->
+<div id="bdiTab_entry">
+<div class="card" style="border-radius:0 0 10px 10px;margin-top:0">
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
 <div class="upload-area" id="vacDropZone" style="flex:1;min-width:200px;padding:12px" onclick="document.getElementById('vacPdfInput').click()">
 <div style="font-size:20px;margin-bottom:4px">&#127968;</div>
 <div style="font-size:12px;font-weight:600;color:#374151">VAC PDF surukle veya tikla</div>
@@ -219,7 +228,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div id="vacPdfStatus" style="font-size:12px;color:#6b7280"></div>
 </div>
 <!-- PM Rooms -->
-<div style="margin-top:12px;padding:10px 14px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px">
+<div style="padding:10px 14px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
   <span style="font-size:12px;font-weight:700;color:#7c3aed">&#128274; PM / Sabit Odalar</span>
   <span id="pmRoomCount" style="font-size:10px;color:#9ca3af"></span>
@@ -244,7 +253,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">
 <div><label style="font-size:11px;display:block;margin-bottom:3px;color:#6b7280">Islem</label><select id="bdiAction" onchange="toggleBdiCustom()" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#fff"></select></div>
 <div><label style="font-size:11px;display:block;margin-bottom:3px;color:#6b7280">Ek Not <span style="font-weight:400;color:#9ca3af">(opsiyonel)</span></label><input id="bdiNote" type="text" placeholder="" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"></div>
-<button class="btn btn-primary" style="padding:7px 24px;white-space:nowrap" onclick="addDidIt()">Ekle</button>
+<button id="bdiAddBtn" class="btn btn-primary" style="padding:7px 24px;white-space:nowrap" onclick="addDidIt()">Ekle</button>
 </div>
 <div id="bdiCustomWrap" style="display:none;margin-top:8px"><label style="font-size:11px;display:block;margin-bottom:3px;color:#6b7280">Serbest Islem</label><input id="bdiCustomAction" type="text" placeholder="Islem aciklamasi yaz..." style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"></div>
 <div id="bdiPreview" style="margin-top:10px;font-size:12px;color:#6b7280;font-style:italic"></div>
@@ -269,6 +278,8 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 </div>
+<!-- TAB: Log -->
+<div id="bdiTab_log" style="display:none">
 <div class="card" id="bdiLogCard">
 <div class="card-header"><h2 id="bdiLogCount">Gunluk Log</h2>
 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -302,7 +313,10 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div id="bdi-log-wrap" style="overflow-x:auto"><p class="hint">Henuz kayit yok.</p></div>
 </div>
 
-<!-- Coverage Rate -->
+</div><!-- end bdiTab_log -->
+
+<!-- TAB: Coverage -->
+<div id="bdiTab_coverage" style="display:none">
 <div class="card" style="padding:14px 20px">
 <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
   <span style="font-size:13px;font-weight:700;color:#1e293b">&#127970; Kapsam Orani</span>
@@ -314,8 +328,16 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   </div>
   <span id="bdiCoverageDetail" style="font-size:11px;color:#6b7280"></span>
 </div>
+<!-- Untouched rooms -->
+<div id="bdiUntouchedWrap" style="display:none;margin-top:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px">
+<div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:6px">&#9888; Hizmet Verilmeyen Odalar</div>
+<div id="bdiUntouchedList" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div>
 </div>
+</div>
+</div><!-- end bdiTab_coverage -->
 
+<!-- TAB: Guest Library -->
+<div id="bdiTab_guests" style="display:none">
 <!-- Guest Library (CRM) -->
 <div class="card">
 <div class="card-header">
@@ -338,6 +360,10 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <p class="hint" id="bdiGuestHintText">Misafir kutuphanesini olusturmak icin "Tara / Guncelle" butonuna basin.</p>
 <div id="bdiGuestProfiles"></div>
 </div>
+</div><!-- end bdiTab_guests -->
+
+</div><!-- end page-didit -->
+
 <div class="page" id="page-radar">
 <div class="card">
 <h2>Inspector Radar — res_detail PDF Yukle</h2>
@@ -1576,6 +1602,67 @@ function getBdiActions(){
   return actions;
 }
 
+// ===== BDI TAB SWITCHING =====
+function switchBdiTab(tab){
+  ["entry","log","coverage","guests"].forEach(function(t){
+    var el=document.getElementById("bdiTab_"+t);
+    if(el)el.style.display=t===tab?"block":"none";
+  });
+  document.querySelectorAll("#page-didit > .tabs .tab").forEach(function(el,i){
+    el.classList.toggle("active",i===(tab==="entry"?0:tab==="log"?1:tab==="coverage"?2:3));
+  });
+  if(tab==="log"){loadBdiLogs();renderBdiLog()}
+  if(tab==="coverage"){loadBdiOccupied();renderBdiCoverage();renderUntouchedRooms()}
+  if(tab==="guests"){if(!_guestLibrary.length)scanBdiGuests();else filterGuestLibrary()}
+}
+
+// ===== UNTOUCHED ROOMS =====
+function renderUntouchedRooms(){
+  var wrap=document.getElementById("bdiUntouchedWrap");
+  var list=document.getElementById("bdiUntouchedList");
+  var occupied=parseInt(document.getElementById("bdiOccupied").value)||0;
+  if(!occupied||!Object.keys(vacRooms).length){wrap.style.display="none";return}
+
+  // Get all known occupied rooms from vacRooms
+  var allRooms=Object.keys(vacRooms).sort();
+  // Get rooms that received touches today
+  var touchedRooms={};
+  var logs=(bdiViewMode==="day")?bdiLogs:loadBdiRangeLogs();
+  for(var i=0;i<logs.length;i++)touchedRooms[logs[i].room]=1;
+
+  var untouched=allRooms.filter(function(r){return !touchedRooms[r]});
+  if(!untouched.length){
+    wrap.style.display="block";
+    list.innerHTML='<span style="color:#059669;font-weight:600">&#10003; Tum odalara hizmet verildi!</span>';
+    wrap.style.background="#f0fdf4";wrap.style.borderColor="#bbf7d0";
+    document.querySelector("#bdiUntouchedWrap > div:first-child").style.color="#065f46";
+    document.querySelector("#bdiUntouchedWrap > div:first-child").innerHTML="&#10003; Kapsam Durumu";
+    return;
+  }
+  wrap.style.display="block";
+  wrap.style.background="#fef2f2";wrap.style.borderColor="#fecaca";
+  document.querySelector("#bdiUntouchedWrap > div:first-child").style.color="#991b1b";
+  document.querySelector("#bdiUntouchedWrap > div:first-child").innerHTML="&#9888; Hizmet Verilmeyen Odalar ("+untouched.length+")";
+  var h="";
+  for(var i=0;i<untouched.length;i++){
+    var gn=vacRooms[untouched[i]]?vacNameFmt(untouched[i]):"";
+    h+='<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;background:#fee2e2;border-radius:6px;color:#991b1b;font-weight:600">';
+    h+=esc(untouched[i]);
+    if(gn)h+=' <span style="font-weight:400;color:#b91c1c;font-size:10px">'+esc(gn)+'</span>';
+    h+='</span>';
+  }
+  list.innerHTML=h;
+}
+
+// ===== BDI ENTRY CONFIRMATION FLASH =====
+function bdiFlashConfirm(){
+  var btn=document.getElementById("bdiAddBtn");
+  if(!btn)return;
+  var orig=btn.textContent;
+  btn.textContent="Eklendi!";btn.style.background="#059669";
+  setTimeout(function(){btn.textContent=orig;btn.style.background=""},1200);
+}
+
 function initDidIt(){
   var bdi=document.getElementById("bdiDate");
   if(bdi&&!bdi.value)bdi.value=getToday();
@@ -1663,6 +1750,7 @@ function addDidIt(){
   document.getElementById("bdiTimeline").style.display="none";
   renderBdiLog();
   renderBdiCoverage();
+  bdiFlashConfirm();
 }
 
 function removeBdiLog(idx){bdiLogs.splice(idx,1);saveBdiLogs();renderBdiLog()}
@@ -2361,6 +2449,11 @@ function renderGuestLibrary(list){
     var aList=Object.keys(g.actions).sort(function(a,b){return g.actions[b]-g.actions[a]});
     for(var ai=0;ai<aList.length;ai++){h+='<span class="badge" style="background:#dbeafe;color:#1e40af;font-size:10px;margin:1px">'+esc(aList[ai])+': '+g.actions[aList[ai]]+'</span> '}
     h+='</div>';
+    // Guest notes
+    var noteId="guestNote_"+btoa(unescape(encodeURIComponent(g.name)));
+    var savedNote=getGuestNote(g.name);
+    h+='<div style="margin-bottom:10px"><b style="font-size:11px;color:#374151">&#128221; Notlar / Tercihler:</b>';
+    h+='<textarea id="'+noteId+'" onchange="saveGuestNote(\''+esc(g.name).replace(/'/g,"\\'")+'\')" placeholder="Tercihler, alerjiler, ozel istekler..." style="width:100%;min-height:50px;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;margin-top:4px;resize:vertical;font-family:inherit">'+esc(savedNote)+'</textarea></div>';
     // Timeline
     h+='<div><b style="font-size:11px;color:#374151">Gecmis:</b></div>';
     h+='<table style="font-size:10px;margin-top:4px"><thead><tr><th>Tarih</th><th>Saat</th><th>Butler</th><th>Oda</th><th>Islem</th><th>Detay</th></tr></thead><tbody>';
@@ -2388,6 +2481,19 @@ function toggleGuestDetail(idx){
   if(!row)return;
   row.style.display=row.style.display==="none"?"table-row":"none";
 }
+
+// ===== GUEST NOTES (CRM) =====
+function loadGuestNotes(){try{var s=localStorage.getItem("bdi_guest_notes");return s?JSON.parse(s):{}}catch(e){return {}}}
+function saveGuestNote(name){
+  var notes=loadGuestNotes();
+  var el=document.getElementById("guestNote_"+btoa(unescape(encodeURIComponent(name))));
+  if(!el)return;
+  notes[name]=el.value;
+  localStorage.setItem("bdi_guest_notes",JSON.stringify(notes));
+  // Brief flash
+  el.style.borderColor="#059669";setTimeout(function(){el.style.borderColor="#d1d5db"},800);
+}
+function getGuestNote(name){var notes=loadGuestNotes();return notes[name]||""}
 
 function bdiToggleAllGuests(checked){
   document.querySelectorAll(".bdiGuestSel").forEach(function(cb){cb.checked=checked});
@@ -4815,7 +4921,7 @@ function importHandoff(file){
   handleRadarPDF, handleResDetailPDF, handleTracePDF, handleVacPDF,
   handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters, toggleBdiCompare,
   saveBdiOccupied, renderBdiCoverage, scanBdiGuests, showBdiMergeMode, bdiToggleAllGuests, filterGuestLibrary, clearGuestSearch, toggleGuestDetail,
-  addPmRoom, removePmRoom,
+  addPmRoom, removePmRoom, switchBdiTab, saveGuestNote,
   parseManualAndRender,
   removeAlertReason, removeAlertRow, removeBdiLog, removeBlockedDate,
   removeGuest, removeKW, removeRadarKW,
