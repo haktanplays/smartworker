@@ -218,6 +218,19 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 <div id="vacPdfStatus" style="font-size:12px;color:#6b7280"></div>
 </div>
+<!-- PM Rooms -->
+<div style="margin-top:12px;padding:10px 14px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+  <span style="font-size:12px;font-weight:700;color:#7c3aed">&#128274; PM / Sabit Odalar</span>
+  <span id="pmRoomCount" style="font-size:10px;color:#9ca3af"></span>
+</div>
+<div id="pmRoomTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
+<div style="display:flex;gap:6px">
+  <input id="pmRoomNo" type="text" placeholder="Oda No" style="width:70px;padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" onkeydown="if(event.key==='Enter')addPmRoom()">
+  <input id="pmGuestName" type="text" placeholder="Misafir Adi (Soyadi, Adi)" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" onkeydown="if(event.key==='Enter')addPmRoom()">
+  <button class="btn-sm" onclick="addPmRoom()" style="font-size:10px;background:#f3e8ff;color:#7c3aed;border-color:#d8b4fe">+ Ekle</button>
+</div>
+</div>
 </div>
 <div class="card">
 <h2>Butler Did It</h2>
@@ -1413,8 +1426,10 @@ async function handleVacPDF(file){
         if(nameItem&&roomNo)vacRooms[roomNo]=nameItem;
       }
     }
+    applyPmRooms(); // Re-apply PM rooms after VAC PDF load
     var cnt=Object.keys(vacRooms).length;
-    document.getElementById("vacPdfStatus").innerHTML='<span style="color:#059669">&#10003; '+cnt+' oda-misafir eslestirmesi yuklendi</span>';
+    var pmCnt=loadPmRooms().length;
+    document.getElementById("vacPdfStatus").innerHTML='<span style="color:#059669">&#10003; '+cnt+' oda-misafir eslestirmesi yuklendi'+(pmCnt?' ('+pmCnt+' PM dahil)':'')+'</span>';
   }catch(err){
     document.getElementById("vacPdfStatus").innerHTML='<span style="color:#dc2626">Hata: '+err.message+'</span>';
     console.error(err);
@@ -1483,6 +1498,64 @@ function vacNameFmt(room){
   if(parts.length>=2)return parts[1].trim()+" "+parts[0].trim();
   return raw;
 }
+// ===== PM ROOMS =====
+function loadPmRooms(){
+  try{var s=localStorage.getItem("bdi_pm_rooms");return s?JSON.parse(s):[]}catch(e){return []}
+}
+function savePmRooms(list){localStorage.setItem("bdi_pm_rooms",JSON.stringify(list))}
+
+function addPmRoom(){
+  var room=document.getElementById("pmRoomNo").value.trim();
+  var guest=document.getElementById("pmGuestName").value.trim();
+  if(!room){alert("Oda numarasi girin.");return}
+  if(!guest){alert("Misafir adi girin.");return}
+  var list=loadPmRooms();
+  // Check if room already exists
+  for(var i=0;i<list.length;i++){if(list[i].room===room){list[i].guest=guest;savePmRooms(list);renderPmRooms();applyPmRooms();document.getElementById("pmRoomNo").value="";document.getElementById("pmGuestName").value="";return}}
+  list.push({room:room,guest:guest});
+  savePmRooms(list);
+  renderPmRooms();
+  applyPmRooms();
+  document.getElementById("pmRoomNo").value="";
+  document.getElementById("pmGuestName").value="";
+}
+
+function removePmRoom(idx){
+  var list=loadPmRooms();
+  var room=list[idx]?list[idx].room:null;
+  list.splice(idx,1);
+  savePmRooms(list);
+  renderPmRooms();
+  // Remove from vacRooms if it was a PM room
+  if(room&&vacRooms[room])delete vacRooms[room];
+}
+
+function renderPmRooms(){
+  var list=loadPmRooms();
+  var el=document.getElementById("pmRoomTags");
+  var count=document.getElementById("pmRoomCount");
+  if(!list.length){el.innerHTML='<span style="font-size:10px;color:#9ca3af">Henuz PM oda eklenmedi</span>';count.textContent="";return}
+  count.textContent=list.length+" oda";
+  var h="";
+  for(var i=0;i<list.length;i++){
+    var r=list[i];
+    h+='<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#ede9fe;border-radius:12px;font-size:11px;color:#5b21b6">';
+    h+='<b>'+esc(r.room)+'</b> '+esc(r.guest);
+    h+='<button onclick="removePmRoom('+i+')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:12px;padding:0;line-height:1">&times;</button></span>';
+  }
+  el.innerHTML=h;
+}
+
+function applyPmRooms(){
+  var list=loadPmRooms();
+  for(var i=0;i<list.length;i++){
+    vacRooms[list[i].room]=list[i].guest;
+  }
+}
+
+// Init PM rooms on page load
+(function(){renderPmRooms();applyPmRooms()})();
+
 function getBdiKey(){var v=document.getElementById("bdiDate").value;if(!v){alert("Tarih girilmedi!");return null;}return"bdi_"+v}
 function loadBdiLogs(){try{var k=getBdiKey();if(!k){bdiLogs=[];return;}var s=localStorage.getItem(k);bdiLogs=s?JSON.parse(s):[]}catch(e){bdiLogs=[]}}
 function saveBdiLogs(){var k=getBdiKey();if(!k)return;localStorage.setItem(k,JSON.stringify(bdiLogs))}
@@ -4657,6 +4730,7 @@ function importHandoff(file){
   handleRadarPDF, handleResDetailPDF, handleTracePDF, handleVacPDF,
   handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters, toggleBdiCompare,
   saveBdiOccupied, renderBdiCoverage, scanBdiGuests, showBdiMergeMode, bdiToggleAllGuests,
+  addPmRoom, removePmRoom,
   parseManualAndRender,
   removeAlertReason, removeAlertRow, removeBdiLog, removeBlockedDate,
   removeGuest, removeKW, removeRadarKW,
