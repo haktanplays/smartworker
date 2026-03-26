@@ -500,6 +500,22 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 
 <!-- Alert table -->
 <div id="alertTableWrap"><p class="hint">Henüz veri yok — Arrival veya Trace PDF yükleyin.</p></div>
+
+<!-- Butler Workload + Target -->
+<div id="alertWorkloadWrap" style="display:none;margin-top:12px">
+<!-- Completion Target -->
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;flex-wrap:wrap">
+  <span style="font-size:12px;font-weight:700;color:#065f46">&#127919; Hedef:</span>
+  <span>%</span><input id="alertTargetInput" type="number" min="0" max="100" value="90" style="width:50px;padding:4px 6px;border:1px solid #bbf7d0;border-radius:4px;font-size:12px;text-align:center" oninput="saveAlertTarget();renderAlertWorkload()">
+  <div style="flex:1;min-width:120px;background:#e5e7eb;border-radius:4px;height:16px;position:relative">
+    <div id="alertTargetFill" style="height:100%;border-radius:4px;background:#059669;width:0%;transition:width .3s"></div>
+  </div>
+  <span id="alertTargetPct" style="font-size:14px;font-weight:800;color:#059669">—</span>
+  <span id="alertTargetDetail" style="font-size:11px;color:#6b7280"></span>
+</div>
+<!-- Butler Breakdown -->
+<div id="alertButlerCards" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+</div>
 </div>
 </div><!-- end alertTab_daily -->
 
@@ -778,14 +794,51 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <span>Butler Alert</span><span class="settings-arrow">&#9660;</span>
 </div>
 <div class="settings-body" style="display:none">
-<div class="settings-info">Butler check-in ziyareti yapılamadığında seçilebilecek sebepler. Ekle/çıkar ile özelleştirin.</div>
-<div style="padding:12px 0">
+
+<div class="section">
+<h3>Gitmedi Sebepleri</h3>
+<div class="settings-info">Butler check-in ziyareti yapılamadığında seçilebilecek sebepler.</div>
 <div id="alertReasonTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
 <div style="display:flex;gap:6px">
 <input id="alertReasonInput" placeholder="Yeni sebep ekle..." style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px" onkeydown="if(event.key==='Enter')addAlertReason()">
 <button onclick="addAlertReason()" class="btn">Ekle</button>
 </div>
 </div>
+
+<div class="section">
+<h3>Transfer Anahtar Kelimeleri</h3>
+<div class="settings-info">Concierge (CON) ve diger trace'lerde transfer tespiti icin kullanilan kelimeler.</div>
+<div id="alertKwTransferTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+<div style="display:flex;gap:6px">
+<input id="alertKwTransferInput" placeholder="Yeni kelime..." style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px" onkeydown="if(event.key==='Enter')addAlertKw('transfer')">
+<button onclick="addAlertKw('transfer')" class="btn">Ekle</button>
+</div>
+<div style="margin-top:8px">
+<h3 style="font-size:12px">Haric Tutulacak Kelimeler</h3>
+<div id="alertKwTransferExTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+<div style="display:flex;gap:6px">
+<input id="alertKwTransferExInput" placeholder="Ornek: transfer offered" style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px" onkeydown="if(event.key==='Enter')addAlertKw('transferEx')">
+<button onclick="addAlertKw('transferEx')" class="btn">Ekle</button>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>OTA Kaynak Kelimeleri</h3>
+<div class="settings-info">OTA kanallarindan gelen misafirleri tespit etmek icin.</div>
+<div id="alertKwOtaTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+<div style="display:flex;gap:6px">
+<input id="alertKwOtaInput" placeholder="Ornek: expedia" style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px" onkeydown="if(event.key==='Enter')addAlertKw('ota')">
+<button onclick="addAlertKw('ota')" class="btn">Ekle</button>
+</div>
+</div>
+
+<div class="section">
+<h3>Upsell Onerileri (Sebep Bazli)</h3>
+<div class="settings-info">Her alert sebebi icin butler'a gosterilecek upsell onerileri.</div>
+<div id="alertUpsellSettings"></div>
+</div>
+
 </div>
 </div>
 
@@ -944,8 +997,8 @@ function showPage(p){
       (p==="alert"&&t.indexOf("Butler Alert")>=0)||
       (p==="handoff"&&t.indexOf("Shift Handoff")>=0)||
       (p==="settings"&&t.indexOf("Ayar")>=0))});
-  if(p==="settings"){renderKWTags();renderRadarSettings();renderTemplateSettings();renderPyKWTagsSettings();renderAlertReasonSettings();renderExpenseSettings();}
-  if(p==="alert"){if(!alertList.length)loadAlertSnapshot();renderAlertTable()}
+  if(p==="settings"){renderKWTags();renderRadarSettings();renderTemplateSettings();renderPyKWTagsSettings();renderAlertReasonSettings();renderAlertKwSettings();renderExpenseSettings();}
+  if(p==="alert"){if(!alertList.length)loadAlertSnapshot();loadAlertTarget();renderAlertTable()}
   if(p==="handoff")renderHandoffExportSummary();
   if(p==="equipment")renderEquipTable();
   if(p==="didit")initDidIt();
@@ -4747,11 +4800,84 @@ var ALERT_REASONS_DEFAULT=["Resepsiyon çağırmadı","Butlerlar yoğundu","Misa
 function getAlertReasons(){try{var s=localStorage.getItem("alertReasons");return s?JSON.parse(s):ALERT_REASONS_DEFAULT.slice()}catch(e){return ALERT_REASONS_DEFAULT.slice()}}
 function setAlertReasons(arr){localStorage.setItem("alertReasons",JSON.stringify(arr))}
 
-// OTA keywords for Booking.com / Ctrip detection
-var ALERT_OTA_KW=["booking.com","booking.com b.v","ctrip","trip.com","ctip"];
-// Transfer keywords for trace detection
-var ALERT_TRANSFER_KW=["transfer","vip transfer","airport transfer","arrival transfer","departure transfer"];
-var ALERT_TRANSFER_EXCLUDE=["transfer offered","offered transfer","no transfer","transfer declined","transfer refused","transfer not","not transfer","transfer teklif","without transfer"];
+// ===== CONFIGURABLE ALERT KEYWORDS =====
+var DEF_ALERT_KW={
+  ota:["booking.com","booking.com b.v","ctrip","trip.com","ctip","expedia","agoda","hotels.com","hrs","travelocity","trivago"],
+  transfer:["transfer","vip transfer","airport transfer","arrival transfer","departure transfer","airport pick up","limousine","car service"],
+  transferEx:["transfer offered","offered transfer","no transfer","transfer declined","transfer refused","transfer not","not transfer","transfer teklif","without transfer"],
+  upsell:{
+    "Special Occasion":["Spa Package","Cake","Decoration Upgrade","Private Dining","Champagne"],
+    "OTA":["Direct Booking Incentive","Loyalty Signup","Room Upgrade"],
+    "4+ Gece":["Spa Discount","Laundry Package","Late Checkout"],
+    "Çocuk":["Kids Activity","Babysitting","Family Package"],
+    "Transfer":["Limousine Upgrade","City Tour"],
+    "RSSRAF":[]
+  }
+};
+
+function getAlertKw(cat){try{var s=localStorage.getItem("alert_kw_"+cat);return s?JSON.parse(s):DEF_ALERT_KW[cat].slice()}catch(e){return DEF_ALERT_KW[cat]?DEF_ALERT_KW[cat].slice():[]}}
+function setAlertKw(cat,arr){localStorage.setItem("alert_kw_"+cat,JSON.stringify(arr))}
+function getAlertUpsellMap(){try{var s=localStorage.getItem("alert_upsell_map");return s?JSON.parse(s):JSON.parse(JSON.stringify(DEF_ALERT_KW.upsell))}catch(e){return JSON.parse(JSON.stringify(DEF_ALERT_KW.upsell))}}
+function setAlertUpsellMap(map){localStorage.setItem("alert_upsell_map",JSON.stringify(map))}
+
+function addAlertKw(cat){
+  var input=document.getElementById("alertKw"+cat.charAt(0).toUpperCase()+cat.slice(1)+"Input");
+  var v=input.value.trim();if(!v)return;
+  var arr=getAlertKw(cat);
+  if(arr.indexOf(v)<0){arr.push(v);setAlertKw(cat,arr);renderAlertKwSettings()}
+  input.value="";
+}
+function removeAlertKw(cat,idx){var arr=getAlertKw(cat);arr.splice(idx,1);setAlertKw(cat,arr);renderAlertKwSettings()}
+
+function renderAlertKwSettings(){
+  ["transfer","transferEx","ota"].forEach(function(cat){
+    var el=document.getElementById("alertKw"+cat.charAt(0).toUpperCase()+cat.slice(1)+"Tags");
+    if(!el)return;
+    var arr=getAlertKw(cat);
+    el.innerHTML=arr.map(function(k,i){return'<span class="kw-tag">'+esc(k)+'<button class="kw-tag button" onclick="removeAlertKw(\''+cat+'\','+i+')">&times;</button></span>'}).join("");
+  });
+  // Upsell settings
+  var uEl=document.getElementById("alertUpsellSettings");
+  if(!uEl)return;
+  var map=getAlertUpsellMap();
+  var h='';
+  var reasons=["Special Occasion","OTA","4+ Gece","Çocuk","Transfer","RSSRAF"];
+  for(var i=0;i<reasons.length;i++){
+    var r=reasons[i];var items=map[r]||[];
+    h+='<div style="margin-bottom:8px"><label style="font-size:11px;font-weight:700;color:#374151">'+esc(r)+':</label>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:3px;margin:4px 0">';
+    for(var j=0;j<items.length;j++){
+      h+='<span class="kw-tag" style="background:#fef3c7;color:#92400e">'+esc(items[j])+'<button class="kw-tag button" onclick="removeUpsellItem(\''+esc(r).replace(/'/g,"\\'")+'\','+j+')">&times;</button></span>';
+    }
+    h+='</div>';
+    h+='<div style="display:flex;gap:4px"><input id="upsellInput_'+i+'" placeholder="Yeni oneri..." style="flex:1;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:11px" onkeydown="if(event.key===\'Enter\')addUpsellItem(\''+esc(r).replace(/'/g,"\\'")+'\','+i+')"><button class="btn-sm" onclick="addUpsellItem(\''+esc(r).replace(/'/g,"\\'")+'\','+i+')" style="font-size:10px">+</button></div>';
+    h+='</div>';
+  }
+  uEl.innerHTML=h;
+}
+
+function addUpsellItem(reason,inputIdx){
+  var input=document.getElementById("upsellInput_"+inputIdx);
+  var v=input.value.trim();if(!v)return;
+  var map=getAlertUpsellMap();
+  if(!map[reason])map[reason]=[];
+  if(map[reason].indexOf(v)<0){map[reason].push(v);setAlertUpsellMap(map);renderAlertKwSettings()}
+  input.value="";
+}
+function removeUpsellItem(reason,idx){
+  var map=getAlertUpsellMap();
+  if(map[reason])map[reason].splice(idx,1);
+  setAlertUpsellMap(map);renderAlertKwSettings();
+}
+
+// Backward compat aliases
+var ALERT_OTA_KW,ALERT_TRANSFER_KW,ALERT_TRANSFER_EXCLUDE;
+function refreshAlertKw(){
+  ALERT_OTA_KW=getAlertKw("ota");
+  ALERT_TRANSFER_KW=getAlertKw("transfer");
+  ALERT_TRANSFER_EXCLUDE=getAlertKw("transferEx");
+}
+refreshAlertKw();
 
 function buildAlertList(parsedGuests, traceList){
   var seen={};
@@ -4859,10 +4985,13 @@ function buildAlertList(parsedGuests, traceList){
     }
     if(occasionMatches.length) reasons.push({label:"Special Occasion",detail:occasionMatches.join(", ")});
 
-    // 6) Transfer — check traces (skip false positives like "transfer offered")
-    var hasTransfer=false;
+    // 6) Transfer — check traces, prioritize CON department
+    refreshAlertKw();
+    var hasTransfer=false;var transferDetail="";
     for(var ti=0;ti<roomTraces.length;ti++){
-      var tLow=(roomTraces[ti].traceText||"").toLowerCase();
+      var tr=roomTraces[ti];
+      var tLow=(tr.traceText||"").toLowerCase();
+      var tDept=(tr.dept||"").toUpperCase();
       var transferHit=false;
       for(var tk=0;tk<ALERT_TRANSFER_KW.length;tk++){
         if(tLow.indexOf(ALERT_TRANSFER_KW[tk])>=0){transferHit=true;break;}
@@ -4872,10 +5001,10 @@ function buildAlertList(parsedGuests, traceList){
         for(var tx=0;tx<ALERT_TRANSFER_EXCLUDE.length;tx++){
           if(tLow.indexOf(ALERT_TRANSFER_EXCLUDE[tx])>=0){excluded=true;break;}
         }
-        if(!excluded){hasTransfer=true;break;}
+        if(!excluded){hasTransfer=true;if(tDept==="CON")transferDetail="CON: "+tLow.substring(0,60);break;}
       }
     }
-    if(hasTransfer) reasons.push({label:"Transfer",detail:""});
+    if(hasTransfer) reasons.push({label:"Transfer",detail:transferDetail});
 
     if(reasons.length===0)continue;
     if(seen[g.roomNo]){
@@ -4958,6 +5087,18 @@ function setAlertVisited(idx,val,butlerName){
 
 function setAlertNotReason(idx,val){
   alertList[idx].notVisitedReason=val;
+  saveAlertSnapshot();
+}
+
+function setAlertUpsell(idx,val){
+  alertList[idx].upsellStatus=val;
+  if(val!=="accepted")alertList[idx].upsellNote="";
+  saveAlertSnapshot();
+  renderAlertTable();
+}
+
+function setAlertUpsellNote(idx,val){
+  alertList[idx].upsellNote=val;
   saveAlertSnapshot();
 }
 
@@ -5106,7 +5247,7 @@ function renderAlertTable(){
   }
 
   var allChecked=filtered.length>0&&filtered.every(function(f){return alertSelected[f.idx]});
-  var h='<table><thead><tr><th style="width:30px"><input type="checkbox" id="alertSelectAll" '+(allChecked?'checked':'')+' onchange="toggleAlertSelectAll(this.checked)"></th><th style="width:55px">Oda</th><th>Misafir</th><th>Sebep(ler)</th><th style="width:50px">Gece</th><th style="width:90px">Çıkış</th><th style="width:140px">Durum</th><th style="width:160px">Gitmedi Sebebi</th><th style="width:30px"></th></tr></thead><tbody>';
+  var h='<table><thead><tr><th style="width:30px"><input type="checkbox" id="alertSelectAll" '+(allChecked?'checked':'')+' onchange="toggleAlertSelectAll(this.checked)"></th><th style="width:55px">Oda</th><th>Misafir</th><th>Sebep(ler)</th><th style="width:50px">Gece</th><th style="width:90px">Çıkış</th><th style="width:140px">Durum</th><th style="width:140px">Gitmedi Sebebi</th><th style="width:120px">Upsell</th><th style="width:30px"></th></tr></thead><tbody>';
 
   for(var fi=0;fi<filtered.length;fi++){
     var idx=filtered[fi].idx;
@@ -5126,6 +5267,15 @@ function renderAlertTable(){
       return'<span'+tip+'display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;color:#fff;background:'+c+';margin:1px 2px'+(detail?';border-bottom:1.5px dashed rgba(255,255,255,.5)':'')+'">'+(detail?'▸ ':'')+esc(lbl)+'</span>';
     }).join("");
     if(a.manual)reasonH+='<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;margin:1px 2px">Manuel</span>';
+    // Upsell suggestions
+    var upsellMap=getAlertUpsellMap();
+    var upsellItems=[];
+    a.reasons.forEach(function(r){var lbl=r.label||r;for(var uk in upsellMap){if(lbl.indexOf(uk)>=0&&upsellMap[uk].length){upsellItems=upsellItems.concat(upsellMap[uk])}}});
+    if(upsellItems.length){
+      var unique={};upsellItems.forEach(function(u){unique[u]=1});
+      var uH=Object.keys(unique).map(function(u){return'<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:600;color:#92400e;background:#fef3c7;margin:1px">&#128176; '+esc(u)+'</span>'}).join("");
+      reasonH+='<div style="margin-top:2px">'+uH+'</div>';
+    }
 
     // Visit toggle with butler assignment
     var butlers=getKW("butler");
@@ -5146,6 +5296,20 @@ function renderAlertTable(){
       visitH+='<button onclick="setAlertVisited('+idx+',false)" style="cursor:pointer;padding:3px 7px;border-radius:4px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:10px;font-weight:700">❌</button>';
     }
     visitH+='</div>';
+
+    // Upsell outcome (only when visited)
+    var upsellH="";
+    if(a.visited===true){
+      upsellH='<select onchange="setAlertUpsell('+idx+',this.value)" style="width:100%;border:1px solid #fde68a;border-radius:4px;padding:3px;font-size:10px;background:#fffbeb">';
+      upsellH+='<option value=""'+(!(a.upsellStatus)?'selected':'')+'>Teklif?</option>';
+      upsellH+='<option value="accepted"'+((a.upsellStatus==="accepted")?' selected':'')+'>Kabul Edildi</option>';
+      upsellH+='<option value="declined"'+((a.upsellStatus==="declined")?' selected':'')+'>Reddedildi</option>';
+      upsellH+='<option value="not_offered"'+((a.upsellStatus==="not_offered")?' selected':'')+'>Teklif Yapilmadi</option>';
+      upsellH+='</select>';
+      if(a.upsellStatus==="accepted"){
+        upsellH+='<input placeholder="Ne satildi?" value="'+esc(a.upsellNote||"")+'" onchange="setAlertUpsellNote('+idx+',this.value)" style="width:100%;margin-top:3px;border:1px solid #bbf7d0;border-radius:4px;padding:3px;font-size:10px">';
+      }
+    }
 
     // Not-visited reason dropdown
     var nvrH="";
@@ -5169,11 +5333,13 @@ function renderAlertTable(){
     h+='<td style="font-size:11px;white-space:nowrap">'+esc(a.depDate)+'</td>';
     h+='<td>'+visitH+'</td>';
     h+='<td>'+nvrH+'</td>';
+    h+='<td>'+upsellH+'</td>';
     h+='<td><button onclick="removeAlertRow('+idx+')" style="cursor:pointer;background:none;border:none;color:#dc2626;font-size:14px;font-weight:700" title="Sil">×</button></td>';
     h+='</tr>';
   }
   h+='</tbody></table>';
   wrap.innerHTML=h;
+  renderAlertWorkload();
 }
 
 // Alert settings render
@@ -5306,6 +5472,70 @@ function exportAlertExcel(){
 
   XLSX.utils.book_append_sheet(wb,ws,"Butler Alert");
   XLSX.writeFile(wb,"ButlerAlert_"+today+".xlsx");
+}
+
+// ===== ALERT WORKLOAD & TARGET =====
+function saveAlertTarget(){
+  var val=parseInt(document.getElementById("alertTargetInput").value)||90;
+  localStorage.setItem("alert_target",String(val));
+}
+function loadAlertTarget(){
+  var val=localStorage.getItem("alert_target");
+  document.getElementById("alertTargetInput").value=val||"90";
+}
+
+function renderAlertWorkload(){
+  var wrap=document.getElementById("alertWorkloadWrap");
+  if(!alertList.length){wrap.style.display="none";return}
+  wrap.style.display="block";
+
+  var total=alertList.length;
+  var visited=alertList.filter(function(a){return a.visited===true}).length;
+  var rate=Math.round(visited/total*100);
+  var target=parseInt(document.getElementById("alertTargetInput").value)||90;
+  var needed=Math.max(0,Math.ceil(total*target/100)-visited);
+
+  // Target bar
+  var fill=document.getElementById("alertTargetFill");
+  var pct=document.getElementById("alertTargetPct");
+  var detail=document.getElementById("alertTargetDetail");
+  fill.style.width=Math.min(100,rate)+"%";
+  fill.style.background=rate>=target?"#059669":rate>=target-15?"#eab308":"#ef4444";
+  pct.textContent=rate+"%";
+  pct.style.color=rate>=target?"#059669":rate>=target-15?"#92400e":"#dc2626";
+  if(rate>=target)detail.textContent="Hedef tutturuldu!";
+  else detail.textContent=needed+" daha ziyaret gerekiyor";
+
+  // Butler breakdown
+  var butlers={};
+  for(var i=0;i<alertList.length;i++){
+    var a=alertList[i];
+    var bn=a.visitedBy||"(Atanmamis)";
+    if(a.visited!==true&&!a.visitedBy)bn="(Beklemede)";
+    if(!butlers[bn])butlers[bn]={total:0,visited:0,pending:0,notVisited:0};
+    butlers[bn].total++;
+    if(a.visited===true)butlers[bn].visited++;
+    else if(a.visited===false)butlers[bn].notVisited++;
+    else butlers[bn].pending++;
+  }
+
+  var cards=document.getElementById("alertButlerCards");
+  var h='';
+  var bKeys=Object.keys(butlers).sort(function(a,b){return butlers[b].total-butlers[a].total});
+  for(var i=0;i<bKeys.length;i++){
+    var bn=bKeys[i],b=butlers[bn];
+    var allDone=b.visited===b.total;
+    var bgColor=allDone?"#f0fdf4":b.pending>0?"#fffbeb":"#fef2f2";
+    var borderColor=allDone?"#bbf7d0":b.pending>0?"#fde68a":"#fecaca";
+    h+='<div style="padding:8px 14px;background:'+bgColor+';border:1px solid '+borderColor+';border-radius:8px;min-width:140px">';
+    h+='<div style="font-size:12px;font-weight:700;color:#1e293b">'+esc(bn)+'</div>';
+    h+='<div style="font-size:11px;color:#6b7280;margin-top:2px">';
+    h+='<span style="color:#059669;font-weight:600">✅'+b.visited+'</span>';
+    if(b.pending)h+=' <span style="color:#b45309;font-weight:600">⏳'+b.pending+'</span>';
+    if(b.notVisited)h+=' <span style="color:#dc2626;font-weight:600">❌'+b.notVisited+'</span>';
+    h+=' / '+b.total+' oda</div></div>';
+  }
+  cards.innerHTML=h;
 }
 
 // ===== ALERT PERSISTENCE =====
@@ -5912,7 +6142,8 @@ function importHandoff(file){
   dlFile, setupDrop, fmtDateDMY, Store, renderPyKWTagsFor, savePyKW, createTemplateManager,
   renderAlertTable, renderPYTable,
   setAlertReasonFlt, setAlertSortKey,
-  switchAlertTab, setAlertRange, renderAlertAnalytics, toggleAlertCompare,
+  switchAlertTab, setAlertRange, renderAlertAnalytics, toggleAlertCompare, saveAlertTarget, renderAlertWorkload,
+  addAlertKw, removeAlertKw, addUpsellItem, removeUpsellItem, setAlertUpsell, setAlertUpsellNote,
   exportAlertBackup, importAlertBackup, autoArchiveAlerts,
   exportAlertAnalyticsPdf, exportAlertAnalyticsXlsx
 ].forEach(function(fn){ if(fn && fn.name) window[fn.name] = fn });
