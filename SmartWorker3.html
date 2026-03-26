@@ -846,32 +846,6 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 
-<!-- Expense Settings -->
-<div class="settings-body" style="display:none">
-<div class="settings-info">Aylik butce limiti ve harcama kategorilerini duzenleyin.</div>
-<div style="padding:12px 0">
-<div style="margin-bottom:10px">
-  <label style="font-size:12px;font-weight:600;color:#374151">Ay Basi Kasa (TL)</label>
-  <input id="expKasaInput" type="number" step="0.01" style="width:140px;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px;margin-left:6px">
-  <button onclick="saveExpKasa()" class="btn btn-primary" style="margin-left:4px;padding:4px 12px;font-size:11px">Kaydet</button>
-  <span style="font-size:10px;color:#9ca3af;margin-left:6px">(secili ay icin)</span>
-</div>
-<div style="margin-bottom:10px">
-  <label style="font-size:12px;font-weight:600;color:#374151">Aylik Butce (TL)</label>
-  <input id="expBudgetInput" type="number" step="0.01" style="width:140px;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px;margin-left:6px">
-  <button onclick="saveExpBudget()" class="btn btn-primary" style="margin-left:4px;padding:4px 12px;font-size:11px">Kaydet</button>
-</div>
-<div>
-  <label style="font-size:12px;font-weight:600;color:#374151">Kategoriler</label>
-  <div id="expCategoryTags" style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0"></div>
-  <div style="display:flex;gap:6px">
-    <input id="expCategoryInput" placeholder="Yeni kategori ekle..." style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px" onkeydown="if(event.key==='Enter')addExpCategory()">
-    <button onclick="addExpCategory()" class="btn">Ekle</button>
-  </div>
-</div>
-</div>
-</div>
-</div>
 
 <div class="settings-segment">
 </div>
@@ -1025,6 +999,10 @@ setupDrop("dropTracePDF",handleTracePDF);
 setupDrop("dropPyPDF",handleResDetailPDF);
 setupDrop("dropRadarPDF",handleRadarPDF);
 setupDrop("dropPreArrPDF",handlePreArrPDF);
+function handleChangesPDF(file){
+  var st=document.getElementById("changesPdfStatus");
+  if(st)st.innerHTML='<span style="color:#ca8a04">&#9888; Changes report parser henuz hazir degil.</span>';
+}
 setupDrop("dropChangesPDF",handleChangesPDF);
 
 // ===== ARRIVAL PDF PARSING =====
@@ -6117,7 +6095,7 @@ function importHandoff(file){
   downloadDidIt, downloadDidItXlsx, downloadEnvelopes, downloadLetters, downloadPY,
   downloadRadarMindTreePDF, downloadRadarPDF, downloadRadarXlsx,
   exportHandoff,
-  filterRadar, handleArrPDF, handleChangesPDF,
+  filterRadar, handleArrPDF,
   handleRadarPDF, handleResDetailPDF, handleTracePDF, handleVacPDF,
   handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters, toggleBdiCompare,
   saveBdiOccupied, renderBdiCoverage, scanBdiGuests, showBdiMergeMode, bdiToggleAllGuests, filterGuestLibrary, clearGuestSearch, toggleGuestDetail,
@@ -6132,8 +6110,8 @@ function importHandoff(file){
   setNatOverride, setRadarVerify, showPage, showRadarDetail, showVacGuest,
   switchLetterTab,
   toggleAlertSelect, toggleAlertSelectAll, toggleBdiCustom, toggleManuelBdi,
-  toggleSettingsSection, updGF, wnHandleArrPDF, wnLoadGuest,
-  dlFile, setupDrop, fmtDateDMY, Store, renderPyKWTagsFor, savePyKW, createTemplateManager,
+  toggleSettingsSection, updGF,
+  dlFile, setupDrop, fmtDateDMY, renderPyKWTagsFor, savePyKW, createTemplateManager,
   renderAlertTable, renderPYTable,
   setAlertReasonFlt, setAlertSortKey,
   switchAlertTab, setAlertRange, renderAlertAnalytics, toggleAlertCompare, saveAlertTarget, renderAlertWorkload,
