@@ -833,6 +833,15 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 
+<div class="section">
+<h3>Upsell Urun Listesi</h3>
+<div class="settings-info">Butler'in satis yapabilecegi urunler. Ziyaret sonrasi "Kabul Edildi" secildiginde bu listeden secim yapilir.</div>
+<div id="alertUpsellProductTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+<div style="display:flex;gap:6px">
+<input id="alertUpsellProductInput" placeholder="Yeni urun ekle..." style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px" onkeydown="if(event.key==='Enter')addUpsellProduct()">
+<button onclick="addUpsellProduct()" class="btn">Ekle</button>
+</div>
+</div>
 
 </div>
 </div>
@@ -4813,8 +4822,9 @@ var DEF_ALERT_KW={
 
 function getAlertKw(cat){try{var s=localStorage.getItem("alert_kw_"+cat);return s?JSON.parse(s):DEF_ALERT_KW[cat].slice()}catch(e){return DEF_ALERT_KW[cat]?DEF_ALERT_KW[cat].slice():[]}}
 function setAlertKw(cat,arr){localStorage.setItem("alert_kw_"+cat,JSON.stringify(arr))}
-function getAlertUpsellMap(){try{var s=localStorage.getItem("alert_upsell_map");return s?JSON.parse(s):JSON.parse(JSON.stringify(DEF_ALERT_KW.upsell))}catch(e){return JSON.parse(JSON.stringify(DEF_ALERT_KW.upsell))}}
-function setAlertUpsellMap(map){localStorage.setItem("alert_upsell_map",JSON.stringify(map))}
+var DEF_UPSELL_PRODUCTS=["Room Upgrade","Spa Reservation","Departure Transfer","Airport Lounge","Late Checkout","Laundry Package","City Tour"];
+function getUpsellProducts(){try{var s=localStorage.getItem("alert_upsell_products");return s?JSON.parse(s):DEF_UPSELL_PRODUCTS.slice()}catch(e){return DEF_UPSELL_PRODUCTS.slice()}}
+function setUpsellProducts(arr){localStorage.setItem("alert_upsell_products",JSON.stringify(arr))}
 
 function addAlertKw(cat){
   var input=document.getElementById("alertKw"+cat.charAt(0).toUpperCase()+cat.slice(1)+"Input");
@@ -4832,20 +4842,23 @@ function renderAlertKwSettings(){
     var arr=getAlertKw(cat);
     el.innerHTML=arr.map(function(k,i){return'<span class="kw-tag">'+esc(k)+'<button class="kw-tag button" onclick="removeAlertKw(\''+cat+'\','+i+')">&times;</button></span>'}).join("");
   });
+  // Upsell product tags
+  var pEl=document.getElementById("alertUpsellProductTags");
+  if(pEl){
+    var products=getUpsellProducts();
+    pEl.innerHTML=products.map(function(p,i){return'<span class="kw-tag" style="background:#fef3c7;color:#92400e">'+esc(p)+'<button class="kw-tag button" onclick="removeUpsellProduct('+i+')">&times;</button></span>'}).join("");
+  }
 }
 
-function addUpsellItem(reason,inputIdx){
-  var input=document.getElementById("upsellInput_"+inputIdx);
+function addUpsellProduct(){
+  var input=document.getElementById("alertUpsellProductInput");
   var v=input.value.trim();if(!v)return;
-  var map=getAlertUpsellMap();
-  if(!map[reason])map[reason]=[];
-  if(map[reason].indexOf(v)<0){map[reason].push(v);setAlertUpsellMap(map);renderAlertKwSettings()}
+  var arr=getUpsellProducts();
+  if(arr.indexOf(v)<0){arr.push(v);setUpsellProducts(arr);renderAlertKwSettings()}
   input.value="";
 }
-function removeUpsellItem(reason,idx){
-  var map=getAlertUpsellMap();
-  if(map[reason])map[reason].splice(idx,1);
-  setAlertUpsellMap(map);renderAlertKwSettings();
+function removeUpsellProduct(idx){
+  var arr=getUpsellProducts();arr.splice(idx,1);setUpsellProducts(arr);renderAlertKwSettings();
 }
 
 // Backward compat aliases
@@ -5070,13 +5083,16 @@ function setAlertNotReason(idx,val){
 
 function setAlertUpsell(idx,val){
   alertList[idx].upsellStatus=val;
-  if(val!=="accepted")alertList[idx].upsellNote="";
+  if(val!=="accepted")alertList[idx].upsellProducts=[];
   saveAlertSnapshot();
   renderAlertTable();
 }
 
-function setAlertUpsellNote(idx,val){
-  alertList[idx].upsellNote=val;
+function toggleAlertUpsellProduct(idx,product){
+  if(!alertList[idx].upsellProducts)alertList[idx].upsellProducts=[];
+  var arr=alertList[idx].upsellProducts;
+  var pos=arr.indexOf(product);
+  if(pos>=0)arr.splice(pos,1);else arr.push(product);
   saveAlertSnapshot();
 }
 
@@ -5276,7 +5292,16 @@ function renderAlertTable(){
       upsellH+='<option value="not_offered"'+((a.upsellStatus==="not_offered")?' selected':'')+'>Teklif Yapilmadi</option>';
       upsellH+='</select>';
       if(a.upsellStatus==="accepted"){
-        upsellH+='<input placeholder="Ne satildi?" value="'+esc(a.upsellNote||"")+'" onchange="setAlertUpsellNote('+idx+',this.value)" style="width:100%;margin-top:3px;border:1px solid #bbf7d0;border-radius:4px;padding:3px;font-size:10px">';
+        var products=getUpsellProducts();
+        var selected=a.upsellProducts||[];
+        upsellH+='<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px">';
+        for(var pi=0;pi<products.length;pi++){
+          var isSelected=selected.indexOf(products[pi])>=0;
+          upsellH+='<label style="display:inline-flex;align-items:center;gap:2px;padding:1px 5px;border-radius:4px;font-size:9px;cursor:pointer;background:'+(isSelected?'#d1fae5':'#f3f4f6')+';color:'+(isSelected?'#065f46':'#6b7280')+';border:1px solid '+(isSelected?'#059669':'#e5e7eb')+'">';
+          upsellH+='<input type="checkbox" '+(isSelected?'checked':'')+' onchange="toggleAlertUpsellProduct('+idx+',\''+esc(products[pi]).replace(/'/g,"\\'")+'\')" style="display:none">';
+          upsellH+=esc(products[pi])+'</label>';
+        }
+        upsellH+='</div>';
       }
     }
 
@@ -6112,7 +6137,7 @@ function importHandoff(file){
   renderAlertTable, renderPYTable,
   setAlertReasonFlt, setAlertSortKey,
   switchAlertTab, setAlertRange, renderAlertAnalytics, toggleAlertCompare, saveAlertTarget, renderAlertWorkload,
-  addAlertKw, removeAlertKw, addUpsellItem, removeUpsellItem, setAlertUpsell, setAlertUpsellNote,
+  addAlertKw, removeAlertKw, setAlertUpsell, toggleAlertUpsellProduct, addUpsellProduct, removeUpsellProduct,
   exportAlertBackup, importAlertBackup, autoArchiveAlerts,
   exportAlertAnalyticsPdf, exportAlertAnalyticsXlsx
 ].forEach(function(fn){ if(fn && fn.name) window[fn.name] = fn });
