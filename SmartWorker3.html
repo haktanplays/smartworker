@@ -833,11 +833,6 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 
-<div class="section">
-<h3>Upsell Onerileri (Sebep Bazli)</h3>
-<div class="settings-info">Her alert sebebi icin butler'a gosterilecek upsell onerileri.</div>
-<div id="alertUpsellSettings"></div>
-</div>
 
 </div>
 </div>
@@ -4837,25 +4832,6 @@ function renderAlertKwSettings(){
     var arr=getAlertKw(cat);
     el.innerHTML=arr.map(function(k,i){return'<span class="kw-tag">'+esc(k)+'<button class="kw-tag button" onclick="removeAlertKw(\''+cat+'\','+i+')">&times;</button></span>'}).join("");
   });
-  // Upsell settings
-  var uEl=document.getElementById("alertUpsellSettings");
-  if(!uEl)return;
-  var map=getAlertUpsellMap();
-  var h='';
-  var reasons=["_all","Transfer","Special Occasion","OTA","4+ Gece","Çocuk","RSSRAF"];
-  var reasonLabels={"_all":"Tum Misafirler (Genel)","Transfer":"Transfer","Special Occasion":"Special Occasion","OTA":"OTA","4+ Gece":"4+ Gece","Çocuk":"Çocuk","RSSRAF":"RSSRAF"};
-  for(var i=0;i<reasons.length;i++){
-    var r=reasons[i];var items=map[r]||[];
-    h+='<div style="margin-bottom:8px"><label style="font-size:11px;font-weight:700;color:#374151">'+(reasonLabels[r]||esc(r))+':</label>';
-    h+='<div style="display:flex;flex-wrap:wrap;gap:3px;margin:4px 0">';
-    for(var j=0;j<items.length;j++){
-      h+='<span class="kw-tag" style="background:#fef3c7;color:#92400e">'+esc(items[j])+'<button class="kw-tag button" onclick="removeUpsellItem(\''+esc(r).replace(/'/g,"\\'")+'\','+j+')">&times;</button></span>';
-    }
-    h+='</div>';
-    h+='<div style="display:flex;gap:4px"><input id="upsellInput_'+i+'" placeholder="Yeni oneri..." style="flex:1;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:11px" onkeydown="if(event.key===\'Enter\')addUpsellItem(\''+esc(r).replace(/'/g,"\\'")+'\','+i+')"><button class="btn-sm" onclick="addUpsellItem(\''+esc(r).replace(/'/g,"\\'")+'\','+i+')" style="font-size:10px">+</button></div>';
-    h+='</div>';
-  }
-  uEl.innerHTML=h;
 }
 
 function addUpsellItem(reason,inputIdx){
@@ -5269,15 +5245,6 @@ function renderAlertTable(){
       return'<span'+tip+'display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;color:#fff;background:'+c+';margin:1px 2px'+(detail?';border-bottom:1.5px dashed rgba(255,255,255,.5)':'')+'">'+(detail?'▸ ':'')+esc(lbl)+'</span>';
     }).join("");
     if(a.manual)reasonH+='<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;margin:1px 2px">Manuel</span>';
-    // Upsell suggestions: _all applies to every guest, reason-specific adds on top
-    var upsellMap=getAlertUpsellMap();
-    var upsellItems=(upsellMap["_all"]||[]).slice();
-    a.reasons.forEach(function(r){var lbl=r.label||r;for(var uk in upsellMap){if(uk!=="_all"&&lbl.indexOf(uk)>=0&&upsellMap[uk].length){upsellItems=upsellItems.concat(upsellMap[uk])}}});
-    if(upsellItems.length){
-      var unique={};upsellItems.forEach(function(u){unique[u]=1});
-      var uH=Object.keys(unique).map(function(u){return'<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:600;color:#92400e;background:#fef3c7;margin:1px">&#128176; '+esc(u)+'</span>'}).join("");
-      reasonH+='<div style="margin-top:2px">'+uH+'</div>';
-    }
 
     // Visit toggle with butler assignment
     var butlers=getKW("butler");
