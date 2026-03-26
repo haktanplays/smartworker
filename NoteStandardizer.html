@@ -266,8 +266,12 @@ Her kategori (MINIBAR, PILLOW TYPE, SPA TREATMENTS vs.) kendi sablonuna sahiptir
 <div>
 <label style="font-size:10px;color:#6b7280;display:block;margin-bottom:3px">Buna donustur (category):</label>
 <select id="learnRuleTo" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px">
-<option value="pa">Pre arrival mail</option>
-<option value="pd">Post departure mail</option>
+<option value="pa">Pre arrival mail (sent)</option>
+<option value="pd">Post departure mail (sent)</option>
+<option value="pa_nomail">PA - no mail address</option>
+<option value="pd_nomail">PD - no mail address</option>
+<option value="pa_mismatch">PA - address mismatch</option>
+<option value="pd_mismatch">PD - address mismatch</option>
 <option value="ignore">Yoksay (sil)</option>
 </select>
 </div>
@@ -735,7 +739,7 @@ function renderLearnedRules(){
   if(!el)return;
   count.textContent=rules.length+" kural";
   if(!rules.length){el.innerHTML='<p class="hint">Henuz ogrenilmis kural yok.</p>';return}
-  var catLabels={"pa":"Pre arrival mail","pd":"Post departure mail","ignore":"Yoksay"};
+  var catLabels={"pa":"PA sent","pd":"PD sent","pa_nomail":"PA no mail","pd_nomail":"PD no mail","pa_mismatch":"PA mismatch","pd_mismatch":"PD mismatch","ignore":"Yoksay"};
   var h='<table style="font-size:11px;margin-top:6px"><thead><tr><th>Pattern</th><th>Kategori</th><th>Kaynak</th><th>Tarih</th><th></th></tr></thead><tbody>';
   for(var i=0;i<rules.length;i++){
     var r=rules[i];
@@ -807,14 +811,18 @@ function correctNoteLine(lineIdx){
     "Orijinal: "+rawText+"\n"+
     "Mevcut: "+currentText+"\n\n"+
     "Secenekler:\n"+
-    "1 = Pre arrival mail\n"+
-    "2 = Post departure mail\n"+
-    "3 = Yoksay (sil)\n"+
-    "4 = Degistirme (koru)\n\n"+
-    "Secim (1-4):");
+    "1 = Pre arrival mail (sent)\n"+
+    "2 = Post departure mail (sent)\n"+
+    "3 = PA - no mail address\n"+
+    "4 = PD - no mail address\n"+
+    "5 = PA - address mismatch\n"+
+    "6 = PD - address mismatch\n"+
+    "7 = Yoksay (sil)\n"+
+    "8 = Degistirme (koru)\n\n"+
+    "Secim (1-8):");
 
   if(!choice)return;
-  var catMap={"1":"pa","2":"pd","3":"ignore"};
+  var catMap={"1":"pa","2":"pd","3":"pa_nomail","4":"pd_nomail","5":"pa_mismatch","6":"pd_mismatch","7":"ignore"};
   var cat=catMap[choice.trim()];
   if(!cat)return; // 4 or invalid = keep
 
@@ -1115,10 +1123,17 @@ function standardizeWebNotes(){
 
   var rePreArr=/(repeat\s+)?pre[\s\-\.]*arr(ival)?\s*(e[\-]?mail|mail)?/i;
   var rePostDep=/post[\s\-\.]*dep(arture)?\s*(e[\-]?mail|mail)?/i;
+  var reNotSent=/\bnot\s+(been\s+)?(sent|send)/i;
+  var reNoMail=/no\s+(e[\-]?mail|mail)\s*(addr|address)/i;
+  var reMismatch=/(mail\s+)?addr(ess)?\s*(does\s*not|doesn'?t|don'?t)\s*match/i;
 
-  // Collect PA and PD entries with dates and initials
-  var paEntries=[];  // [{date:"DD.MM.YYYY", initials:"HK", year:2024}]
-  var pdEntries=[];
+  // Collect entries with dates and initials
+  var paEntries=[];   // sent
+  var pdEntries=[];   // sent
+  var paNoMail=[];    // not sent - no mail address
+  var pdNoMail=[];    // not sent - no mail address
+  var paMismatch=[];  // not sent - mail address mismatch
+  var pdMismatch=[];  // not sent - mail address mismatch
   var other=[];
 
   for(var i=0;i<lines.length;i++){
@@ -1127,12 +1142,18 @@ function standardizeWebNotes(){
     // Check learned rules FIRST
     var learned=applyLearnedRules(l);
     if(learned.matched){
-      if(learned.category==="ignore")continue; // skip this line
-      var isPreArr=(learned.category==="pa");
-      var isPostDep=(learned.category==="pd");
+      if(learned.category==="ignore")continue;
+      var isPreArr=(learned.category==="pa"||learned.category==="pa_nomail"||learned.category==="pa_mismatch");
+      var isPostDep=(learned.category==="pd"||learned.category==="pd_nomail"||learned.category==="pd_mismatch");
+      var isNotSent=(learned.category==="pa_nomail"||learned.category==="pd_nomail"||learned.category==="pa_mismatch"||learned.category==="pd_mismatch");
+      var isNoMail=(learned.category==="pa_nomail"||learned.category==="pd_nomail");
+      var isMismatch=(learned.category==="pa_mismatch"||learned.category==="pd_mismatch");
     }else{
-      var isPreArr=rePreArr.test(l)&&!/\bnot\s+(been|sent)/i.test(l);
-      var isPostDep=rePostDep.test(l)&&!/\bnot\s+(been|sent)/i.test(l);
+      var isPreArr=rePreArr.test(l);
+      var isPostDep=!isPreArr&&rePostDep.test(l);
+      var isNotSent=reNotSent.test(l);
+      var isNoMail=reNoMail.test(l);
+      var isMismatch=reMismatch.test(l);
     }
 
     if(isPreArr||isPostDep){
@@ -1141,8 +1162,10 @@ function standardizeWebNotes(){
       if(d){
         var parsed=parseNoteDate(d);
         var entry={date:parsed,dateYY:dateToYY(parsed),initials:ini,year:dateYear(parsed)};
-        if(isPreArr)paEntries.push(entry);
-        else pdEntries.push(entry);
+        if(isNotSent&&isNoMail){if(isPreArr)paNoMail.push(entry);else pdNoMail.push(entry)}
+        else if(isNotSent&&isMismatch){if(isPreArr)paMismatch.push(entry);else pdMismatch.push(entry)}
+        else if(isNotSent){if(isPreArr)paNoMail.push(entry);else pdNoMail.push(entry)} // default not-sent = no mail
+        else{if(isPreArr)paEntries.push(entry);else pdEntries.push(entry)}
       }
     } else {
       other.push(l);
@@ -1153,13 +1176,21 @@ function standardizeWebNotes(){
   function sortByDate(a,b){return dateVal(a.date)-dateVal(b.date)}
   paEntries.sort(sortByDate);
   pdEntries.sort(sortByDate);
+  paNoMail.sort(sortByDate);
+  pdNoMail.sort(sortByDate);
+  paMismatch.sort(sortByDate);
+  pdMismatch.sort(sortByDate);
 
   var result=[];
 
-  // Process PA entries
-  result=result.concat(formatMailEntries(paEntries,"Pre arrival"));
-  // Process PD entries
-  result=result.concat(formatMailEntries(pdEntries,"Post departure"));
+  // Process sent entries
+  result=result.concat(formatMailEntries(paEntries,"Pre arrival","mail has been sent on"));
+  result=result.concat(formatMailEntries(pdEntries,"Post departure","mail has been sent on"));
+  // Process not-sent entries
+  result=result.concat(formatMailEntries(paNoMail,"Pre arrival","mail has not been sent - no mail address on"));
+  result=result.concat(formatMailEntries(pdNoMail,"Post departure","mail has not been sent - no mail address on"));
+  result=result.concat(formatMailEntries(paMismatch,"Pre arrival","mail has not been sent - mail address does not match on"));
+  result=result.concat(formatMailEntries(pdMismatch,"Post departure","mail has not been sent - mail address does not match on"));
 
   // Parse preferences from "other" lines
   var otherText=other.join("\n");
@@ -1199,9 +1230,13 @@ function standardizeWebNotes(){
   document.getElementById("wnCopyBtn").style.display="inline-block";
 }
 
-function formatMailEntries(entries, mailType){
+function formatMailEntries(entries, mailType, actionPhrase){
   if(!entries.length)return [];
   var result=[];
+  actionPhrase=actionPhrase||"mail has been sent on";
+
+  // Determine past tense for stacked old entries
+  var pastPhrase=actionPhrase.replace("has been sent","was sent").replace("has not been sent","was not sent");
 
   // Separate pre-2023 and 2023+
   var old=entries.filter(function(e){return e.year<2023});
@@ -1211,7 +1246,7 @@ function formatMailEntries(entries, mailType){
   if(old.length){
     var oldDates=old.map(function(e){return e.dateYY});
     result.push({
-      text:mailType+" mail was sent on "+oldDates.join(", "),
+      text:mailType+" "+pastPhrase+" "+oldDates.join(", "),
       changed:true,
       stacked:true
     });
@@ -1220,7 +1255,7 @@ function formatMailEntries(entries, mailType){
   // 2023+ entries: each as individual standardized line with initials
   for(var i=0;i<recent.length;i++){
     var e=recent[i];
-    var line=mailType+" mail has been sent on "+e.dateYY;
+    var line=mailType+" "+actionPhrase+" "+e.dateYY;
     if(e.initials)line+=" **"+e.initials;
     result.push({text:line, changed:true});
   }
