@@ -4949,10 +4949,8 @@ function setAlertVisited(idx,val,butlerName){
   if(val){
     alertList[idx].notVisitedReason="";
     alertList[idx].visitedBy=butlerName||"";
-    alertList[idx].visitedAt=new Date().toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
   }else{
     alertList[idx].visitedBy="";
-    alertList[idx].visitedAt="";
   }
   saveAlertSnapshot();
   renderAlertTable();
@@ -5028,11 +5026,10 @@ function bulkAlertAction(action){
   if(!indices.length){alert("Önce satır seçin (checkbox)");return}
   var butlerName="";
   if(action==="yes"){butlerName=prompt("Butler adi (bos birakilabilir):")||""}
-  var time=new Date().toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
   indices.forEach(function(i){
-    if(action==="yes"){alertList[i].visited=true;alertList[i].notVisitedReason="";alertList[i].visitedBy=butlerName;alertList[i].visitedAt=time}
-    else if(action==="no"){alertList[i].visited=false;alertList[i].visitedBy="";alertList[i].visitedAt=""}
-    else if(action==="reset"){alertList[i].visited=null;alertList[i].notVisitedReason="";alertList[i].visitedBy="";alertList[i].visitedAt=""}
+    if(action==="yes"){alertList[i].visited=true;alertList[i].notVisitedReason="";alertList[i].visitedBy=butlerName}
+    else if(action==="no"){alertList[i].visited=false;alertList[i].visitedBy=""}
+    else if(action==="reset"){alertList[i].visited=null;alertList[i].notVisitedReason="";alertList[i].visitedBy=""}
   });
   alertSelected={};
   saveAlertSnapshot();
@@ -5136,7 +5133,6 @@ function renderAlertTable(){
     if(a.visited===true){
       visitH+='<span style="font-size:11px;font-weight:700;color:#059669">✅</span>';
       if(a.visitedBy)visitH+='<span style="font-size:9px;color:#065f46;background:#d1fae5;padding:1px 5px;border-radius:4px">'+esc(a.visitedBy)+'</span>';
-      if(a.visitedAt)visitH+='<span style="font-size:9px;color:#6b7280">'+esc(a.visitedAt)+'</span>';
       visitH+='<button onclick="setAlertVisited('+idx+',null)" style="cursor:pointer;background:none;border:none;color:#9ca3af;font-size:10px;padding:0" title="Sifirla">↩</button>';
     }else if(a.visited===false){
       visitH+='<span style="font-size:11px;font-weight:700;color:#dc2626">❌</span>';
@@ -5249,8 +5245,8 @@ function exportAlertExcel(){
 
   // ── R0: Title ──────────────────────────────────────────────
   cell(0,0,"BUTLER CHECK-IN ALERT — "+today,S_TITLE);
-  for(var tc=1;tc<=9;tc++) empty(0,tc,S_TITLE);
-  merges.push({s:{r:0,c:0},e:{r:0,c:9}});
+  for(var tc=1;tc<=8;tc++) empty(0,tc,S_TITLE);
+  merges.push({s:{r:0,c:0},e:{r:0,c:8}});
 
   // ── R1: Summary strip ──────────────────────────────────────
   var visited=alertList.filter(function(a){return a.visited===true}).length;
@@ -5263,7 +5259,7 @@ function exportAlertExcel(){
   cell(1,6,"Beklemede",S_SUMH); cell(1,7,pending,S_SUMA);
 
   // ── R2: Column headers ─────────────────────────────────────
-  var headers=["Oda","Misafir","Sebep(ler)","Detay","Gece","Çıkış","Ziyaret Durumu","Ziyaret Eden","Saat","Gitmedi Sebebi"];
+  var headers=["Oda","Misafir","Sebep(ler)","Detay","Gece","Çıkış","Ziyaret Durumu","Ziyaret Eden","Gitmedi Sebebi"];
   headers.forEach(function(h,ci){cell(2,ci,h,S_HDR);});
 
   // ── R3+: Data rows ─────────────────────────────────────────
@@ -5280,16 +5276,15 @@ function exportAlertExcel(){
     cell(row,5,a.depDate||"",S_DATAC);
     cell(row,6,vLabel,vStyle);
     cell(row,7,a.visitedBy||"",S_DATA);
-    cell(row,8,a.visitedAt||"",S_DATAC);
-    cell(row,9,a.notVisitedReason||"",S_DATA);
+    cell(row,8,a.notVisitedReason||"",S_DATA);
   });
 
   // ── Reason breakdown ───────────────────────────────────────
   var sr=3+alertList.length+1;
   var reasonCounts={};
   alertList.forEach(function(a){a.reasons.forEach(function(r){var k=r.label||r;reasonCounts[k]=(reasonCounts[k]||0)+1})});
-  cell(sr,0,"SEBEP DAĞILIMI",S_TITLE); for(tc=1;tc<=9;tc++) empty(sr,tc,S_TITLE);
-  merges.push({s:{r:sr,c:0},e:{r:sr,c:9}});
+  cell(sr,0,"SEBEP DAĞILIMI",S_TITLE); for(tc=1;tc<=8;tc++) empty(sr,tc,S_TITLE);
+  merges.push({s:{r:sr,c:0},e:{r:sr,c:8}});
   sr++;
   cell(sr,0,"Sebep",S_HDR); cell(sr,1,"Oda Sayısı",S_HDR); cell(sr,2,"Oran",S_HDR);
   for(tc=3;tc<=7;tc++) empty(sr,tc,S_HDR);
