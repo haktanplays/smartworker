@@ -1161,11 +1161,13 @@ function standardizeWebNotes(){
       var ini=extractInitials(l);
       if(d){
         var parsed=parseNoteDate(d);
-        var entry={date:parsed,dateYY:dateToYY(parsed),initials:ini,year:dateYear(parsed)};
-        if(isNotSent&&isNoMail){if(isPreArr)paNoMail.push(entry);else pdNoMail.push(entry)}
-        else if(isNotSent&&isMismatch){if(isPreArr)paMismatch.push(entry);else pdMismatch.push(entry)}
-        else if(isNotSent){if(isPreArr)paNoMail.push(entry);else pdNoMail.push(entry)} // default not-sent = no mail
-        else{if(isPreArr)paEntries.push(entry);else pdEntries.push(entry)}
+        var mailPrefix=isPreArr?"Pre arrival":"Post departure";
+        var actionPhrase="mail has been sent on";
+        var pastPhrase="mail was sent on";
+        if(isNotSent&&isMismatch){actionPhrase="mail has not been sent - mail address does not match on";pastPhrase="mail was not sent - mail address does not match on"}
+        else if(isNotSent){actionPhrase="mail has not been sent - no mail address on";pastPhrase="mail was not sent - no mail address on"}
+        var entry={date:parsed,dateYY:dateToYY(parsed),initials:ini,year:dateYear(parsed),prefix:mailPrefix,action:actionPhrase,past:pastPhrase};
+        if(isPreArr)paEntries.push(entry);else pdEntries.push(entry);
       }
     } else {
       other.push(l);
@@ -1176,21 +1178,13 @@ function standardizeWebNotes(){
   function sortByDate(a,b){return dateVal(a.date)-dateVal(b.date)}
   paEntries.sort(sortByDate);
   pdEntries.sort(sortByDate);
-  paNoMail.sort(sortByDate);
-  pdNoMail.sort(sortByDate);
-  paMismatch.sort(sortByDate);
-  pdMismatch.sort(sortByDate);
 
   var result=[];
 
-  // Process sent entries
-  result=result.concat(formatMailEntries(paEntries,"Pre arrival","mail has been sent on"));
-  result=result.concat(formatMailEntries(pdEntries,"Post departure","mail has been sent on"));
-  // Process not-sent entries
-  result=result.concat(formatMailEntries(paNoMail,"Pre arrival","mail has not been sent - no mail address on"));
-  result=result.concat(formatMailEntries(pdNoMail,"Post departure","mail has not been sent - no mail address on"));
-  result=result.concat(formatMailEntries(paMismatch,"Pre arrival","mail has not been sent - mail address does not match on"));
-  result=result.concat(formatMailEntries(pdMismatch,"Post departure","mail has not been sent - mail address does not match on"));
+  // Process PA entries (all types mixed, sorted by date)
+  result=result.concat(formatMailEntriesChronological(paEntries));
+  // Process PD entries (all types mixed, sorted by date)
+  result=result.concat(formatMailEntriesChronological(pdEntries));
 
   // Parse preferences from "other" lines
   var otherText=other.join("\n");
@@ -1230,32 +1224,31 @@ function standardizeWebNotes(){
   document.getElementById("wnCopyBtn").style.display="inline-block";
 }
 
-function formatMailEntries(entries, mailType, actionPhrase){
+function formatMailEntriesChronological(entries){
   if(!entries.length)return [];
   var result=[];
-  actionPhrase=actionPhrase||"mail has been sent on";
-
-  // Determine past tense for stacked old entries
-  var pastPhrase=actionPhrase.replace("has been sent","was sent").replace("has not been sent","was not sent");
 
   // Separate pre-2023 and 2023+
   var old=entries.filter(function(e){return e.year<2023});
   var recent=entries.filter(function(e){return e.year>=2023});
 
-  // Stack pre-2023 dates into one line
+  // Group old entries by type (prefix+past) and stack dates
   if(old.length){
-    var oldDates=old.map(function(e){return e.dateYY});
-    result.push({
-      text:mailType+" "+pastPhrase+" "+oldDates.join(", "),
-      changed:true,
-      stacked:true
-    });
+    var oldGroups={};
+    for(var i=0;i<old.length;i++){
+      var key=old[i].prefix+" "+old[i].past;
+      if(!oldGroups[key])oldGroups[key]=[];
+      oldGroups[key].push(old[i].dateYY);
+    }
+    for(var key in oldGroups){
+      result.push({text:key+" "+oldGroups[key].join(", "), changed:true, stacked:true});
+    }
   }
 
-  // 2023+ entries: each as individual standardized line with initials
+  // 2023+ entries: each individual, sorted by date (already sorted)
   for(var i=0;i<recent.length;i++){
     var e=recent[i];
-    var line=mailType+" "+actionPhrase+" "+e.dateYY;
+    var line=e.prefix+" "+e.action+" "+e.dateYY;
     if(e.initials)line+=" **"+e.initials;
     result.push({text:line, changed:true});
   }
