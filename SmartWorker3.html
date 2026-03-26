@@ -4944,9 +4944,16 @@ function removeAlertRow(idx){
   renderAlertTable();
 }
 
-function setAlertVisited(idx,val){
+function setAlertVisited(idx,val,butlerName){
   alertList[idx].visited=val;
-  if(val)alertList[idx].notVisitedReason="";
+  if(val){
+    alertList[idx].notVisitedReason="";
+    alertList[idx].visitedBy=butlerName||"";
+    alertList[idx].visitedAt=new Date().toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
+  }else{
+    alertList[idx].visitedBy="";
+    alertList[idx].visitedAt="";
+  }
   saveAlertSnapshot();
   renderAlertTable();
 }
@@ -5019,12 +5026,16 @@ function getFilteredAlerts(){
 function bulkAlertAction(action){
   var indices=Object.keys(alertSelected).map(Number).filter(function(i){return alertSelected[i]});
   if(!indices.length){alert("Önce satır seçin (checkbox)");return}
+  var butlerName="";
+  if(action==="yes"){butlerName=prompt("Butler adi (bos birakilabilir):")||""}
+  var time=new Date().toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
   indices.forEach(function(i){
-    if(action==="yes"){alertList[i].visited=true;alertList[i].notVisitedReason="";}
-    else if(action==="no"){alertList[i].visited=false;}
-    else if(action==="reset"){alertList[i].visited=null;alertList[i].notVisitedReason="";}
+    if(action==="yes"){alertList[i].visited=true;alertList[i].notVisitedReason="";alertList[i].visitedBy=butlerName;alertList[i].visitedAt=time}
+    else if(action==="no"){alertList[i].visited=false;alertList[i].visitedBy="";alertList[i].visitedAt=""}
+    else if(action==="reset"){alertList[i].visited=null;alertList[i].notVisitedReason="";alertList[i].visitedBy="";alertList[i].visitedAt=""}
   });
   alertSelected={};
+  saveAlertSnapshot();
   renderAlertTable();
 }
 
@@ -5098,7 +5109,7 @@ function renderAlertTable(){
   }
 
   var allChecked=filtered.length>0&&filtered.every(function(f){return alertSelected[f.idx]});
-  var h='<table><thead><tr><th style="width:30px"><input type="checkbox" id="alertSelectAll" '+(allChecked?'checked':'')+' onchange="toggleAlertSelectAll(this.checked)"></th><th style="width:55px">Oda</th><th>Misafir</th><th>Sebep(ler)</th><th style="width:50px">Gece</th><th style="width:90px">Çıkış</th><th style="width:100px">Durum</th><th style="width:180px">Gitmedi Sebebi</th><th style="width:30px"></th></tr></thead><tbody>';
+  var h='<table><thead><tr><th style="width:30px"><input type="checkbox" id="alertSelectAll" '+(allChecked?'checked':'')+' onchange="toggleAlertSelectAll(this.checked)"></th><th style="width:55px">Oda</th><th>Misafir</th><th>Sebep(ler)</th><th style="width:50px">Gece</th><th style="width:90px">Çıkış</th><th style="width:140px">Durum</th><th style="width:160px">Gitmedi Sebebi</th><th style="width:30px"></th></tr></thead><tbody>';
 
   for(var fi=0;fi<filtered.length;fi++){
     var idx=filtered[fi].idx;
@@ -5119,10 +5130,25 @@ function renderAlertTable(){
     }).join("");
     if(a.manual)reasonH+='<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;margin:1px 2px">Manuel</span>';
 
-    // Visit toggle
-    var visitH='<div style="display:flex;gap:4px">';
-    visitH+='<button onclick="setAlertVisited('+idx+',true)" style="cursor:pointer;padding:4px 8px;border-radius:5px;border:1.5px solid '+(a.visited===true?"#059669":"#d1d5db")+';background:'+(a.visited===true?"#059669":"#fff")+';color:'+(a.visited===true?"#fff":"#6b7280")+';font-size:11px;font-weight:700">✅</button>';
-    visitH+='<button onclick="setAlertVisited('+idx+',false)" style="cursor:pointer;padding:4px 8px;border-radius:5px;border:1.5px solid '+(a.visited===false?"#dc2626":"#d1d5db")+';background:'+(a.visited===false?"#dc2626":"#fff")+';color:'+(a.visited===false?"#fff":"#6b7280")+';font-size:11px;font-weight:700">❌</button>';
+    // Visit toggle with butler assignment
+    var butlers=getKW("butler");
+    var visitH='<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">';
+    if(a.visited===true){
+      visitH+='<span style="font-size:11px;font-weight:700;color:#059669">✅</span>';
+      if(a.visitedBy)visitH+='<span style="font-size:9px;color:#065f46;background:#d1fae5;padding:1px 5px;border-radius:4px">'+esc(a.visitedBy)+'</span>';
+      if(a.visitedAt)visitH+='<span style="font-size:9px;color:#6b7280">'+esc(a.visitedAt)+'</span>';
+      visitH+='<button onclick="setAlertVisited('+idx+',null)" style="cursor:pointer;background:none;border:none;color:#9ca3af;font-size:10px;padding:0" title="Sifirla">↩</button>';
+    }else if(a.visited===false){
+      visitH+='<span style="font-size:11px;font-weight:700;color:#dc2626">❌</span>';
+      visitH+='<button onclick="setAlertVisited('+idx+',null)" style="cursor:pointer;background:none;border:none;color:#9ca3af;font-size:10px;padding:0" title="Sifirla">↩</button>';
+    }else{
+      // Pending — show butler select + visit button
+      visitH+='<select id="alertButler_'+idx+'" style="padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:10px;max-width:80px"><option value="">Butler</option>';
+      for(var bi=0;bi<butlers.length;bi++)visitH+='<option value="'+esc(butlers[bi])+'">'+esc(butlers[bi])+'</option>';
+      visitH+='</select>';
+      visitH+='<button onclick="setAlertVisited('+idx+',true,(document.getElementById(\'alertButler_'+idx+'\')||{}).value)" style="cursor:pointer;padding:3px 7px;border-radius:4px;border:1.5px solid #059669;background:#f0fdf4;color:#059669;font-size:10px;font-weight:700">✅</button>';
+      visitH+='<button onclick="setAlertVisited('+idx+',false)" style="cursor:pointer;padding:3px 7px;border-radius:4px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:10px;font-weight:700">❌</button>';
+    }
     visitH+='</div>';
 
     // Not-visited reason dropdown
@@ -5223,8 +5249,8 @@ function exportAlertExcel(){
 
   // ── R0: Title ──────────────────────────────────────────────
   cell(0,0,"BUTLER CHECK-IN ALERT — "+today,S_TITLE);
-  for(var tc=1;tc<=7;tc++) empty(0,tc,S_TITLE);
-  merges.push({s:{r:0,c:0},e:{r:0,c:7}});
+  for(var tc=1;tc<=9;tc++) empty(0,tc,S_TITLE);
+  merges.push({s:{r:0,c:0},e:{r:0,c:9}});
 
   // ── R1: Summary strip ──────────────────────────────────────
   var visited=alertList.filter(function(a){return a.visited===true}).length;
@@ -5237,7 +5263,7 @@ function exportAlertExcel(){
   cell(1,6,"Beklemede",S_SUMH); cell(1,7,pending,S_SUMA);
 
   // ── R2: Column headers ─────────────────────────────────────
-  var headers=["Oda","Misafir","Sebep(ler)","Detay","Gece","Çıkış","Ziyaret Durumu","Gitmedi Sebebi"];
+  var headers=["Oda","Misafir","Sebep(ler)","Detay","Gece","Çıkış","Ziyaret Durumu","Ziyaret Eden","Saat","Gitmedi Sebebi"];
   headers.forEach(function(h,ci){cell(2,ci,h,S_HDR);});
 
   // ── R3+: Data rows ─────────────────────────────────────────
@@ -5253,15 +5279,17 @@ function exportAlertExcel(){
     cell(row,4,a.nights||"",S_DATAC);
     cell(row,5,a.depDate||"",S_DATAC);
     cell(row,6,vLabel,vStyle);
-    cell(row,7,a.notVisitedReason||"",S_DATA);
+    cell(row,7,a.visitedBy||"",S_DATA);
+    cell(row,8,a.visitedAt||"",S_DATAC);
+    cell(row,9,a.notVisitedReason||"",S_DATA);
   });
 
   // ── Reason breakdown ───────────────────────────────────────
   var sr=3+alertList.length+1;
   var reasonCounts={};
   alertList.forEach(function(a){a.reasons.forEach(function(r){var k=r.label||r;reasonCounts[k]=(reasonCounts[k]||0)+1})});
-  cell(sr,0,"SEBEP DAĞILIMI",S_TITLE); for(tc=1;tc<=7;tc++) empty(sr,tc,S_TITLE);
-  merges.push({s:{r:sr,c:0},e:{r:sr,c:7}});
+  cell(sr,0,"SEBEP DAĞILIMI",S_TITLE); for(tc=1;tc<=9;tc++) empty(sr,tc,S_TITLE);
+  merges.push({s:{r:sr,c:0},e:{r:sr,c:9}});
   sr++;
   cell(sr,0,"Sebep",S_HDR); cell(sr,1,"Oda Sayısı",S_HDR); cell(sr,2,"Oran",S_HDR);
   for(tc=3;tc<=7;tc++) empty(sr,tc,S_HDR);
