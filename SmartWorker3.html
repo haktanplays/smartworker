@@ -441,7 +441,16 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 
 <!-- ===== BUTLER ALERT PAGE ===== -->
 <div class="page" id="page-alert">
-<div class="card">
+
+<!-- Alert Page Tabs -->
+<div class="tabs" style="margin-bottom:0">
+<div class="tab active" onclick="switchAlertTab('daily')">Gunluk</div>
+<div class="tab" onclick="switchAlertTab('analytics')">Analitik</div>
+</div>
+
+<!-- TAB: Daily (existing alert view) -->
+<div id="alertTab_daily">
+<div class="card" style="border-radius:0 0 10px 10px;margin-top:0">
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
   <h2 style="margin:0">Butler Check-in Alert</h2>
   <span id="alertDate" style="font-size:12px;color:#6b7280;font-weight:600"></span>
@@ -492,7 +501,49 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <!-- Alert table -->
 <div id="alertTableWrap"><p class="hint">Henüz veri yok — Arrival veya Trace PDF yükleyin.</p></div>
 </div>
+</div><!-- end alertTab_daily -->
+
+<!-- TAB: Analytics -->
+<div id="alertTab_analytics" style="display:none">
+<div class="card">
+<div class="card-header">
+  <h2>Butler Alert — Analitik</h2>
+  <div style="display:flex;gap:6px;align-items:center">
+    <div style="display:flex;gap:0">
+      <button id="alertRngWeek" class="tab active" style="font-size:10px;padding:4px 10px" onclick="setAlertRange('week')">Hafta</button>
+      <button id="alertRngMonth" class="tab" style="font-size:10px;padding:4px 10px" onclick="setAlertRange('month')">Ay</button>
+      <button id="alertRngYear" class="tab" style="font-size:10px;padding:4px 10px" onclick="setAlertRange('year')">Yil</button>
+      <button id="alertRngCustom" class="tab" style="font-size:10px;padding:4px 10px" onclick="setAlertRange('custom')">Ozel</button>
+    </div>
+    <span id="alertCustomRange" style="display:none;font-size:11px">
+      <input type="date" id="alertRangeStart" style="padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" onchange="renderAlertAnalytics()">
+      <span>—</span>
+      <input type="date" id="alertRangeEnd" style="padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" onchange="renderAlertAnalytics()">
+    </span>
+    <button class="btn-sm" style="background:#fef3c7;color:#92400e;border-color:#fbbf24;font-size:10px" onclick="toggleAlertCompare()">&#128200; Karsilastir</button>
+    <button class="btn btn-primary" style="font-size:10px;padding:4px 12px" onclick="exportAlertAnalyticsPdf()">&#x2B07; PDF</button>
+    <button class="btn btn-dark" style="font-size:10px;padding:4px 12px" onclick="exportAlertAnalyticsXlsx()">&#x2B07; Excel</button>
+  </div>
 </div>
+<div id="alertComparePanel" style="display:none;margin-bottom:12px;padding:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px"></div>
+<div id="alertAnalyticsWrap"><p class="hint">Veri yukleniyor...</p></div>
+</div>
+
+<!-- Backup/Import/Archive -->
+<div class="card">
+<h2>&#128190; Veri Yonetimi</h2>
+<div id="alertStorageDash" style="margin-bottom:10px"></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+  <button class="btn btn-primary" style="font-size:11px;padding:6px 16px" onclick="exportAlertBackup()">&#128190; Yedekle</button>
+  <button class="btn btn-dark" style="font-size:11px;padding:6px 16px" onclick="document.getElementById('alertImportInput').click()">&#128194; Iceri Aktar</button>
+  <input type="file" id="alertImportInput" accept=".json" multiple style="display:none" onchange="importAlertBackup(this.files)">
+  <button class="btn-sm" style="font-size:11px;padding:6px 16px;background:#fef3c7;color:#92400e;border-color:#fbbf24" onclick="autoArchiveAlerts()">&#128230; Arsivle (3+ ay)</button>
+</div>
+<div id="alertImportStatus" style="margin-top:8px;font-size:11px;color:#6b7280"></div>
+</div>
+</div><!-- end alertTab_analytics -->
+
+</div><!-- end page-alert -->
 
 <!-- ===== SHIFT HANDOFF PAGE ===== -->
 <div class="page" id="page-handoff">
@@ -894,7 +945,7 @@ function showPage(p){
       (p==="handoff"&&t.indexOf("Shift Handoff")>=0)||
       (p==="settings"&&t.indexOf("Ayar")>=0))});
   if(p==="settings"){renderKWTags();renderRadarSettings();renderTemplateSettings();renderPyKWTagsSettings();renderAlertReasonSettings();renderExpenseSettings();}
-  if(p==="alert")renderAlertTable();
+  if(p==="alert"){if(!alertList.length)loadAlertSnapshot();renderAlertTable()}
   if(p==="handoff")renderHandoffExportSummary();
   if(p==="equipment")renderEquipTable();
   if(p==="didit")initDidIt();
@@ -4859,6 +4910,7 @@ function buildAlertList(parsedGuests, traceList){
   newAlerts.sort(function(a,b){return a.roomNo-b.roomNo});
   alertList=manuals.concat(newAlerts); window.alertList=alertList;
   alertSelected={};
+  saveAlertSnapshot();
   setAlertFilter("all");
 }
 
@@ -4882,22 +4934,26 @@ function addManualAlert(){
   document.getElementById("alertManualRoom").value="";
   document.getElementById("alertManualGuest").value="";
   document.getElementById("alertManualReason").value="";
+  saveAlertSnapshot();
   renderAlertTable();
 }
 
 function removeAlertRow(idx){
   alertList.splice(idx,1);
+  saveAlertSnapshot();
   renderAlertTable();
 }
 
 function setAlertVisited(idx,val){
   alertList[idx].visited=val;
   if(val)alertList[idx].notVisitedReason="";
+  saveAlertSnapshot();
   renderAlertTable();
 }
 
 function setAlertNotReason(idx,val){
   alertList[idx].notVisitedReason=val;
+  saveAlertSnapshot();
 }
 
 function setAlertFilter(f){
@@ -5229,6 +5285,409 @@ function exportAlertExcel(){
   XLSX.writeFile(wb,"ButlerAlert_"+today+".xlsx");
 }
 
+// ===== ALERT PERSISTENCE =====
+function saveAlertSnapshot(){
+  if(!alertList.length)return;
+  var today=new Date().toISOString().split("T")[0];
+  localStorage.setItem("alert_"+today,JSON.stringify(alertList));
+}
+function loadAlertSnapshot(){
+  var today=new Date().toISOString().split("T")[0];
+  try{var s=localStorage.getItem("alert_"+today);if(s){alertList=JSON.parse(s);return true}}catch(e){}
+  return false;
+}
+
+// ===== ALERT TAB SWITCHING =====
+function switchAlertTab(tab){
+  document.getElementById("alertTab_daily").style.display=tab==="daily"?"block":"none";
+  document.getElementById("alertTab_analytics").style.display=tab==="analytics"?"block":"none";
+  document.querySelectorAll("#page-alert > .tabs .tab").forEach(function(el,i){
+    el.classList.toggle("active",i===(tab==="daily"?0:1));
+  });
+  if(tab==="daily"){renderAlertTable()}
+  if(tab==="analytics"){renderAlertAnalytics();renderAlertStorageDash()}
+}
+
+// ===== ALERT ANALYTICS =====
+var alertAnalyticsRange="week";
+
+function setAlertRange(mode){
+  alertAnalyticsRange=mode;
+  ["Week","Month","Year","Custom"].forEach(function(m){
+    var el=document.getElementById("alertRng"+m);
+    if(el)el.classList.toggle("active",mode===m.toLowerCase());
+  });
+  document.getElementById("alertCustomRange").style.display=mode==="custom"?"inline":"none";
+  if(mode==="custom"){
+    var today=new Date().toISOString().split("T")[0];
+    if(!document.getElementById("alertRangeStart").value){
+      var s=new Date();s.setDate(s.getDate()-6);
+      document.getElementById("alertRangeStart").value=s.toISOString().split("T")[0];
+      document.getElementById("alertRangeEnd").value=today;
+    }
+  }
+  renderAlertAnalytics();
+}
+
+function getAlertDateRange(){
+  var today=new Date();
+  var start,end=today.toISOString().split("T")[0];
+  if(alertAnalyticsRange==="week"){
+    var s=new Date(today);s.setDate(s.getDate()-6);start=s.toISOString().split("T")[0];
+  }else if(alertAnalyticsRange==="month"){
+    start=today.getFullYear()+"-"+("0"+(today.getMonth()+1)).slice(-2)+"-01";
+  }else if(alertAnalyticsRange==="year"){
+    start=today.getFullYear()+"-01-01";
+  }else if(alertAnalyticsRange==="custom"){
+    start=document.getElementById("alertRangeStart").value;
+    end=document.getElementById("alertRangeEnd").value;
+    if(!start||!end)return null;
+  }
+  return {start:start,end:end};
+}
+
+function loadAlertRangeData(){
+  var range=getAlertDateRange();
+  if(!range)return [];
+  var prefix="alert_";
+  var days=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!key.startsWith(prefix))continue;
+    var datePart=key.substring(prefix.length);
+    if(datePart.length<10||datePart.indexOf("archive")>=0)continue;
+    if(datePart>=range.start&&datePart<=range.end){
+      try{
+        var items=JSON.parse(localStorage.getItem(key));
+        if(Array.isArray(items))days.push({date:datePart,alerts:items});
+      }catch(e){}
+    }
+  }
+  // Also read archives
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!key.startsWith("alert_archive_"))continue;
+    var ym=key.substring(14);
+    var archStart=ym.substring(0,4)+"-"+ym.substring(4,6)+"-01";
+    var archEnd=ym.substring(0,4)+"-"+ym.substring(4,6)+"-31";
+    if(archEnd>=range.start&&archStart<=range.end){
+      try{days.push({date:archStart,alerts:null,archive:JSON.parse(localStorage.getItem(key))})}catch(e){}
+    }
+  }
+  days.sort(function(a,b){return a.date>b.date?1:-1});
+  return days;
+}
+
+function renderAlertAnalytics(){
+  var days=loadAlertRangeData();
+  var range=getAlertDateRange();
+  var wrap=document.getElementById("alertAnalyticsWrap");
+  if(!days.length){wrap.innerHTML='<p class="hint">Secilen donemde kayit bulunamadi.</p>';return}
+
+  // Aggregate
+  var totalAlerts=0,totalVisited=0,totalNotVisited=0,totalPending=0;
+  var reasonCounts={},notVisitedReasons={},dailyData=[];
+
+  for(var d=0;d<days.length;d++){
+    var day=days[d];
+    if(day.archive){
+      // Archive summary
+      var a=day.archive;
+      totalAlerts+=a.total||0;totalVisited+=a.visited||0;totalNotVisited+=a.notVisited||0;totalPending+=a.pending||0;
+      if(a.reasons)for(var r in a.reasons)reasonCounts[r]=(reasonCounts[r]||0)+a.reasons[r];
+      if(a.notVisitedReasons)for(var r in a.notVisitedReasons)notVisitedReasons[r]=(notVisitedReasons[r]||0)+a.notVisitedReasons[r];
+      dailyData.push({date:day.date,total:a.total||0,visited:a.visited||0,rate:a.total?Math.round((a.visited||0)/a.total*100):0});
+      continue;
+    }
+    var alerts=day.alerts;
+    var dTotal=alerts.length,dVisited=0,dNot=0,dPend=0;
+    for(var i=0;i<alerts.length;i++){
+      var al=alerts[i];
+      if(al.visited===true)dVisited++;
+      else if(al.visited===false){dNot++;if(al.notVisitedReason)notVisitedReasons[al.notVisitedReason]=(notVisitedReasons[al.notVisitedReason]||0)+1}
+      else dPend++;
+      if(al.reasons){for(var j=0;j<al.reasons.length;j++){var rl=al.reasons[j].label;reasonCounts[rl]=(reasonCounts[rl]||0)+1}}
+    }
+    totalAlerts+=dTotal;totalVisited+=dVisited;totalNotVisited+=dNot;totalPending+=dPend;
+    dailyData.push({date:day.date,total:dTotal,visited:dVisited,rate:dTotal?Math.round(dVisited/dTotal*100):0});
+  }
+
+  var overallRate=totalAlerts?Math.round(totalVisited/totalAlerts*100):0;
+  var avgPerDay=Math.round(totalAlerts/days.length*10)/10;
+
+  var h='';
+
+  // Summary cards
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px">';
+  h+='<div style="padding:12px;background:#f0fdf4;border-radius:8px;text-align:center"><div style="font-size:24px;font-weight:800;color:#059669">'+overallRate+'%</div><div style="font-size:10px;color:#065f46">Tamamlanma Orani</div></div>';
+  h+='<div style="padding:12px;background:#eff6ff;border-radius:8px;text-align:center"><div style="font-size:24px;font-weight:800;color:#1e40af">'+totalAlerts+'</div><div style="font-size:10px;color:#1e3a8a">Toplam Alert</div></div>';
+  h+='<div style="padding:12px;background:#f0fdf4;border-radius:8px;text-align:center"><div style="font-size:24px;font-weight:800;color:#059669">'+totalVisited+'</div><div style="font-size:10px;color:#065f46">Gidildi</div></div>';
+  h+='<div style="padding:12px;background:#fef2f2;border-radius:8px;text-align:center"><div style="font-size:24px;font-weight:800;color:#dc2626">'+totalNotVisited+'</div><div style="font-size:10px;color:#991b1b">Gidilmedi</div></div>';
+  h+='<div style="padding:12px;background:#fffbeb;border-radius:8px;text-align:center"><div style="font-size:24px;font-weight:800;color:#b45309">'+totalPending+'</div><div style="font-size:10px;color:#92400e">Beklemede</div></div>';
+  h+='<div style="padding:12px;background:#f3f4f6;border-radius:8px;text-align:center"><div style="font-size:24px;font-weight:800;color:#374151">'+avgPerDay+'</div><div style="font-size:10px;color:#6b7280">Ort/Gun</div></div>';
+  h+='</div>';
+
+  // Completion rate trend (daily bars)
+  var maxTotal=1;for(var i=0;i<dailyData.length;i++){if(dailyData[i].total>maxTotal)maxTotal=dailyData[i].total}
+  h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:16px">';
+  h+='<h3 style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">Gunluk Tamamlanma Orani ('+dailyData.length+' gun)</h3>';
+  for(var i=0;i<dailyData.length;i++){
+    var dd=new Date(dailyData[i].date+"T00:00:00");
+    var fD=("0"+dd.getDate()).slice(-2)+"."+("0"+(dd.getMonth()+1)).slice(-2);
+    var rate=dailyData[i].rate;
+    var clr=rate>=90?"#059669":rate>=70?"#eab308":"#ef4444";
+    var pctW=Math.round(dailyData[i].total/maxTotal*100);
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">';
+    h+='<span style="font-size:10px;color:#6b7280;min-width:40px;text-align:right">'+fD+'</span>';
+    h+='<div style="flex:1;background:#f3f4f6;border-radius:3px;height:16px;position:relative">';
+    h+='<div style="position:absolute;height:100%;border-radius:3px;background:#e5e7eb;width:'+pctW+'%"></div>';
+    h+='<div style="position:absolute;height:100%;border-radius:3px;background:'+clr+';width:'+Math.round(pctW*rate/100)+'%;opacity:.85"></div>';
+    h+='</div>';
+    h+='<span style="font-size:11px;font-weight:700;min-width:35px;color:'+clr+'">'+rate+'%</span>';
+    h+='<span style="font-size:10px;color:#9ca3af;min-width:30px">'+dailyData[i].visited+'/'+dailyData[i].total+'</span>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // Reason distribution
+  var rKeys=Object.keys(reasonCounts).sort(function(a,b){return reasonCounts[b]-reasonCounts[a]});
+  var REASON_COLORS={"4+ Gece":"#3b82f6","Çocuk":"#f59e0b","RSSRAF":"#dc2626","Special Occasion":"#7c3aed","Transfer":"#059669","OTA":"#e11d48"};
+  if(rKeys.length){
+    h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:16px">';
+    h+='<h3 style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">Sebep Dagilimi</h3>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    for(var i=0;i<rKeys.length;i++){
+      var clr2=REASON_COLORS[rKeys[i]]||"#6b7280";
+      h+='<div style="padding:8px 14px;background:'+clr2+'15;border:1px solid '+clr2+'40;border-radius:8px;text-align:center">';
+      h+='<div style="font-size:18px;font-weight:800;color:'+clr2+'">'+reasonCounts[rKeys[i]]+'</div>';
+      h+='<div style="font-size:10px;color:'+clr2+'">'+esc(rKeys[i])+'</div></div>';
+    }
+    h+='</div></div>';
+  }
+
+  // Not-visited reason breakdown
+  var nvKeys=Object.keys(notVisitedReasons).sort(function(a,b){return notVisitedReasons[b]-notVisitedReasons[a]});
+  if(nvKeys.length){
+    h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px">';
+    h+='<h3 style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">Gidilmeme Sebepleri</h3>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    for(var i=0;i<nvKeys.length;i++){
+      h+='<span class="badge" style="background:#fef2f2;color:#dc2626;font-size:11px;padding:4px 10px;border:1px solid #fecaca">'+esc(nvKeys[i])+': <b>'+notVisitedReasons[nvKeys[i]]+'</b></span>';
+    }
+    h+='</div></div>';
+  }
+
+  wrap.innerHTML=h;
+}
+
+// ===== ALERT COMPARISON =====
+var alertCompareVisible=false;
+function toggleAlertCompare(){
+  alertCompareVisible=!alertCompareVisible;
+  var panel=document.getElementById("alertComparePanel");
+  if(!alertCompareVisible){panel.style.display="none";return}
+  renderAlertCompare();
+}
+function renderAlertCompare(){
+  var panel=document.getElementById("alertComparePanel");
+  var range=getAlertDateRange();
+  if(!range){panel.innerHTML='<p style="font-size:11px;color:#92400e">Tarih secin.</p>';panel.style.display="block";return}
+  var s=new Date(range.start+"T00:00:00"),e=new Date(range.end+"T00:00:00");
+  var span=Math.round((e-s)/(1000*60*60*24))+1;
+  var prevEnd=new Date(s);prevEnd.setDate(prevEnd.getDate()-1);
+  var prevStart=new Date(prevEnd);prevStart.setDate(prevStart.getDate()-span+1);
+  var prevRange={start:prevStart.toISOString().split("T")[0],end:prevEnd.toISOString().split("T")[0]};
+
+  function loadForRange(r){
+    var total=0,visited=0,notVisited=0,reasons={};
+    for(var i=0;i<localStorage.length;i++){
+      var key=localStorage.key(i);
+      if(!key.startsWith("alert_")||key.indexOf("archive")>=0)continue;
+      var dp=key.substring(6);if(dp.length<10)continue;
+      if(dp>=r.start&&dp<=r.end){
+        try{var items=JSON.parse(localStorage.getItem(key));
+          for(var j=0;j<items.length;j++){total++;if(items[j].visited===true)visited++;else if(items[j].visited===false)notVisited++;
+            if(items[j].reasons)for(var k=0;k<items[j].reasons.length;k++){var rl=items[j].reasons[k].label;reasons[rl]=(reasons[rl]||0)+1}}
+        }catch(e){}
+      }
+    }
+    return {total:total,visited:visited,notVisited:notVisited,rate:total?Math.round(visited/total*100):0,reasons:reasons};
+  }
+
+  var cur=loadForRange(range),prev=loadForRange(prevRange);
+  function arrow(c,p){if(c>p)return '<span style="color:#059669">&#9650; +'+(c-p)+'</span>';if(c<p)return '<span style="color:#dc2626">&#9660; '+(c-p)+'</span>';return '<span style="color:#6b7280">— 0</span>'}
+  function fmtR(r){var s2=new Date(r.start+"T00:00:00"),e2=new Date(r.end+"T00:00:00");return ("0"+s2.getDate()).slice(-2)+"."+("0"+(s2.getMonth()+1)).slice(-2)+" — "+("0"+e2.getDate()).slice(-2)+"."+("0"+(e2.getMonth()+1)).slice(-2)+"."+e2.getFullYear()}
+
+  var h='<div style="font-weight:700;font-size:12px;color:#92400e;margin-bottom:10px">&#128200; Donem Karsilastirmasi</div>';
+  h+='<table style="font-size:12px;width:100%;max-width:450px"><thead><tr><th style="text-align:left;padding:4px 8px"></th><th style="text-align:center;padding:4px 8px;font-size:10px;color:#6b7280">'+fmtR(prevRange)+'</th><th style="text-align:center;padding:4px 8px;font-size:10px;font-weight:700;color:#92400e">'+fmtR(range)+'</th><th style="text-align:center;font-size:10px">Degisim</th></tr></thead><tbody>';
+  var rows=[["Toplam Alert",prev.total,cur.total],["Tamamlanma %",prev.rate+"%",cur.rate+"%"],["Gidildi",prev.visited,cur.visited],["Gidilmedi",prev.notVisited,cur.notVisited]];
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i];var c=typeof r[2]==="string"?parseInt(r[2]):r[2];var p=typeof r[1]==="string"?parseInt(r[1]):r[1];
+    h+='<tr style="font-weight:'+(i<2?'700':'400')+'"><td style="padding:4px 8px">'+r[0]+'</td><td style="text-align:center;padding:4px 8px;color:#6b7280">'+r[1]+'</td><td style="text-align:center;padding:4px 8px;font-weight:700">'+r[2]+'</td><td style="text-align:center;padding:4px 8px;font-size:11px">'+arrow(c,p)+'</td></tr>';
+  }
+  h+='</tbody></table>';
+  panel.innerHTML=h;panel.style.display="block";
+}
+
+// ===== ALERT BACKUP/IMPORT =====
+function exportAlertBackup(){
+  var backup={version:"ALERT_BACKUP_v1",exportDate:new Date().toISOString(),data:{}};
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(key.startsWith("alert_")||key==="alertReasons"){
+      try{backup.data[key]=JSON.parse(localStorage.getItem(key))}catch(e){backup.data[key]=localStorage.getItem(key)}
+    }
+  }
+  var json=JSON.stringify(backup,null,2);
+  var blob=new Blob([json],{type:"application/json"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;
+  a.download="Alert_Yedek_"+new Date().toISOString().split("T")[0]+".json";
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  document.getElementById("alertImportStatus").innerHTML='<span style="color:#059669">&#10003; Yedek indirildi.</span>';
+}
+
+function importAlertBackup(files){
+  if(!files||!files.length)return;
+  var totalNew=0,totalSkipped=0,processed=0,fileCount=files.length;
+
+  function processFile(file){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var imported=JSON.parse(e.target.result);
+        var data=imported.data||imported;
+        for(var key in data){
+          if(!key.startsWith("alert_"))continue;
+          if(key.indexOf("archive")>=0){if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(data[key]));continue}
+          var incoming=data[key];
+          if(typeof incoming==="string"){try{incoming=JSON.parse(incoming)}catch(ex){continue}}
+          if(!Array.isArray(incoming))continue;
+          var existing=[];
+          try{var s=localStorage.getItem(key);if(s)existing=JSON.parse(s)}catch(ex){}
+          var dedupSet={};
+          for(var j=0;j<existing.length;j++){dedupSet[existing[j].roomNo+"|"+existing[j].reasons.map(function(r){return r.label}).sort().join(",")]=1}
+          for(var j=0;j<incoming.length;j++){
+            var entry=incoming[j];
+            var dk=entry.roomNo+"|"+(entry.reasons||[]).map(function(r){return r.label}).sort().join(",");
+            if(dedupSet[dk]){
+              // Merge visit status: visited > notVisited > pending
+              var existIdx=-1;for(var k=0;k<existing.length;k++){if(existing[k].roomNo===entry.roomNo){existIdx=k;break}}
+              if(existIdx>=0&&entry.visited===true&&existing[existIdx].visited!==true){existing[existIdx].visited=true;existing[existIdx].notVisitedReason=""}
+              totalSkipped++;
+            }else{existing.push(entry);dedupSet[dk]=1;totalNew++}
+          }
+          localStorage.setItem(key,JSON.stringify(existing));
+        }
+      }catch(err){console.error("Alert import error:",err)}
+      processed++;
+      if(processed>=fileCount){
+        document.getElementById("alertImportStatus").innerHTML='<span style="color:#059669">&#10003; '+fileCount+' dosya: <b>'+totalNew+'</b> yeni, <b>'+totalSkipped+'</b> tekrar.</span>';
+        loadAlertSnapshot();renderAlertTable();renderAlertStorageDash();
+      }
+    };
+    reader.readAsText(file);
+  }
+  for(var i=0;i<files.length;i++)processFile(files[i]);
+}
+
+// ===== ALERT ARCHIVE =====
+function autoArchiveAlerts(){
+  var now=new Date();
+  var cutoff=new Date(now.getFullYear(),now.getMonth()-3,1).toISOString().split("T")[0];
+  var prefix="alert_";
+  var months={};var keysToDelete=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!key.startsWith(prefix)||key.indexOf("archive")>=0)continue;
+    var dp=key.substring(prefix.length);
+    if(dp.length<10||dp>=cutoff)continue;
+    var ym=dp.substring(0,4)+dp.substring(5,7);
+    try{var items=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(items))continue;
+      if(!months[ym])months[ym]={total:0,visited:0,notVisited:0,pending:0,reasons:{},notVisitedReasons:{}};
+      var m=months[ym];
+      for(var j=0;j<items.length;j++){
+        m.total++;
+        if(items[j].visited===true)m.visited++;
+        else if(items[j].visited===false){m.notVisited++;if(items[j].notVisitedReason)m.notVisitedReasons[items[j].notVisitedReason]=(m.notVisitedReasons[items[j].notVisitedReason]||0)+1}
+        else m.pending++;
+        if(items[j].reasons)for(var k=0;k<items[j].reasons.length;k++){var rl=items[j].reasons[k].label;m.reasons[rl]=(m.reasons[rl]||0)+1}
+      }
+      keysToDelete.push(key);
+    }catch(e){}
+  }
+  if(!keysToDelete.length){alert("Arsivlenecek eski veri yok.");return}
+  for(var ym in months)localStorage.setItem("alert_archive_"+ym,JSON.stringify(months[ym]));
+  for(var i=0;i<keysToDelete.length;i++)localStorage.removeItem(keysToDelete[i]);
+  alert(Object.keys(months).length+" ay arsivlendi, "+keysToDelete.length+" gunluk kayit sikistirildi.");
+  renderAlertStorageDash();
+}
+
+function renderAlertStorageDash(){
+  var total=0;var alertTotal=0;
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    var size=(localStorage.getItem(key).length*2)/1024;
+    total+=size;
+    if(key.startsWith("alert_"))alertTotal+=size;
+  }
+  var pct=Math.min(100,Math.round(total/5120*100));
+  var el=document.getElementById("alertStorageDash");
+  if(!el)return;
+  el.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:11px"><span>Alert: <b>'+Math.round(alertTotal)+' KB</b></span><span style="color:#9ca3af">|</span><span>Toplam: <b>'+Math.round(total)+' KB</b> / 5 MB ('+pct+'%)</span></div>';
+}
+
+// ===== ALERT ANALYTICS EXPORT =====
+function exportAlertAnalyticsPdf(){
+  var days=loadAlertRangeData();
+  if(!days.length)return alert("Veri yok.");
+  var range=getAlertDateRange();
+  var s=new Date(range.start+"T00:00:00"),e=new Date(range.end+"T00:00:00");
+  var label=("0"+s.getDate()).slice(-2)+"."+("0"+(s.getMonth()+1)).slice(-2)+" — "+("0"+e.getDate()).slice(-2)+"."+("0"+(e.getMonth()+1)).slice(-2)+"."+e.getFullYear();
+  // Calculate stats
+  var tA=0,tV=0,tN=0,rc={},nvr={};
+  for(var d=0;d<days.length;d++){
+    if(days[d].archive){var a=days[d].archive;tA+=a.total||0;tV+=a.visited||0;tN+=a.notVisited||0;if(a.reasons)for(var r in a.reasons)rc[r]=(rc[r]||0)+a.reasons[r];continue}
+    for(var i=0;i<days[d].alerts.length;i++){var al=days[d].alerts[i];tA++;if(al.visited===true)tV++;else if(al.visited===false){tN++;if(al.notVisitedReason)nvr[al.notVisitedReason]=(nvr[al.notVisitedReason]||0)+1}
+    if(al.reasons)for(var j=0;j<al.reasons.length;j++){rc[al.reasons[j].label]=(rc[al.reasons[j].label]||0)+1}}
+  }
+  var rate=tA?Math.round(tV/tA*100):0;
+  var css='@page{size:A4;margin:15mm 20mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Segoe UI",sans-serif;color:#1e293b;font-size:10.5pt}.page{max-width:210mm;margin:0 auto;padding:15mm 20mm}.header{text-align:center;border-bottom:2px solid #1a6b5c;padding-bottom:5mm;margin-bottom:6mm}.header h1{font-size:20pt;color:#1a6b5c}.cards{display:flex;gap:10px;flex-wrap:wrap;margin:6mm 0}.card2{flex:1;min-width:80px;padding:10px;border-radius:8px;text-align:center}.card2 .num{font-size:20pt;font-weight:800}.card2 .lbl{font-size:8pt}table{width:100%;border-collapse:collapse;font-size:9.5pt;margin:5mm 0}th{padding:2mm 4mm;border-bottom:2px solid #1a6b5c;color:#1a6b5c;font-size:8pt;text-align:left}td{padding:2mm 4mm;border-bottom:1px solid #e5e7eb}.badge2{display:inline-block;padding:1mm 3mm;border-radius:3mm;font-size:8pt;font-weight:600}.toolbar{position:fixed;top:0;left:0;right:0;background:#1a6b5c;color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100}.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:#fff;color:#1a6b5c}@media print{.toolbar{display:none!important}}@media screen{body{background:#e5e7eb;padding:60px 10px 20px}}';
+  var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Alert Analytics - '+esc(label)+'</title><style>'+css+'</style></head><body>';
+  h+='<div class="toolbar"><button onclick="window.print()">PDF Kaydet</button><span style="font-size:13px;opacity:.8">Butler Alert Analytics — '+esc(label)+'</span></div>';
+  h+='<div class="page"><div class="header"><h1>Butler Check-in Alert Analytics</h1><div style="color:#6b7280;margin-top:2mm">'+esc(label)+' — '+days.length+' gun</div></div>';
+  h+='<div class="cards"><div class="card2" style="background:#f0fdf4"><div class="num" style="color:#059669">'+rate+'%</div><div class="lbl" style="color:#065f46">Tamamlanma</div></div>';
+  h+='<div class="card2" style="background:#eff6ff"><div class="num" style="color:#1e40af">'+tA+'</div><div class="lbl" style="color:#1e3a8a">Toplam</div></div>';
+  h+='<div class="card2" style="background:#f0fdf4"><div class="num" style="color:#059669">'+tV+'</div><div class="lbl" style="color:#065f46">Gidildi</div></div>';
+  h+='<div class="card2" style="background:#fef2f2"><div class="num" style="color:#dc2626">'+tN+'</div><div class="lbl" style="color:#991b1b">Gidilmedi</div></div></div>';
+  // Reason table
+  var rk=Object.keys(rc).sort(function(a,b){return rc[b]-rc[a]});
+  if(rk.length){h+='<h3 style="margin-top:5mm">Sebep Dagilimi</h3><table><thead><tr><th>Sebep</th><th>Sayi</th><th>Oran</th></tr></thead><tbody>';
+    for(var i=0;i<rk.length;i++){h+='<tr><td>'+esc(rk[i])+'</td><td style="font-weight:700">'+rc[rk[i]]+'</td><td>'+Math.round(rc[rk[i]]/tA*100)+'%</td></tr>'}
+    h+='</tbody></table>';
+  }
+  h+='</div></body></html>';
+  dl(h,"AlertAnalytics_"+label.replace(/[\.\s—\/]/g,"_")+".html");
+}
+
+function exportAlertAnalyticsXlsx(){
+  var days=loadAlertRangeData();
+  if(!days.length)return alert("Veri yok.");
+  var dailyRows=[];
+  for(var d=0;d<days.length;d++){
+    var day=days[d];var t=0,v=0,n=0;
+    if(day.archive){t=day.archive.total||0;v=day.archive.visited||0;n=day.archive.notVisited||0}
+    else{t=day.alerts.length;for(var i=0;i<day.alerts.length;i++){if(day.alerts[i].visited===true)v++;else if(day.alerts[i].visited===false)n++}}
+    dailyRows.push({Tarih:day.date,Toplam:t,Gidildi:v,Gidilmedi:n,Beklemede:t-v-n,"Oran %":t?Math.round(v/t*100):0});
+  }
+  var ws=XLSX.utils.json_to_sheet(dailyRows);
+  ws["!cols"]=[{wch:12},{wch:8},{wch:8},{wch:10},{wch:10},{wch:8}];
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Alert Analytics");
+  XLSX.writeFile(wb,"AlertAnalytics.xlsx");
+}
+
 // ============================================================
 // SHIFT HANDOFF MODULE
 // ============================================================
@@ -5390,7 +5849,10 @@ function importHandoff(file){
   toggleSettingsSection, updGF, wnHandleArrPDF, wnLoadGuest,
   dlFile, setupDrop, fmtDateDMY, Store, renderPyKWTagsFor, savePyKW, createTemplateManager,
   renderAlertTable, renderPYTable,
-  setAlertReasonFlt, setAlertSortKey
+  setAlertReasonFlt, setAlertSortKey,
+  switchAlertTab, setAlertRange, renderAlertAnalytics, toggleAlertCompare,
+  exportAlertBackup, importAlertBackup, autoArchiveAlerts,
+  exportAlertAnalyticsPdf, exportAlertAnalyticsXlsx
 ].forEach(function(fn){ if(fn && fn.name) window[fn.name] = fn });
 
 // Also alias object-type helpers
