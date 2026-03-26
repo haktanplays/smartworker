@@ -247,7 +247,44 @@ Her kategori (MINIBAR, PILLOW TYPE, SPA TREATMENTS vs.) kendi sablonuna sahiptir
 </div>
 </div>
 
-<script>
+<!-- Learned Rules Section -->
+<div class="settings-segment">
+<div class="settings-header" onclick="toggleSettingsSection(this)">
+<span>&#129504; Ogrenilmis Kurallar</span><span class="settings-arrow">&#9660;</span>
+</div>
+<div class="settings-body" style="display:none">
+<div class="settings-info">Sistem duzeltmelerinizden ogrenir. Her duzeltme bir kural olarak kaydedilir. Ayrica elle kural ekleyebilirsiniz.</div>
+
+<!-- Manual rule adder -->
+<div style="padding:12px 0;border-bottom:1px solid #e5e7eb;margin-bottom:10px">
+<h3 style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px">Elle Kural Ekle</h3>
+<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
+<div>
+<label style="font-size:10px;color:#6b7280;display:block;margin-bottom:3px">Bunu gordugunde (pattern):</label>
+<input id="learnRuleFrom" placeholder="Ornek: PA mail gonderildi" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px">
+</div>
+<div>
+<label style="font-size:10px;color:#6b7280;display:block;margin-bottom:3px">Buna donustur (category):</label>
+<select id="learnRuleTo" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px">
+<option value="pa">Pre arrival mail</option>
+<option value="pd">Post departure mail</option>
+<option value="ignore">Yoksay (sil)</option>
+</select>
+</div>
+<button onclick="addManualLearnedRule()" class="btn btn-primary" style="font-size:11px;padding:6px 14px">+ Ekle</button>
+</div>
+</div>
+
+<!-- Learned rules list -->
+<div id="learnedRulesList"></div>
+<div style="display:flex;gap:8px;margin-top:10px">
+<button onclick="exportLearnedRules()" class="btn-sm" style="font-size:10px">&#128190; Kural Yedekle</button>
+<button onclick="document.getElementById('learnRuleImport').click()" class="btn-sm" style="font-size:10px">&#128194; Kural Yukle</button>
+<input type="file" id="learnRuleImport" accept=".json" style="display:none" onchange="importLearnedRules(this.files[0])">
+<span id="learnRuleCount" style="font-size:10px;color:#6b7280"></span>
+</div>
+</div>
+</div>
 pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
@@ -664,6 +701,140 @@ function resetNoteForm(){
 
 // ===== WEB NOTES STANDARDIZER =====
 
+// ===== LEARNING SYSTEM =====
+// Rules: [{from:"pa mail gonderildi", to:"pa", addedBy:"manual"|"correction", addedOn:"2026-03-26"}]
+function getLearnedRules(){try{var s=localStorage.getItem("note_learned_rules");return s?JSON.parse(s):[]}catch(e){return []}}
+function setLearnedRules(rules){localStorage.setItem("note_learned_rules",JSON.stringify(rules))}
+
+function addLearnedRule(fromPattern,toCategory,source){
+  var rules=getLearnedRules();
+  var norm=fromPattern.trim().toLowerCase();
+  // Check if rule already exists
+  for(var i=0;i<rules.length;i++){if(rules[i].from===norm)return} // already learned
+  rules.push({from:norm,to:toCategory,addedBy:source||"correction",addedOn:new Date().toISOString().split("T")[0]});
+  setLearnedRules(rules);
+}
+
+function removeLearnedRule(idx){
+  var rules=getLearnedRules();rules.splice(idx,1);setLearnedRules(rules);renderLearnedRules();
+}
+
+function addManualLearnedRule(){
+  var from=document.getElementById("learnRuleFrom").value.trim();
+  var to=document.getElementById("learnRuleTo").value;
+  if(!from){alert("Pattern girin.");return}
+  addLearnedRule(from,to,"manual");
+  document.getElementById("learnRuleFrom").value="";
+  renderLearnedRules();
+}
+
+function renderLearnedRules(){
+  var rules=getLearnedRules();
+  var el=document.getElementById("learnedRulesList");
+  var count=document.getElementById("learnRuleCount");
+  if(!el)return;
+  count.textContent=rules.length+" kural";
+  if(!rules.length){el.innerHTML='<p class="hint">Henuz ogrenilmis kural yok.</p>';return}
+  var catLabels={"pa":"Pre arrival mail","pd":"Post departure mail","ignore":"Yoksay"};
+  var h='<table style="font-size:11px;margin-top:6px"><thead><tr><th>Pattern</th><th>Kategori</th><th>Kaynak</th><th>Tarih</th><th></th></tr></thead><tbody>';
+  for(var i=0;i<rules.length;i++){
+    var r=rules[i];
+    var catColor=r.to==="pa"?"#1a6b5c":r.to==="pd"?"#7c3aed":"#6b7280";
+    h+='<tr><td style="font-family:monospace;font-size:10px;color:#374151">'+esc(r.from)+'</td>';
+    h+='<td><span style="color:'+catColor+';font-weight:600;font-size:10px">'+(catLabels[r.to]||r.to)+'</span></td>';
+    h+='<td style="font-size:10px;color:#9ca3af">'+(r.addedBy==="manual"?"Elle":"Duzeltme")+'</td>';
+    h+='<td style="font-size:10px;color:#9ca3af">'+(r.addedOn||"")+'</td>';
+    h+='<td><button onclick="removeLearnedRule('+i+')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:12px">&times;</button></td></tr>';
+  }
+  h+='</tbody></table>';
+  el.innerHTML=h;
+}
+
+function exportLearnedRules(){
+  var rules=getLearnedRules();
+  var json=JSON.stringify({version:"LEARN_RULES_v1",rules:rules},null,2);
+  var blob=new Blob([json],{type:"application/json"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;
+  a.download="NoteRules_"+new Date().toISOString().split("T")[0]+".json";
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function importLearnedRules(file){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      var incoming=data.rules||data;
+      if(!Array.isArray(incoming)){alert("Gecersiz dosya.");return}
+      var existing=getLearnedRules();
+      var existSet={};existing.forEach(function(r){existSet[r.from]=1});
+      var added=0;
+      for(var i=0;i<incoming.length;i++){
+        if(!existSet[incoming[i].from]){existing.push(incoming[i]);existSet[incoming[i].from]=1;added++}
+      }
+      setLearnedRules(existing);
+      renderLearnedRules();
+      alert(added+" yeni kural eklendi ("+(incoming.length-added)+" tekrar atlandi).");
+    }catch(err){alert("Dosya okunamadi: "+err.message)}
+  };
+  reader.readAsText(file);
+}
+
+// Apply learned rules to a line — returns {matched:true/false, category:"pa"/"pd"/"ignore"}
+function applyLearnedRules(line){
+  var rules=getLearnedRules();
+  var low=line.toLowerCase();
+  for(var i=0;i<rules.length;i++){
+    if(low.indexOf(rules[i].from)>=0){
+      return {matched:true, category:rules[i].to};
+    }
+  }
+  return {matched:false};
+}
+
+// Click-to-correct: when user clicks an output line
+function correctNoteLine(lineIdx){
+  var outDiv=document.getElementById("wnOutput");
+  var plain=(outDiv.dataset.plain||"").split("\n");
+  var rawLines=(outDiv.dataset.rawLines||"").split("\u001F"); // stored raw lines per index
+  if(lineIdx>=plain.length)return;
+
+  var currentText=plain[lineIdx];
+  var rawText=rawLines[lineIdx]||currentText;
+  var choice=prompt("Bu satirin kategorisi nedir?\n\n"+
+    "Orijinal: "+rawText+"\n"+
+    "Mevcut: "+currentText+"\n\n"+
+    "Secenekler:\n"+
+    "1 = Pre arrival mail\n"+
+    "2 = Post departure mail\n"+
+    "3 = Yoksay (sil)\n"+
+    "4 = Degistirme (koru)\n\n"+
+    "Secim (1-4):");
+
+  if(!choice)return;
+  var catMap={"1":"pa","2":"pd","3":"ignore"};
+  var cat=catMap[choice.trim()];
+  if(!cat)return; // 4 or invalid = keep
+
+  // Extract the key phrase from the raw text to learn
+  var keyPhrase=rawText.toLowerCase()
+    .replace(/\d{1,2}[\.\-\/\s]\d{1,2}[\.\-\/\s]\d{2,4}/g,"") // remove dates
+    .replace(/\*\*\s*[a-z]{1,4}\s*$/i,"") // remove initials
+    .replace(/\s+/g," ").trim();
+
+  if(keyPhrase.length>=5){
+    addLearnedRule(keyPhrase,cat,"correction");
+  }
+
+  // Re-run standardization to apply the new rule
+  standardizeWebNotes();
+}
+
+// Init: render learned rules on load
+(function(){setTimeout(renderLearnedRules,100)})();
+
 function todayStr(){
   var d=new Date();
   return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear();
@@ -952,8 +1123,17 @@ function standardizeWebNotes(){
 
   for(var i=0;i<lines.length;i++){
     var l=lines[i];
-    var isPreArr=rePreArr.test(l)&&!/\bnot\s+(been|sent)/i.test(l);
-    var isPostDep=rePostDep.test(l)&&!/\bnot\s+(been|sent)/i.test(l);
+
+    // Check learned rules FIRST
+    var learned=applyLearnedRules(l);
+    if(learned.matched){
+      if(learned.category==="ignore")continue; // skip this line
+      var isPreArr=(learned.category==="pa");
+      var isPostDep=(learned.category==="pd");
+    }else{
+      var isPreArr=rePreArr.test(l)&&!/\bnot\s+(been|sent)/i.test(l);
+      var isPostDep=rePostDep.test(l)&&!/\bnot\s+(been|sent)/i.test(l);
+    }
 
     if(isPreArr||isPostDep){
       var d=extractDate(l);
@@ -990,28 +1170,32 @@ function standardizeWebNotes(){
   if(prefResult.unmatched.length>0){
     result.push({text:"\u2550\u2550\u2550 OTHER NOTES \u2550\u2550\u2550",changed:false,isHeader:true});
     for(var i=0;i<prefResult.unmatched.length;i++){
-      result.push({text:prefResult.unmatched[i], changed:false});
+      result.push({text:prefResult.unmatched[i], changed:false, raw:prefResult.unmatched[i]});
     }
   }
 
-  // Render
+  // Render with clickable lines for correction
   var html="";
   var plain=[];
+  var rawMap=[]; // maps output index to original raw line
   for(var i=0;i<result.length;i++){
     var item=result[i];
     var style;
     if(item.isHeader)style="color:#6b7280;font-weight:700;font-size:10px;padding:6px 0 2px;letter-spacing:1px";
-    else if(item.stacked)style="color:#6b7280;font-style:italic"; // old stacked dates
+    else if(item.stacked)style="color:#6b7280;font-style:italic";
     else if(item.changed)style="color:#1a6b5c;font-weight:500";
     else style="color:#374151";
-    html+='<div style="padding:2px 0;'+style+'">'+esc(item.text)+'</div>';
+    var clickable=!item.isHeader&&!item.stacked;
+    html+='<div style="padding:3px 6px;border-radius:4px;'+style+(clickable?';cursor:pointer':'')+'"'+(clickable?' onclick="correctNoteLine('+i+')" title="Tikla: duzelt / ogret"':'')+' onmouseover="'+(clickable?"this.style.background='#f0f9ff'":"")+'" onmouseout="this.style.background=\'\'">'+esc(item.text)+'</div>';
     plain.push(item.text);
+    rawMap.push(item.raw||item.text);
   }
 
   var outDiv=document.getElementById("wnOutput");
   document.getElementById("wnLines").innerHTML=html||'<span style="color:#6b7280">Sonuc yok.</span>';
   outDiv.style.display="block";
   outDiv.dataset.plain=plain.join("\n");
+  outDiv.dataset.rawLines=rawMap.join("\u001F");
   document.getElementById("wnCopyBtn").style.display="inline-block";
 }
 
