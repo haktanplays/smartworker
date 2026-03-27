@@ -951,6 +951,7 @@ function setKW(cat,arr){ Store.set("kw_"+cat,arr) }
 
 // ===== UTILS =====
 function getTomorrow(){var d=new Date();d.setDate(d.getDate()+1);return d.toISOString().split("T")[0]}
+function getToday(){return new Date().toISOString().split("T")[0]}
 function fmtDate(ds,lang){var d=new Date(ds+"T00:00:00");return d.getDate()+" "+(lang==="TR"?TR_M:EN_M)[d.getMonth()]+" "+d.getFullYear()}
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1).toLowerCase():""}
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
