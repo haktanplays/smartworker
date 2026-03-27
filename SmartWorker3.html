@@ -20,7 +20,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f4;min-height:1
 .topbar{background:linear-gradient(135deg,#1a6b5c,#0d4a3f);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .topbar h1{font-size:18px;font-weight:600}
 .topbar small{font-size:10px;letter-spacing:2px;opacity:.5;text-transform:uppercase;display:block}
-.nav{display:flex;gap:0;background:#fff;border-bottom:2px solid #e5e7eb;padding:0 16px;overflow-x:auto}
+.nav{display:flex;gap:0;background:#fff;border-bottom:2px solid #e5e7eb;padding:0 16px;overflow-x:auto;position:sticky;top:0;z-index:50}
 .nav-btn{padding:12px 20px;border:none;background:none;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
 .nav-btn.active{color:#1a6b5c;border-bottom-color:#1a6b5c}
 .nav-btn:hover{color:#1a6b5c}
@@ -975,7 +975,7 @@ function showPage(p){
       (p==="alert"&&t.indexOf("Butler Alert")>=0)||
       (p==="handoff"&&t.indexOf("Shift Handoff")>=0)||
       (p==="settings"&&t.indexOf("Ayar")>=0))});
-  if(p==="settings"){renderKWTags();renderRadarSettings();renderTemplateSettings();renderPyKWTagsSettings();renderAlertReasonSettings();renderAlertKwSettings();renderExpenseSettings();}
+  if(p==="settings"){renderKWTags();renderRadarSettings();renderPyKWTagsSettings();renderAlertReasonSettings();renderAlertKwSettings();}
   if(p==="alert"){if(!alertList.length)loadAlertSnapshot();loadAlertTarget();renderAlertTable()}
   if(p==="handoff")renderHandoffExportSummary();
   if(p==="equipment")renderEquipTable();
@@ -6117,7 +6117,8 @@ function importHandoff(file){
   switchAlertTab, setAlertRange, renderAlertAnalytics, toggleAlertCompare, saveAlertTarget, renderAlertWorkload,
   addAlertKw, removeAlertKw, setAlertUpsell, toggleAlertUpsellProduct, addUpsellProduct, removeUpsellProduct,
   exportAlertBackup, importAlertBackup, autoArchiveAlerts,
-  exportAlertAnalyticsPdf, exportAlertAnalyticsXlsx
+  exportAlertAnalyticsPdf, exportAlertAnalyticsXlsx,
+  exportAlertExcel, handleChangesPDF, renderBdiPeriod
 ].forEach(function(fn){ if(fn && fn.name) window[fn.name] = fn });
 
 // Also alias object-type helpers
