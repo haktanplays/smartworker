@@ -1054,17 +1054,18 @@ function processArrEntries(entries){
     else if(title&&!title.endsWith("."))title+=".";
     result.push({id:"g"+Math.random().toString(36).slice(2),title:title,firstName:e.firstName.split(/\s+/).map(cap).join(" "),lastName:e.lastName.split(/\s+/).map(cap).join(" "),lang:lang,type:type,stays:e.stays,roomNo:rn});
   }
+  applyGuestHistory(result);
   return result;
 }
 
 // ===== EXCEL =====
 function handleXLS(file){if(!file)return;document.getElementById("xlsStatus").textContent="Okunuyor...";var r=new FileReader();r.onload=function(ev){try{var wb=XLSX.read(new Uint8Array(ev.target.result),{type:"array"});parseExcel(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""}));document.getElementById("xlsStatus").innerHTML='<span style="color:#059669">&#10003; '+guests.length+' misafir</span>'}catch(e){document.getElementById("xlsStatus").innerHTML='<span style="color:#dc2626">'+e.message+'</span>'}};r.readAsArrayBuffer(file)}
-function parseExcel(rows){var seen={},result=[];for(var i=0;i<rows.length;i++){var r=rows[i];var nm=r["FULL_NAME_NO_SHR_IND"]||r["FULL_NAME"]||"";if(!nm||nm.indexOf(",")<0)continue;var nl=nm.toLowerCase();if(nl.indexOf("spare,spare")>=0||nl.indexOf("tba,tba")>=0||nl.indexOf("coach driver")>=0||nl.indexOf("hold,hold")>=0)continue;var rid=String(r["RESV_NAME_ID"]||"");if(rid&&seen[rid])continue;if(rid)seen[rid]=true;var mc=String(r["MARKET_CODE"]||"").toUpperCase();var rn=parseInt(r["ROOM_NO"],10)||0;var isR=(rn>=300&&rn<=499)||(rn>=700&&rn<=2799);if(mc==="PM"&&!isR)continue;var ad=parseInt(r["ADULTS"],10)||0,pq=parseInt(r["PHYSICAL_QUANTITY"],10)||0;if(ad===0&&pq===0&&!isR)continue;var fl=Math.floor(rn/100),un=rn%100,isSu=false;if(fl>=7&&fl<=18)isSu=[2,3,12].indexOf(un)>=0;else if(fl>=19&&fl<=20)isSu=[2,3,4,12].indexOf(un)>=0;else if(fl>=21)isSu=[2,3,4,7,12].indexOf(un)>=0;if(isSu)continue;var ps=nm.split(",").map(function(s){return s.trim()});var ln=ps[0]||"",fn=ps[1]||"",ti=ps[2]||"";var st=parseInt(r["NO_OF_STAYS"],10)||0;var ty=st>1?"REPEAT":"NEW";var la="EN",tl=ti.toLowerCase().replace(/\.$/,"");if(["bay","bayan","sn"].indexOf(tl)>=0)la="TR";if(["mr","bay"].indexOf(tl)>=0)ti=la==="TR"?"":"Mr.";else if(["mrs","bayan"].indexOf(tl)>=0)ti=la==="TR"?"":"Mrs.";else if(["ms","miss"].indexOf(tl)>=0)ti=la==="TR"?"":"Ms.";else if(tl==="sn"){ti="";la="TR"}else if(ti&&!ti.endsWith("."))ti+=".";fn=fn.split(/\s+/).map(cap).join(" ");ln=ln.split(/\s+/).map(cap).join(" ");if(ln)result.push({id:"g"+Math.random().toString(36).slice(2),title:ti,firstName:fn,lastName:ln,lang:la,type:ty,stays:st,roomNo:rn})}guests=result;window.guests=guests;renderGuestTable()}
+function parseExcel(rows){var seen={},result=[];for(var i=0;i<rows.length;i++){var r=rows[i];var nm=r["FULL_NAME_NO_SHR_IND"]||r["FULL_NAME"]||"";if(!nm||nm.indexOf(",")<0)continue;var nl=nm.toLowerCase();if(nl.indexOf("spare,spare")>=0||nl.indexOf("tba,tba")>=0||nl.indexOf("coach driver")>=0||nl.indexOf("hold,hold")>=0)continue;var rid=String(r["RESV_NAME_ID"]||"");if(rid&&seen[rid])continue;if(rid)seen[rid]=true;var mc=String(r["MARKET_CODE"]||"").toUpperCase();var rn=parseInt(r["ROOM_NO"],10)||0;var isR=(rn>=300&&rn<=499)||(rn>=700&&rn<=2799);if(mc==="PM"&&!isR)continue;var ad=parseInt(r["ADULTS"],10)||0,pq=parseInt(r["PHYSICAL_QUANTITY"],10)||0;if(ad===0&&pq===0&&!isR)continue;var fl=Math.floor(rn/100),un=rn%100,isSu=false;if(fl>=7&&fl<=18)isSu=[2,3,12].indexOf(un)>=0;else if(fl>=19&&fl<=20)isSu=[2,3,4,12].indexOf(un)>=0;else if(fl>=21)isSu=[2,3,4,7,12].indexOf(un)>=0;if(isSu)continue;var ps=nm.split(",").map(function(s){return s.trim()});var ln=ps[0]||"",fn=ps[1]||"",ti=ps[2]||"";var st=parseInt(r["NO_OF_STAYS"],10)||0;var ty=st>1?"REPEAT":"NEW";var la="EN",tl=ti.toLowerCase().replace(/\.$/,"");if(["bay","bayan","sn"].indexOf(tl)>=0)la="TR";if(["mr","bay"].indexOf(tl)>=0)ti=la==="TR"?"":"Mr.";else if(["mrs","bayan"].indexOf(tl)>=0)ti=la==="TR"?"":"Mrs.";else if(["ms","miss"].indexOf(tl)>=0)ti=la==="TR"?"":"Ms.";else if(tl==="sn"){ti="";la="TR"}else if(ti&&!ti.endsWith("."))ti+=".";fn=fn.split(/\s+/).map(cap).join(" ");ln=ln.split(/\s+/).map(cap).join(" ");if(ln)result.push({id:"g"+Math.random().toString(36).slice(2),title:ti,firstName:fn,lastName:ln,lang:la,type:ty,stays:st,roomNo:rn})}applyGuestHistory(result);guests=result;window.guests=guests;renderGuestTable()}
 
 // ===== MANUAL =====
 var SAMPLE="Acar,Alper,Bay\nAlarcon Gonzalez,Luis Francisc,Mr.\nDumont,Laurent Charles,Mr.\nHaydar,Elif,Bayan\nKarabulut,Batuhan,Bay";
 function loadSample(){document.getElementById("guestInput").value=SAMPLE}
-function parseManualAndRender(){var lines=document.getElementById("guestInput").value.split("\n").map(function(l){return l.trim()}).filter(function(l){return l.length>0});var r=[];for(var i=0;i<lines.length;i++){var p=lines[i].split(",").map(function(s){return s.trim()});if(p.length<2)continue;var ln=p[0],fn=p[1]||"",ti=p[2]||"";var la="EN",tl=ti.toLowerCase().replace(/\.$/,"");if(["bay","bayan","sn"].indexOf(tl)>=0)la="TR";if(["mr","bay"].indexOf(tl)>=0)ti=la==="TR"?"":"Mr.";else if(["mrs","bayan"].indexOf(tl)>=0)ti=la==="TR"?"":"Mrs.";else if(["ms","miss"].indexOf(tl)>=0)ti=la==="TR"?"":"Ms.";else if(tl==="sn"){ti="";la="TR"}else if(ti&&!ti.endsWith("."))ti+=".";fn=fn.split(/\s+/).map(cap).join(" ");ln=ln.split(/\s+/).map(cap).join(" ");r.push({id:"g"+Math.random().toString(36).slice(2),title:ti,firstName:fn,lastName:ln,lang:la,type:"NEW",stays:0,roomNo:0})}guests=r;window.guests=guests;renderGuestTable()}
+function parseManualAndRender(){var lines=document.getElementById("guestInput").value.split("\n").map(function(l){return l.trim()}).filter(function(l){return l.length>0});var r=[];for(var i=0;i<lines.length;i++){var p=lines[i].split(",").map(function(s){return s.trim()});if(p.length<2)continue;var ln=p[0],fn=p[1]||"",ti=p[2]||"";var la="EN",tl=ti.toLowerCase().replace(/\.$/,"");if(["bay","bayan","sn"].indexOf(tl)>=0)la="TR";if(["mr","bay"].indexOf(tl)>=0)ti=la==="TR"?"":"Mr.";else if(["mrs","bayan"].indexOf(tl)>=0)ti=la==="TR"?"":"Mrs.";else if(["ms","miss"].indexOf(tl)>=0)ti=la==="TR"?"":"Ms.";else if(tl==="sn"){ti="";la="TR"}else if(ti&&!ti.endsWith("."))ti+=".";fn=fn.split(/\s+/).map(cap).join(" ");ln=ln.split(/\s+/).map(cap).join(" ");r.push({id:"g"+Math.random().toString(36).slice(2),title:ti,firstName:fn,lastName:ln,lang:la,type:"NEW",stays:0,roomNo:0})}applyGuestHistory(r);guests=r;window.guests=guests;renderGuestTable()}
 
 // ===== LETTER GEN =====
 function genLetter(g,ds){var d=fmtDate(ds,g.lang),rp=g.type==="REPEAT";if(g.lang==="TR")return{date:d,greeting:"Say\u0131n "+g.lastName+",",welcome:rp?"Raffles \u0130stanbul\u2019a yeniden ho\u015f geldiniz!":"Raffles \u0130stanbul\u2019a ho\u015f geldiniz!",body:"T\u00fcm otel ailesi ad\u0131na konaklaman\u0131z\u0131n keyifli ge\u00e7mesini diliyor, sundu\u011fumuz hizmetlerin beklentilerinizi kar\u015f\u0131layaca\u011f\u0131n\u0131 umuyorum.",body2:"Yard\u0131mc\u0131 olabilece\u011fimiz her konuda bana veya ekip arkada\u015flar\u0131ma ula\u015fmakta l\u00fctfen tereddit etmeyiniz. Bizler, siz konuklar\u0131m\u0131z\u0131n keyifli zaman ge\u00e7irmesini sa\u011flamaktan mutluluk duyaca\u011f\u0131z.",closing:"\u0130\u00e7ten sayg\u0131lar\u0131mla,",name:"Burak Unan",jobtitle:"Genel M\u00fcd\u00fcr"};return{date:d,greeting:"Dear "+(g.title?g.title+" ":"")+g.lastName+",",welcome:rp?"It is a true delight to welcome you back at Raffles Istanbul!":"It is a true delight to welcome you at Raffles Istanbul!",body:"On behalf of the hotel family, I wish you a most pleasant stay with us; hoping that our services exceed your expectations.",body2:"Please do not hesitate to contact me or my colleagues for any assistance you may require, as we are all here for your well-being.",closing:"Yours sincerely,",name:"Burak Unan",jobtitle:"General Manager"}}
@@ -1072,6 +1073,41 @@ function genLetter(g,ds){var d=fmtDate(ds,g.lang),rp=g.type==="REPEAT";if(g.lang
 // ===== PRINTED LETTER TRACKING =====
 var letterSearchQuery="";
 var letterPrintedFilter=false;
+
+function getGuestHistory(){
+  try{var s=localStorage.getItem("guest_history");return s?JSON.parse(s):{}}catch(e){return {}}
+}
+function saveGuestHistory(h){localStorage.setItem("guest_history",JSON.stringify(h))}
+function guestKey(g){return(g.lastName+"|"+g.firstName).toLowerCase().trim()}
+
+function recordGuestPrint(g){
+  var hist=getGuestHistory();
+  var key=guestKey(g);
+  if(!hist[key]){
+    hist[key]={stays:g.stays||1,lang:g.lang,title:g.title,prints:0};
+  }
+  hist[key].stays++;
+  hist[key].prints=(hist[key].prints||0)+1;
+  hist[key].lastDate=new Date().toISOString().split("T")[0];
+  hist[key].lang=g.lang;
+  hist[key].title=g.title;
+  saveGuestHistory(hist);
+}
+
+function applyGuestHistory(guestList){
+  var hist=getGuestHistory();
+  for(var i=0;i<guestList.length;i++){
+    var g=guestList[i];
+    var key=guestKey(g);
+    var rec=hist[key];
+    if(rec){
+      g.stays=Math.max(g.stays||0,rec.stays);
+      if(rec.stays>0)g.type="REPEAT";
+      if(rec.lang)g.lang=rec.lang;
+    }
+  }
+  return guestList;
+}
 
 function getPrintedLetters(){
   var ds=document.getElementById("dateInput").value;
@@ -1101,6 +1137,9 @@ function printSingleLetter(idx){
   var h='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><div class="toolbar"><button class="bp" onclick="window.print()">Yazdir</button><span style="font-size:13px;opacity:.8">'+esc(g.firstName)+' '+esc(g.lastName)+' — Mektup</span></div>';
   h+='<div class="letter"><p class="date">'+l.date+'</p><div class="spacer"></div><p>'+l.greeting+'</p><div class="spacer"></div><p>'+l.welcome+'</p><div class="spacer"></div><p>'+l.body+'</p><div class="spacer"></div><p>'+l.body2+'</p><div class="spacer"></div><p>'+l.closing+'</p><img class="sig" src="'+SIG+'" alt="" /><p>'+l.name+'</p><p>'+l.jobtitle+'</p></div></body></html>';
   dl(h,"mektup_"+g.lastName+"_"+g.firstName+".html");
+  recordGuestPrint(g);
+  g.stays=(g.stays||0)+1;
+  g.type="REPEAT";
   markLetterPrinted(g.id);
 }
 
@@ -3270,7 +3309,7 @@ function removeKW(cat,idx){var kws=getKW(cat);kws.splice(idx,1);setKW(cat,kws);r
 
 // ===== DOWNLOADS =====
 function dl(h,fn){ dlFile(h,fn,"text/html") }
-function downloadLetters(){var ds=document.getElementById("dateInput").value,ls=guests.map(function(g){return genLetter(g,ds)});var css="@page{size:148mm 210mm;margin:25mm 20mm 15mm 20mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',Times,serif;font-size:13pt;line-height:1;color:#000;font-style:italic}.letter{page-break-after:always;padding-top:32mm}.letter:last-child{page-break-after:auto}p{margin:0}.spacer{height:18pt}.date{text-align:right}.sig{width:34mm;height:auto;display:block;margin:0}.toolbar{position:fixed;top:0;left:0;right:0;background:#1a6b5c;color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100;font-family:system-ui,sans-serif;font-style:normal}.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer}.bp{background:#fff;color:#1a6b5c}@media print{.toolbar{display:none!important}}@media screen{body{background:#e5e7eb;padding:60px 20px 20px}.letter{background:#fff;width:148mm;min-height:210mm;margin:0 auto 20px;padding:32mm 20mm 15mm;box-shadow:0 2px 8px rgba(0,0,0,.15)}}";var h='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><div class="toolbar"><button class="bp" onclick="window.print()">Yazdir</button><span style="font-size:13px;opacity:.8">'+ls.length+' mektup - A5</span></div>';for(var i=0;i<ls.length;i++){var l=ls[i];h+='<div class="letter"><p class="date">'+l.date+'</p><div class="spacer"></div><p>'+l.greeting+'</p><div class="spacer"></div><p>'+l.welcome+'</p><div class="spacer"></div><p>'+l.body+'</p><div class="spacer"></div><p>'+l.body2+'</p><div class="spacer"></div><p>'+l.closing+'</p><img class="sig" src="'+SIG+'" alt="" /><p>'+l.name+'</p><p>'+l.jobtitle+'</p></div>'}h+='</body></html>';dl(h,"welcome_letters_"+ds+".html");var pm=getPrintedLetters();var now=new Date();for(var mi=0;mi<guests.length;mi++){if(!pm[guests[mi].id])pm[guests[mi].id]={time:now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}),date:now.toLocaleDateString("tr-TR")};}savePrintedLetters(pm);renderGuestTable()}
+function downloadLetters(){var ds=document.getElementById("dateInput").value,ls=guests.map(function(g){return genLetter(g,ds)});var css="@page{size:148mm 210mm;margin:25mm 20mm 15mm 20mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',Times,serif;font-size:13pt;line-height:1;color:#000;font-style:italic}.letter{page-break-after:always;padding-top:32mm}.letter:last-child{page-break-after:auto}p{margin:0}.spacer{height:18pt}.date{text-align:right}.sig{width:34mm;height:auto;display:block;margin:0}.toolbar{position:fixed;top:0;left:0;right:0;background:#1a6b5c;color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100;font-family:system-ui,sans-serif;font-style:normal}.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer}.bp{background:#fff;color:#1a6b5c}@media print{.toolbar{display:none!important}}@media screen{body{background:#e5e7eb;padding:60px 20px 20px}.letter{background:#fff;width:148mm;min-height:210mm;margin:0 auto 20px;padding:32mm 20mm 15mm;box-shadow:0 2px 8px rgba(0,0,0,.15)}}";var h='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><div class="toolbar"><button class="bp" onclick="window.print()">Yazdir</button><span style="font-size:13px;opacity:.8">'+ls.length+' mektup - A5</span></div>';for(var i=0;i<ls.length;i++){var l=ls[i];h+='<div class="letter"><p class="date">'+l.date+'</p><div class="spacer"></div><p>'+l.greeting+'</p><div class="spacer"></div><p>'+l.welcome+'</p><div class="spacer"></div><p>'+l.body+'</p><div class="spacer"></div><p>'+l.body2+'</p><div class="spacer"></div><p>'+l.closing+'</p><img class="sig" src="'+SIG+'" alt="" /><p>'+l.name+'</p><p>'+l.jobtitle+'</p></div>'}h+='</body></html>';dl(h,"welcome_letters_"+ds+".html");var pm=getPrintedLetters();var now=new Date();for(var mi=0;mi<guests.length;mi++){if(!pm[guests[mi].id])pm[guests[mi].id]={time:now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}),date:now.toLocaleDateString("tr-TR")};}savePrintedLetters(pm);for(var mi=0;mi<guests.length;mi++){recordGuestPrint(guests[mi]);guests[mi].stays=(guests[mi].stays||0)+1;guests[mi].type="REPEAT";}renderGuestTable()}
 function downloadEnvelopes(){var ds=document.getElementById("dateInput").value;var css="@page{size:162mm 114mm landscape;margin:18mm 25mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',Times,serif;font-size:17pt;line-height:1.2;color:#000;font-style:italic}.envelope{page-break-after:always;height:78mm;display:flex;align-items:flex-end;justify-content:flex-end;padding-bottom:2mm}.envelope:last-child{page-break-after:auto}.envelope p{text-align:right}.toolbar{position:fixed;top:0;left:0;right:0;background:#1e293b;color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100;font-family:system-ui,sans-serif;font-style:normal}.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer}.bp{background:#fff;color:#1e293b}@media print{.toolbar{display:none!important}}@media screen{body{background:#e5e7eb;padding:60px 20px 20px}.envelope{background:#fff;width:162mm;height:114mm;margin:0 auto 20px;padding:18mm 25mm;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;align-items:flex-end;justify-content:flex-end;padding-bottom:20mm}}";var h='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><div class="toolbar"><button class="bp" onclick="window.print()">Yazdir</button><span style="font-size:13px;opacity:.8">'+guests.length+' zarf - C6</span></div>';for(var i=0;i<guests.length;i++){var g=guests[i];var n=g.lang==="TR"?"Say\u0131n "+g.firstName+" "+g.lastName:(g.title?g.title+" ":"")+g.firstName+" "+g.lastName;h+='<div class="envelope"><p>'+n+'</p></div>'}h+='</body></html>';dl(h,"envelopes_"+ds+".html")}
 
 // Init
@@ -6219,7 +6258,8 @@ function importHandoff(file){
   exportAlertBackup, importAlertBackup, autoArchiveAlerts,
   exportAlertAnalyticsPdf, exportAlertAnalyticsXlsx,
   exportAlertExcel, handleChangesPDF, renderBdiPeriod,
-  filterGuestTable, togglePrintedFilter, printSingleLetter, markLetterPrinted, unmarkLetterPrinted
+  filterGuestTable, togglePrintedFilter, printSingleLetter, markLetterPrinted, unmarkLetterPrinted,
+  recordGuestPrint, applyGuestHistory
 ].forEach(function(fn){ if(fn && fn.name) window[fn.name] = fn });
 
 // Also alias object-type helpers
