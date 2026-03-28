@@ -32,6 +32,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f4;min-height:1
 .btn-sm{font-size:11px;padding:4px 10px;border:1px solid #d1d5db;border-radius:4px;cursor:pointer;background:#fff}
 .upload-area{border:2px dashed #d1d5db;border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s}
 .upload-area:hover,.upload-area.dragover{border-color:#1a6b5c;background:#f0f7f5}
+.mb-dropzone.dragover{background:#f0f7f5;border:2px dashed #1a6b5c;border-radius:8px}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{text-align:left;padding:6px 8px;color:#6b7280;font-weight:600;font-size:11px;border-bottom:2px solid #e5e7eb;position:sticky;top:0;background:#fff}
 td{padding:6px 8px;border-bottom:1px solid #f3f4f6;vertical-align:top}
@@ -155,6 +156,8 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 
 <!-- TAB: VERİ GİRİŞ -->
 <div id="mb_tabcontent_entry">
+  <div id="mb_dropZone" class="mb-dropzone" style="transition:background .2s,border .2s;border:2px dashed transparent;border-radius:8px;padding:0">
+  <div id="mb_dropHint" style="display:none;text-align:center;padding:12px;font-size:13px;font-weight:700;color:#1a6b5c;background:#f0f7f5;border-radius:6px;margin-bottom:8px">📄 PDF dosyasını buraya bırakın</div>
   <!-- Hotel Stats -->
   <div class="card" style="padding:9px 14px;margin-bottom:10px">
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
@@ -169,10 +172,14 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   </div>
   <!-- 4-Category Tables -->
   <div id="mb_tableWrap" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+  </div><!-- /mb_dropZone -->
 </div>
 
 <!-- TAB: ANALYTICS -->
 <div id="mb_tabcontent_analytics" style="display:none">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+    <button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="mbExportAnalyticsPdf()">📄 PDF</button>
+  </div>
   <!-- Compare strip -->
   <div id="mb_compareStrip" style="display:none;margin-bottom:10px"></div>
   <!-- KPI row - 8 cards -->
@@ -786,18 +793,29 @@ function mbRenderAnalytics(){
   });
 
   // ── Consistency (how many months sold this year above minQty) ─
+  // Track first appearance month so mid-year products get fair scoring
   var consistency={};
-  products.forEach(function(p){consistency[p.name]=0;});
+  var firstAppearance={}; // month (1-based) the product first had any sales
+  products.forEach(function(p){consistency[p.name]=0;firstAppearance[p.name]=null;});
   for(var cm=1;cm<=mb_currentMonth;cm++){
     var cmd=mbGetData(cm,year);
     products.forEach(function(p){
       var it=(cmd.items||{})[p.name];
+      var charged=(Number((it||{}).charged)||0);
+      var rebated=(Number((it||{}).rebated)||0);
+      // Record first appearance: any sales activity (charged or rebated)
+      if(firstAppearance[p.name]===null&&(charged>0||rebated>0)){
+        firstAppearance[p.name]=cm;
+      }
       var threshold=p.minQty||1;
-      if(it&&(Number(it.charged)||0)>=threshold)consistency[p.name]++;
+      if(it&&charged>=threshold)consistency[p.name]++;
     });
   }
   var consistencyListAll=products.map(function(p){
-    return{name:p.name,cat:p.cat,count:consistency[p.name],total:mb_currentMonth,minQty:p.minQty||1};
+    // If never appeared, total = mb_currentMonth (legacy behavior, will be filtered out anyway)
+    var firstM=firstAppearance[p.name];
+    var effectiveTotal=firstM?mb_currentMonth-firstM+1:mb_currentMonth;
+    return{name:p.name,cat:p.cat,count:consistency[p.name],total:effectiveTotal,firstMonth:firstM,minQty:p.minQty||1};
   }).filter(function(p){return p.count>0;}).sort(function(a,b){return b.count-a.count;});
   var consistencyList=consistencyListAll.slice(0,12);
   // Store globally for category filter re-render
