@@ -6534,6 +6534,14 @@ function importHandoff(file){
       if(d.parsedGuests)window._lastParsedGuests=d.parsedGuests;
       if(d.expenseList&&d.expenseList.length){expenseList=d.expenseList;expSave();}
 
+      // Sync guest history from handoff data
+      if(d.guests&&d.guests.length){
+        for(var gi=0;gi<d.guests.length;gi++)recordGuestPrint(d.guests[gi]);
+      }
+      if(d.pyGuests&&d.pyGuests.length){
+        for(var pi=0;pi<d.pyGuests.length;pi++)recordPyPrint(d.pyGuests[pi]);
+      }
+
       var s=getHandoffSummary();
       statusEl.innerHTML='<span style="color:#059669;font-weight:700">✅ Başarıyla yüklendi!</span>';
 
