@@ -110,10 +110,13 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 
 <!-- ===== LETTERS PAGE ===== -->
 <div class="page active" id="page-letters">
-<div class="tabs">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+<div class="tabs" style="margin-bottom:0">
 <div class="tab active" onclick="switchLetterTab('pdf')">Opera PDF</div>
 <div class="tab" onclick="switchLetterTab('search')">Misafir Ara</div>
 <div class="tab" onclick="switchLetterTab('manual')">Elle Gir</div>
+</div>
+<button class="btn-sm" style="border-color:#7c3aed;color:#7c3aed" onclick="exportGuestHistoryXlsx()">&#128202; VIP Top 20 Raporu</button>
 </div>
 <div class="card" id="ltPdfCard">
 <h2>Opera ARR01102 PDF Yukle</h2>
@@ -157,7 +160,6 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div class="actions">
 <button class="btn btn-primary" onclick="downloadLetters()">&#x2B07; Mektup Indir</button>
 <button class="btn btn-dark" onclick="downloadEnvelopes()">&#x2709; Zarf Indir</button>
-<button class="btn-sm" style="border-color:#7c3aed;color:#7c3aed" onclick="exportGuestHistoryXlsx()">&#128202; Misafir Gecmis Raporu</button>
 </div>
 </div>
 </div>
@@ -1284,15 +1286,16 @@ function searchGuestHistory(){
 
   if(!results.length){wrap.innerHTML='<p class="hint">Sonuc bulunamadi.</p>';return}
 
-  var h='<table style="font-size:12px"><thead><tr><th>Isim</th><th>Konaklama</th><th>Dil</th><th>Son Gelis</th><th></th></tr></thead><tbody>';
+  var h='<table style="font-size:12px"><thead><tr><th>Isim</th><th>Konaklama</th><th>Dil</th><th>Son Gelis</th><th style="width:70px">Oda</th><th></th></tr></thead><tbody>';
   for(var i=0;i<results.length&&i<20;i++){
     var r=results[i];
-    h+='<tr style="cursor:pointer" onclick="addHistoryGuest('+i+')">';
+    h+='<tr>';
     h+='<td style="font-weight:600">'+esc(r.lastName)+', '+esc(r.firstName)+'</td>';
     h+='<td style="text-align:center">'+r.stays+'</td>';
     h+='<td style="text-align:center">'+r.lang+'</td>';
     h+='<td style="font-size:11px;color:#6b7280">'+esc(r.lastDate)+'</td>';
-    h+='<td><button class="btn-sm" style="font-size:10px;padding:2px 8px" onclick="event.stopPropagation();addHistoryGuest('+i+')">+ Ekle</button></td>';
+    h+='<td><input type="number" id="histRoom_'+i+'" placeholder="Oda" style="width:60px;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;text-align:center"></td>';
+    h+='<td><button class="btn-sm" style="font-size:10px;padding:2px 8px;background:#f0fdf4;border-color:#059669;color:#059669" onclick="addHistoryGuest('+i+')">+ Ekle</button></td>';
     h+='</tr>';
   }
   h+='</tbody></table>';
@@ -1303,13 +1306,15 @@ function searchGuestHistory(){
 function addHistoryGuest(idx){
   var r=_historySearchResults[idx];
   if(!r)return;
+  var roomInp=document.getElementById("histRoom_"+idx);
+  var roomNo=roomInp?parseInt(roomInp.value)||0:0;
   // Check if already in current guest list
   var exists=guests.some(function(g){return g.lastName.toLowerCase()===r.lastName.toLowerCase()&&g.firstName.toLowerCase()===r.firstName.toLowerCase()});
   if(exists){alert(r.firstName+" "+r.lastName+" zaten listede.");return}
   guests.push({
     id:"g"+Math.random().toString(36).slice(2),
     title:r.title,firstName:r.firstName,lastName:r.lastName,
-    lang:r.lang,type:r.stays>1?"REPEAT":"NEW",stays:r.stays,roomNo:0
+    lang:r.lang,type:r.stays>1?"REPEAT":"NEW",stays:r.stays,roomNo:roomNo
   });
   window.guests=guests;
   renderGuestTable();
