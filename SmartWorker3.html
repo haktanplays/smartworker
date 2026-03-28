@@ -151,7 +151,6 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
     <input id="letterSearch" type="text" placeholder="Misafir ara (isim, soyad veya oda no)..." oninput="filterGuestTable()" style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px">
     <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;color:#9ca3af">&#128269;</span>
   </div>
-  <button class="btn-sm" onclick="togglePrintedFilter()" id="printedFilterBtn" style="font-size:11px;padding:5px 12px">&#128206; Basilmamislari Goster</button>
   <span id="printedStats" style="font-size:11px;color:#6b7280"></span>
 </div>
 <div id="guest-table-wrap"></div>
@@ -1072,7 +1071,6 @@ function genLetter(g,ds){var d=fmtDate(ds,g.lang),rp=g.type==="REPEAT";if(g.lang
 
 // ===== PRINTED LETTER TRACKING =====
 var letterSearchQuery="";
-var letterPrintedFilter=false;
 
 function getGuestHistory(){
   try{var s=localStorage.getItem("guest_history");return s?JSON.parse(s):{}}catch(e){return {}}
@@ -1147,15 +1145,6 @@ function filterGuestTable(){
   letterSearchQuery=(document.getElementById("letterSearch").value||"").toLowerCase().trim();
   renderGuestTable();
 }
-function togglePrintedFilter(){
-  letterPrintedFilter=!letterPrintedFilter;
-  var btn=document.getElementById("printedFilterBtn");
-  btn.style.background=letterPrintedFilter?"#dbeafe":"#fff";
-  btn.style.color=letterPrintedFilter?"#1e40af":"#374151";
-  btn.style.borderColor=letterPrintedFilter?"#3b82f6":"#d1d5db";
-  renderGuestTable();
-}
-
 // ===== GUEST TABLE =====
 function setAllType(t){for(var i=0;i<guests.length;i++)guests[i].type=t;renderGuestTable()}
 function removeGuest(id){guests=guests.filter(function(g){return g.id!==id});window.guests=guests;renderGuestTable()}
@@ -1175,7 +1164,6 @@ function renderGuestTable(){
   var filtered=[];
   for(var j=0;j<guests.length;j++){
     var g=guests[j];
-    if(letterPrintedFilter&&printed[g.id])continue;
     if(letterSearchQuery){
       var hay=(g.firstName+" "+g.lastName+" "+g.title+" "+(g.roomNo||"")).toLowerCase();
       if(hay.indexOf(letterSearchQuery)<0)continue;
@@ -6258,7 +6246,7 @@ function importHandoff(file){
   exportAlertBackup, importAlertBackup, autoArchiveAlerts,
   exportAlertAnalyticsPdf, exportAlertAnalyticsXlsx,
   exportAlertExcel, handleChangesPDF, renderBdiPeriod,
-  filterGuestTable, togglePrintedFilter, printSingleLetter, markLetterPrinted, unmarkLetterPrinted,
+  filterGuestTable, printSingleLetter, markLetterPrinted, unmarkLetterPrinted,
   recordGuestPrint, applyGuestHistory
 ].forEach(function(fn){ if(fn && fn.name) window[fn.name] = fn });
 
