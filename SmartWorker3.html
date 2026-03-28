@@ -6442,7 +6442,10 @@ function getHandoffSummary(){
     alertPending: alertList.filter(function(a){return a.visited===null}).length,
     pyGuests: pyGuests.length,
     b2b: Object.keys(b2bMap).length,
-    expenses: expenseList.length
+    expenses: expenseList.length,
+    bdiLogs: bdiLogs.length,
+    vacRooms: Object.keys(vacRooms).length,
+    radarResults: (radarResults||[]).length
   };
 }
 
@@ -6461,6 +6464,8 @@ function renderHandoffExportSummary(){
   if(s.pyGuests)h+='<span style="background:#f0fdf4;color:#065f46;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600">🎁 '+s.pyGuests+' PY</span>';
   if(s.b2b)h+='<span style="background:#fff7ed;color:#9a3412;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600">🔗 '+s.b2b+' B2B</span>';
   if(s.expenses)h+='<span style="background:#ecfdf5;color:#065f46;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600">💰 '+s.expenses+' harcama</span>';
+  if(s.bdiLogs)h+='<span style="background:#e0e7ff;color:#3730a3;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600">📝 '+s.bdiLogs+' BDI log</span>';
+  if(s.radarResults)h+='<span style="background:#fef2f2;color:#991b1b;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600">🔍 '+s.radarResults+' radar</span>';
   h+='</div>';
   el.innerHTML=h;
 }
@@ -6486,7 +6491,10 @@ function exportHandoff(){
       parsedGuests:(window._lastParsedGuests||[]).map(function(g){
         var c={};for(var k in g){if(k!=="_rawLines")c[k]=g[k];}return c;
       }),
-      expenseList:expenseList||[]
+      expenseList:expenseList||[],
+      bdiLogs:bdiLogs||[],
+      vacRooms:vacRooms||{},
+      radarResults:radarResults||[]
     }
   };
   var json=JSON.stringify(payload,null,2);
@@ -6533,6 +6541,9 @@ function importHandoff(file){
       if(d.b2bMap){b2bMap=d.b2bMap;window.b2bMap=b2bMap;}
       if(d.parsedGuests)window._lastParsedGuests=d.parsedGuests;
       if(d.expenseList&&d.expenseList.length){expenseList=d.expenseList;expSave();}
+      if(d.bdiLogs&&d.bdiLogs.length){bdiLogs=d.bdiLogs;saveBdiLogs();}
+      if(d.vacRooms){vacRooms=d.vacRooms;}
+      if(d.radarResults&&d.radarResults.length){radarResults=d.radarResults;}
 
       // Sync guest history from handoff data
       if(d.guests&&d.guests.length){
@@ -6555,6 +6566,8 @@ function importHandoff(file){
       lh+='<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600">📋 '+s.traces+' trace</span>';
       lh+='<span style="background:#fdf4ff;color:#7c3aed;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600">🔔 '+s.alerts+' alert</span>';
       lh+='<span style="background:#f0fdf4;color:#065f46;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600">🎁 '+s.pyGuests+' PY</span>';
+      if(s.bdiLogs)lh+='<span style="background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600">📝 '+s.bdiLogs+' BDI</span>';
+      if(s.radarResults)lh+='<span style="background:#fef2f2;color:#991b1b;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600">🔍 '+s.radarResults+' radar</span>';
       if(s.expenses)lh+='<span style="background:#ecfdf5;color:#065f46;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600">💰 '+s.expenses+' harcama</span>';
       lh+='</div>';
       logContent.innerHTML=lh;
