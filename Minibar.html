@@ -117,6 +117,10 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="document.getElementById('mb_pdfInput').click()">📄 PDF Yükle</button>
   <input type="file" id="mb_pdfInput" accept=".pdf" style="display:none" onchange="mbHandlePdf(this)">
   <button class="btn" style="padding:5px 12px;font-size:12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5" onclick="mbClearMonth()">🗑 Temizle</button>
+  <span style="border-left:1px solid #e5e7eb;height:20px;margin:0 4px"></span>
+  <button class="btn-sm" style="font-size:11px" onclick="mbExportBackup()">&#128190; Yedekle</button>
+  <button class="btn-sm" style="font-size:11px" onclick="document.getElementById('mbBackupInput').click()">&#128194; Iceri Aktar</button>
+  <input type="file" id="mbBackupInput" accept=".json" style="display:none" onchange="mbImportBackup(this.files)">
   <span id="mb_pdfStatus" style="font-size:11px;color:#6b7280;margin-left:4px"></span>
 </div>
 
@@ -664,17 +668,20 @@ function mbUpdQty(name,field,val){
   mbSaveMonthData(data);
   mbRenderStatus(data);
   mbRenderQuickKpi(data);
+  mbRenderTable(data);
 }
 
 // ---- SAVE (stats) ----
 function mbSaveData(){
   var data=mbGetData();
+  var occ=parseFloat(document.getElementById("mb_occ").value)||0;
+  if(occ<0)occ=0;if(occ>100)occ=100;
   data.stats={
-    occ:document.getElementById("mb_occ").value,
-    rooms:document.getElementById("mb_rooms").value,
-    pax:document.getElementById("mb_pax").value,
-    kids:document.getElementById("mb_kids").value,
-    comp:document.getElementById("mb_comp").value
+    occ:occ,
+    rooms:Math.max(0,parseInt(document.getElementById("mb_rooms").value)||0),
+    pax:Math.max(0,parseInt(document.getElementById("mb_pax").value)||0),
+    kids:Math.max(0,parseInt(document.getElementById("mb_kids").value)||0),
+    comp:Math.max(0,parseInt(document.getElementById("mb_comp").value)||0)
   };
   mbSaveMonthData(data);
   var el=document.getElementById("mb_pdfStatus");
@@ -1611,12 +1618,14 @@ function mbResetPrices(){
 function mbHandlePdf(inp){
   if(!inp.files||!inp.files[0])return;
   var file=inp.files[0];inp.value="";
-  if(typeof pdfjsLib==="undefined"){
-    var el=document.getElementById("mb_pdfStatus");
-    if(el){el.textContent="❌ PDF.js yüklü değil";el.style.color="#dc2626";}return;
-  }
   var statusEl=document.getElementById("mb_pdfStatus");
-  if(statusEl){statusEl.textContent="⏳ PDF okunuyor...";statusEl.style.color="#6b7280";}
+  if(!file.name.toLowerCase().endsWith(".pdf")){
+    if(statusEl){statusEl.textContent="❌ Sadece PDF dosyası yüklenebilir";statusEl.style.color="#dc2626";}return;
+  }
+  if(typeof pdfjsLib==="undefined"){
+    if(statusEl){statusEl.textContent="❌ PDF.js yüklü değil — internet bağlantısı gerekli";statusEl.style.color="#dc2626";}return;
+  }
+  if(statusEl){statusEl.textContent="⏳ PDF okunuyor: "+file.name+"...";statusEl.style.color="#6b7280";}
   var reader=new FileReader();
   reader.onload=function(e){
     pdfjsLib.getDocument({data:e.target.result}).promise.then(function(pdf){
@@ -1650,19 +1659,18 @@ function mbParsePdfItems(items,statusEl){
 
   items.sort(function(a,b){return a.page-b.page||a.y-b.y||a.x-b.x;});
 
-  // --- Sütun X aralıklarını belirle ---
-  var codeHdr=items.find(function(i){return i.text==="Article Code";});
-  if(!codeHdr){if(statusEl){statusEl.textContent="❌ Protel formatı tanınmadı";statusEl.style.color="#dc2626";}return;}
+  // --- Sütun X aralıklarını belirle (fuzzy header matching) ---
+  var codeHdr=items.find(function(i){return /^article\s*code$/i.test(i.text)||/^(product|item)\s*code$/i.test(i.text)||i.text==="Code";});
+  if(!codeHdr){if(statusEl){statusEl.textContent="❌ Protel formatı tanınmadı — 'Article Code' başlığı bulunamadı";statusEl.style.color="#dc2626";}return;}
   var codeMinX=codeHdr.x-5, codeMaxX=codeHdr.x+80;
 
-  // Quantity — en sondaki header (son sayfa)
-  var qtyHdrs=items.filter(function(i){return i.text==="Quantity";});
+  // Quantity — fuzzy match
+  var qtyHdrs=items.filter(function(i){return /^quantity$/i.test(i.text)||/^qty$/i.test(i.text);});
   var qtyHdr=qtyHdrs[qtyHdrs.length-1];
   var qtyMinX=qtyHdr?qtyHdr.x-50:550, qtyMaxX=qtyHdr?qtyHdr.x+60:750;
 
-  // Revenue/Amount — "Revenue" başlığının X'i
-  // PDF'de "Revenue" sütunu: tutarlar "X,XXX.XX" ya da "-X,XXX.XX" formatında
-  var revHdrs=items.filter(function(i){return i.text==="Revenue";});
+  // Revenue/Amount — fuzzy match
+  var revHdrs=items.filter(function(i){return /^revenue$/i.test(i.text)||/^amount$/i.test(i.text)||/^total$/i.test(i.text);});
   var revHdr=revHdrs[revHdrs.length-1];
   var revMinX=revHdr?revHdr.x-80:800, revMaxX=revHdr?revHdr.x+80:1050;
 
@@ -1726,6 +1734,10 @@ function mbParsePdfItems(items,statusEl){
   if(matched===0){if(statusEl){statusEl.textContent="❌ Hiçbir ürün eşleştirilemedi";statusEl.style.color="#dc2626";}return;}
 
   var monthData=mbGetData();
+  var hasExisting=Object.keys(monthData.items).some(function(k){return monthData.items[k].charged>0||monthData.items[k].rebated>0});
+  if(hasExisting&&!confirm("Bu ay icin zaten veri var. Uzerine yazilsin mi?")){
+    if(statusEl){statusEl.textContent="⚠️ Import iptal edildi";statusEl.style.color="#b45309";}return;
+  }
   Object.keys(result).forEach(function(name){monthData.items[name]=result[name];});
   mbSaveMonthData(monthData);
   mbRenderAll();
@@ -1959,9 +1971,46 @@ function mbDownloadXLSX(){
   XLSX.writeFile(wb,"Minibar_"+fileLabel+"_"+new Date().toISOString().slice(0,10)+".xlsx");
 }
 
+// ---- BACKUP / RESTORE ----
+function mbExportBackup(){
+  var backup={version:"MB_BACKUP_v1",exportDate:new Date().toISOString(),data:{}};
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(key.startsWith("mb_")){
+      try{backup.data[key]=JSON.parse(localStorage.getItem(key))}catch(e){backup.data[key]=localStorage.getItem(key)}
+    }
+  }
+  var json=JSON.stringify(backup,null,2);
+  var blob=new Blob([json],{type:"application/json"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;
+  a.download="Minibar_Yedek_"+new Date().toISOString().split("T")[0]+".json";
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function mbImportBackup(files){
+  if(!files||!files[0])return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var imported=JSON.parse(e.target.result);
+      var data=imported.data||imported;
+      var count=0;
+      for(var key in data){
+        if(!key.startsWith("mb_"))continue;
+        localStorage.setItem(key,typeof data[key]==="string"?data[key]:JSON.stringify(data[key]));
+        count++;
+      }
+      alert(count+" kayit iceri aktarildi.");
+      mbRenderAll();
+    }catch(err){alert("Import hatasi: "+err.message)}
+  };
+  reader.readAsText(files[0]);
+}
+
 // ---- INIT ----
 (function(){
-  var _sp=showPage;
+  var _sp=typeof showPage==="function"?showPage:function(){};
   showPage=function(p){
     _sp(p);
     if(p==="minibar"){
