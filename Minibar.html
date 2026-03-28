@@ -199,7 +199,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <!-- Zero-sellers + Consistency -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
     <div class="card">
-      <div style="font-size:11px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🚫 Sıfır Satış — Bu Ay</div>
+      <div style="font-size:11px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🚫 Sıfır Satış Analizi</div>
       <div id="mb_zeroSellers"></div>
     </div>
     <div class="card">
@@ -207,6 +207,33 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
       <div id="mb_cnsFilters" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
       <div id="mb_consistency"></div>
     </div>
+  </div>
+
+  <!-- Product Detail Panel (click to expand) -->
+  <div class="card" id="mb_productDetail" style="display:none;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.4px">📊 Ürün Detay — <span id="mb_pdName" style="color:#1a6b5c"></span></div>
+      <button onclick="closeMbProductDetail()" style="border:none;background:none;cursor:pointer;font-size:16px;color:#9ca3af">✕</button>
+    </div>
+    <div id="mb_pdContent"></div>
+  </div>
+
+  <!-- Profit per Unit Ranking -->
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">💰 Birim Başına Kâr Sıralaması</div>
+    <div id="mb_profitPerUnit"></div>
+  </div>
+
+  <!-- Rebate Trend -->
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">📉 Rebate Oranı Trendi — 12 Ay</div>
+    <div id="mb_rebateTrend"></div>
+  </div>
+
+  <!-- RevPAR -->
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🏨 RevPAR — Minibar Oda Başı Gelir (12 Ay)</div>
+    <div id="mb_revpar"></div>
   </div>
 
   <!-- Seasonality heatmap -->
@@ -895,7 +922,7 @@ function mbRenderAnalytics(){
   var t10rEl=document.getElementById("mb_top10rev");
   if(t10rEl)t10rEl.innerHTML=byRev.map(function(p){
     var col=MB_CAT_COLORS[p.cat]||"#1a6b5c";
-    return"<div style='display:flex;align-items:center;gap:5px;margin:3px 0'>"
+    return"<div style='display:flex;align-items:center;gap:5px;margin:3px 0;cursor:pointer' onclick='showMbProductDetail(\""+p.name.replace(/"/g,"&quot;")+"\")'>"
       +"<div style='width:110px;font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right' title='"+p.name+"'>"+p.name+"</div>"
       +"<div style='flex:1;background:#e5e7eb;border-radius:2px;height:10px'><div style='width:"+Math.round(p.rev/maxR*100)+"%;height:100%;border-radius:2px;background:"+col+"'></div></div>"
       +"<div style='width:80px;font-size:10px;font-weight:700;color:"+col+"'>"+mbFmtRev(p.rev)+"</div></div>";
@@ -923,25 +950,50 @@ function mbRenderAnalytics(){
       +"<div style='font-size:10px;font-weight:700;color:"+col+";white-space:nowrap'>"+p.margin.toFixed(1)+"%</div></div>";
   }).join(""):"<p style='font-size:11px;color:#059669'>✓ Tüm ürünler >70% marj</p>";
 
-  // ── Zero-sellers ───────────────────────────────────────────
+  // ── Zero-sellers ENHANCED ────────────────────────────────────
   var zsEl=document.getElementById("mb_zeroSellers");
   if(zsEl){
     if(zeroSellers.length===0){
       zsEl.innerHTML="<p style='font-size:12px;color:#059669;font-weight:600'>✓ Bu ay tüm ürünler satış yaptı!</p>";
     } else {
+      // Calculate consecutive zero months for each zero-seller
+      var zsEnhanced=zeroSellers.map(function(p){
+        var streak=0;
+        for(var zm=mb_currentMonth;zm>=1;zm--){
+          var zd=mbGetData(zm,year);
+          var zi=(zd.items||{})[p.name];
+          if(zi&&(Number(zi.charged)||0)>0)break;
+          streak++;
+        }
+        return{name:p.name,cat:p.cat,sell:p.sell,streak:streak};
+      }).sort(function(a,b){return b.streak-a.streak});
+
       var zsGroups={};
       MB_CATS.forEach(function(c){zsGroups[c]=[];});
-      zeroSellers.forEach(function(p){if(zsGroups[p.cat])zsGroups[p.cat].push(p.name);});
+      zsEnhanced.forEach(function(p){if(zsGroups[p.cat])zsGroups[p.cat].push(p)});
       var zsHtml="<div style='font-size:12px;color:#b45309;font-weight:700;margin-bottom:8px'>"+zeroSellers.length+" ürün / "+products.length+" toplam stok</div>";
+      var longZero=zsEnhanced.filter(function(p){return p.streak>=3});
+      if(longZero.length){
+        zsHtml+="<div style='padding:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;margin-bottom:10px'>"
+          +"<div style='font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px'>⚠ Menüden Çıkarma Önerisi (3+ ay sıfır satış)</div>";
+        longZero.forEach(function(p){
+          zsHtml+="<div style='display:flex;align-items:center;gap:6px;padding:2px 0;font-size:10px'>"
+            +"<span style='font-weight:700;color:#dc2626'>"+p.streak+" ay</span>"
+            +"<span style='color:#991b1b'>"+p.name+"</span>"
+            +"<span style='color:#9ca3af;font-size:9px'>("+p.cat+" · ₺"+p.sell+")</span></div>";
+        });
+        zsHtml+="</div>";
+      }
       MB_CATS.forEach(function(cat){
         if(!zsGroups[cat].length)return;
         var col=MB_CAT_COLORS[cat]||"#6b7280";
         zsHtml+="<div style='margin-bottom:8px'>"
           +"<div style='font-size:10px;font-weight:700;color:"+col+";margin-bottom:3px;text-transform:uppercase'>"+cat+" ("+zsGroups[cat].length+")</div>"
-          +zsGroups[cat].map(function(n){
-            return"<div style='display:flex;align-items:center;gap:5px;padding:2px 0;border-bottom:1px solid #fef3c7'>"
-              +"<span style='width:8px;height:8px;border-radius:50%;background:#fbbf24;display:inline-block;flex-shrink:0'></span>"
-              +"<span style='font-size:10px;color:#92400e'>"+n+"</span></div>";
+          +zsGroups[cat].map(function(p){
+            var streakBadge=p.streak>1?"<span style='font-size:9px;font-weight:700;color:"+(p.streak>=3?"#dc2626":"#b45309")+";margin-left:auto'>"+p.streak+" ay</span>":"";
+            return"<div style='display:flex;align-items:center;gap:5px;padding:2px 0;border-bottom:1px solid #fef3c7;cursor:pointer' onclick='showMbProductDetail(\""+p.name.replace(/"/g,"&quot;")+"\")'>"
+              +"<span style='width:8px;height:8px;border-radius:50%;background:"+(p.streak>=3?"#dc2626":"#fbbf24")+";display:inline-block;flex-shrink:0'></span>"
+              +"<span style='font-size:10px;color:#92400e'>"+p.name+"</span>"+streakBadge+"</div>";
           }).join("")+"</div>";
       });
       zsEl.innerHTML=zsHtml;
@@ -1391,7 +1443,190 @@ function mbRenderAnalytics(){
       csEl.innerHTML=csHtml;
     }
   }
+
+  // ── Profit per Unit Ranking ──────────────────────────────────
+  var ppuEl=document.getElementById("mb_profitPerUnit");
+  if(ppuEl){
+    var ppuList=products.map(function(p){
+      var c=mbCalcItem(p,items);
+      var units=c.ch+c.rb;
+      var profitPerUnit=units>0?c.profit/units:0;
+      return{name:p.name,cat:p.cat,ppu:profitPerUnit,units:units,profit:c.profit,rev:c.rev};
+    }).filter(function(p){return p.units>0}).sort(function(a,b){return b.ppu-a.ppu});
+    var ppuTop=ppuList.slice(0,10);
+    var ppuMax=ppuTop.length?ppuTop[0].ppu:1;
+    if(ppuMax<=0)ppuMax=1;
+    var ppuH="";
+    ppuTop.forEach(function(p,i){
+      var col=MB_CAT_COLORS[p.cat]||"#6b7280";
+      var w=Math.round(p.ppu/ppuMax*100);
+      ppuH+="<div style='display:flex;align-items:center;gap:6px;margin-bottom:4px;cursor:pointer' onclick='showMbProductDetail(\""+p.name.replace(/"/g,"&quot;")+"\")'>"
+        +"<span style='min-width:16px;font-size:10px;font-weight:700;color:#9ca3af'>"+(i+1)+"</span>"
+        +"<span style='min-width:120px;font-size:11px;font-weight:600;color:#1e293b'>"+p.name+"</span>"
+        +"<div style='flex:1;background:#f3f4f6;border-radius:3px;height:14px;position:relative'>"
+        +"<div style='height:100%;border-radius:3px;background:"+col+";width:"+w+"%;opacity:.7'></div></div>"
+        +"<span style='min-width:55px;text-align:right;font-size:11px;font-weight:700;color:#059669'>₺"+p.ppu.toFixed(0)+"/ad</span></div>";
+    });
+    if(!ppuH)ppuH="<p style='font-size:11px;color:#9ca3af'>Veri yok</p>";
+    ppuEl.innerHTML=ppuH;
+  }
+
+  // ── Rebate Trend (12 months) ──────────────────────────────────
+  var rtEl=document.getElementById("mb_rebateTrend");
+  if(rtEl){
+    var rtData=[];
+    for(var rti=1;rti<=12;rti++){
+      var rtd=mbGetData(rti,year);
+      var rtCh=0,rtRb=0;
+      products.forEach(function(p){
+        var it=(rtd.items||{})[p.name];
+        if(it){rtCh+=Number(it.charged)||0;rtRb+=Number(it.rebated)||0}
+      });
+      var rtPct=rtCh>0?rtRb/rtCh*100:0;
+      rtData.push({month:rti,pct:rtPct,ch:rtCh,rb:rtRb});
+    }
+    var rtMax=Math.max.apply(null,rtData.map(function(d){return d.pct}))||10;
+    var rtH="<div style='display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:6px'>";
+    rtData.forEach(function(d,i){
+      var h=rtMax>0?Math.round(d.pct/rtMax*70):0;
+      var isCur=i+1===mb_currentMonth;
+      var isFut=i+1>mb_currentMonth;
+      var col=d.pct>15?"#dc2626":d.pct>8?"#f59e0b":"#059669";
+      if(isFut)col="#e5e7eb";
+      rtH+="<div style='flex:1;display:flex;flex-direction:column;align-items:center'>"
+        +"<div style='font-size:8px;color:"+(isFut?"#d1d5db":col)+";font-weight:700;margin-bottom:2px'>"+(isFut?"":d.pct.toFixed(1)+"%")+"</div>"
+        +"<div style='width:100%;height:"+Math.max(h,2)+"px;background:"+col+";border-radius:2px 2px 0 0;opacity:"+(isFut?".3":isCur?"1":".7")+"'"+(isCur?" title='Bu ay'":"")+">"+"</div>"
+        +"<div style='font-size:8px;color:#9ca3af;margin-top:2px'>"+MB_MONTHS_TR[i].substring(0,3)+"</div></div>";
+    });
+    rtH+="</div>";
+    var avgRebate=rtData.slice(0,mb_currentMonth).reduce(function(s,d){return s+d.pct},0)/mb_currentMonth;
+    rtH+="<div style='font-size:10px;color:#6b7280'>Ortalama: <b style=\"color:"+(avgRebate>10?"#dc2626":"#059669")+"\">"+avgRebate.toFixed(1)+"%</b> · Düşük = iyi</div>";
+    rtEl.innerHTML=rtH;
+  }
+
+  // ── RevPAR (12 months) ──────────────────────────────────────
+  var rpEl=document.getElementById("mb_revpar");
+  if(rpEl){
+    var rpData=[];
+    for(var rpi=1;rpi<=12;rpi++){
+      var rpd=mbGetData(rpi,year);
+      var rpRev=0;
+      products.forEach(function(p){rpRev+=mbCalcItem(p,rpd.items||{}).rev});
+      var rpRooms=parseFloat((rpd.stats||{}).rooms)||0;
+      var rpVal=rpRooms>0?rpRev/rpRooms:0;
+      rpData.push({month:rpi,revpar:rpVal,rev:rpRev,rooms:rpRooms});
+    }
+    var rpMax=Math.max.apply(null,rpData.map(function(d){return d.revpar}))||1;
+    var rpH="<div style='display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:6px'>";
+    rpData.forEach(function(d,i){
+      var h=rpMax>0?Math.round(d.revpar/rpMax*70):0;
+      var isCur=i+1===mb_currentMonth;
+      var isFut=i+1>mb_currentMonth;
+      rpH+="<div style='flex:1;display:flex;flex-direction:column;align-items:center'>"
+        +"<div style='font-size:8px;color:"+(isFut?"#d1d5db":"#0369a1")+";font-weight:700;margin-bottom:2px'>"+(isFut||!d.revpar?"":"₺"+d.revpar.toFixed(0))+"</div>"
+        +"<div style='width:100%;height:"+Math.max(h,2)+"px;background:#0ea5e9;border-radius:2px 2px 0 0;opacity:"+(isFut?".2":isCur?"1":".6")+"'></div>"
+        +"<div style='font-size:8px;color:#9ca3af;margin-top:2px'>"+MB_MONTHS_TR[i].substring(0,3)+"</div></div>";
+    });
+    rpH+="</div>";
+    var avgRp=rpData.slice(0,mb_currentMonth).filter(function(d){return d.rooms>0});
+    var avgRpVal=avgRp.length?avgRp.reduce(function(s,d){return s+d.revpar},0)/avgRp.length:0;
+    rpH+="<div style='font-size:10px;color:#6b7280'>Ortalama RevPAR: <b style=\"color:#0369a1\">₺"+avgRpVal.toFixed(0)+"</b>/oda · Yüksek = iyi</div>";
+    rpEl.innerHTML=rpH;
+  }
 }
+
+// ===== PRODUCT DETAIL PANEL =====
+function showMbProductDetail(productName){
+  var products=mbGetProducts();
+  var product=products.find(function(p){return p.name===productName});
+  if(!product)return;
+  var year=mb_currentYear;
+  var panel=document.getElementById("mb_productDetail");
+  var nameEl=document.getElementById("mb_pdName");
+  var contentEl=document.getElementById("mb_pdContent");
+  if(!panel||!contentEl)return;
+  nameEl.textContent=productName;
+  panel.style.display="block";
+  panel.scrollIntoView({behavior:"smooth",block:"start"});
+
+  // Collect 12 months of data for this product
+  var months=[];
+  for(var m=1;m<=12;m++){
+    var md=mbGetData(m,year);
+    var it=(md.items||{})[productName]||{};
+    var ch=Number(it.charged)||0;
+    var rb=Number(it.rebated)||0;
+    var rev=ch*product.sell;
+    var cost=(ch+rb)*(product.buy||0);
+    var profit=rev-cost;
+    months.push({m:m,ch:ch,rb:rb,rev:rev,cost:cost,profit:profit,margin:rev>0?profit/rev*100:0});
+  }
+  var maxCh=Math.max.apply(null,months.map(function(d){return d.ch}))||1;
+  var maxRev=Math.max.apply(null,months.map(function(d){return d.rev}))||1;
+  var col=MB_CAT_COLORS[product.cat]||"#1a6b5c";
+
+  var h="<div style='display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px'>";
+  var ytdCh=months.slice(0,mb_currentMonth).reduce(function(s,d){return s+d.ch},0);
+  var ytdRb=months.slice(0,mb_currentMonth).reduce(function(s,d){return s+d.rb},0);
+  var ytdRev=months.slice(0,mb_currentMonth).reduce(function(s,d){return s+d.rev},0);
+  var ytdProfit=months.slice(0,mb_currentMonth).reduce(function(s,d){return s+d.profit},0);
+  var ytdMargin=ytdRev>0?ytdProfit/ytdRev*100:0;
+  h+="<div style='padding:10px;background:#f0fdf4;border-radius:6px;text-align:center'><div style='font-size:18px;font-weight:800;color:#059669'>"+ytdCh+"</div><div style='font-size:9px;color:#065f46'>YTD Satış</div></div>";
+  h+="<div style='padding:10px;background:#eff6ff;border-radius:6px;text-align:center'><div style='font-size:18px;font-weight:800;color:#1e40af'>"+mbFmtRev(ytdRev)+"</div><div style='font-size:9px;color:#1e3a8a'>YTD Ciro</div></div>";
+  h+="<div style='padding:10px;background:#fefce8;border-radius:6px;text-align:center'><div style='font-size:18px;font-weight:800;color:#a16207'>"+mbFmtRev(ytdProfit)+"</div><div style='font-size:9px;color:#854d0e'>YTD Kâr</div></div>";
+  h+="<div style='padding:10px;background:#f3f4f6;border-radius:6px;text-align:center'><div style='font-size:18px;font-weight:800;color:"+(ytdMargin>=70?"#059669":"#dc2626")+"'>"+ytdMargin.toFixed(1)+"%</div><div style='font-size:9px;color:#6b7280'>Marj</div></div>";
+  h+="</div>";
+
+  // Info row
+  h+="<div style='display:flex;gap:12px;margin-bottom:12px;font-size:11px;color:#6b7280'>";
+  h+="<span>Kategori: <b style=\"color:"+col+"\">"+product.cat+"</b></span>";
+  h+="<span>Satış: <b>₺"+product.sell+"</b></span>";
+  h+="<span>Alış: <b>₺"+(product.buy||0)+"</b></span>";
+  h+="<span>Birim Kâr: <b style=\"color:#059669\">₺"+(product.sell-(product.buy||0)).toFixed(0)+"</b></span>";
+  h+="<span>Rebate: <b style=\"color:"+(ytdRb>ytdCh*0.1?"#dc2626":"#6b7280")+"\">"+ytdRb+" adet</b> ("+(ytdCh>0?(ytdRb/ytdCh*100).toFixed(1):0)+"%)</span>";
+  h+="</div>";
+
+  // Monthly bar chart
+  h+="<div style='font-size:10px;font-weight:700;color:#374151;margin-bottom:6px'>Aylık Satış Trendi</div>";
+  h+="<div style='display:flex;align-items:flex-end;gap:3px;height:90px;margin-bottom:4px'>";
+  months.forEach(function(d,i){
+    var hPx=maxCh>0?Math.round(d.ch/maxCh*75):0;
+    var rbPx=maxCh>0?Math.round(d.rb/maxCh*75):0;
+    var isCur=i+1===mb_currentMonth;
+    var isFut=i+1>mb_currentMonth;
+    h+="<div style='flex:1;display:flex;flex-direction:column;align-items:center'>"
+      +"<div style='font-size:8px;font-weight:700;color:"+(isFut?"#d1d5db":col)+";margin-bottom:1px'>"+(isFut?"":d.ch||"")+"</div>"
+      +"<div style='width:100%;position:relative'>"
+      +"<div style='width:100%;height:"+Math.max(hPx,1)+"px;background:"+col+";border-radius:2px 2px 0 0;opacity:"+(isFut?".15":isCur?"1":".6")+"'></div>"
+      +(d.rb?"<div style='width:100%;height:"+Math.max(rbPx,1)+"px;background:#dc2626;border-radius:0;opacity:.5;margin-top:1px'></div>":"")
+      +"</div>"
+      +"<div style='font-size:7px;color:#9ca3af;margin-top:2px'>"+MB_MONTHS_TR[i].substring(0,3)+"</div></div>";
+  });
+  h+="</div>";
+  h+="<div style='display:flex;gap:12px;font-size:9px;color:#9ca3af'><span>■ <span style='color:"+col+"'>Satış</span></span>"+(ytdRb?"<span>■ <span style='color:#dc2626'>Rebate</span></span>":"")+"</div>";
+
+  // Monthly revenue table
+  h+="<table style='width:100%;border-collapse:collapse;font-size:10px;margin-top:10px'>"
+    +"<thead><tr style='background:#f9fafb'><th style='padding:4px 6px;text-align:left;border-bottom:1px solid #e5e7eb'>Ay</th><th style='text-align:right;padding:4px 6px;border-bottom:1px solid #e5e7eb'>Satış</th><th style='text-align:right;padding:4px 6px;border-bottom:1px solid #e5e7eb'>Rebate</th><th style='text-align:right;padding:4px 6px;border-bottom:1px solid #e5e7eb'>Ciro</th><th style='text-align:right;padding:4px 6px;border-bottom:1px solid #e5e7eb'>Kâr</th><th style='text-align:center;padding:4px 6px;border-bottom:1px solid #e5e7eb'>Marj</th></tr></thead><tbody>";
+  months.forEach(function(d,i){
+    if(i+1>mb_currentMonth)return;
+    h+="<tr style='border-bottom:1px solid #f3f4f6'>"
+      +"<td style='padding:3px 6px;font-weight:600'>"+MB_MONTHS_TR[i]+"</td>"
+      +"<td style='padding:3px 6px;text-align:right'>"+d.ch+"</td>"
+      +"<td style='padding:3px 6px;text-align:right;color:#dc2626'>"+(d.rb||"-")+"</td>"
+      +"<td style='padding:3px 6px;text-align:right'>"+mbFmtRev(d.rev)+"</td>"
+      +"<td style='padding:3px 6px;text-align:right;color:#059669'>"+mbFmtRev(d.profit)+"</td>"
+      +"<td style='padding:3px 6px;text-align:center'><span style='color:"+(d.margin>=70?"#059669":"#dc2626")+"'>"+d.margin.toFixed(0)+"%</span></td></tr>";
+  });
+  h+="</tbody></table>";
+  contentEl.innerHTML=h;
+}
+
+function closeMbProductDetail(){
+  var panel=document.getElementById("mb_productDetail");
+  if(panel)panel.style.display="none";
+}
+
 function mbGetTargets(){
   try{var s=localStorage.getItem("mb_targets");return s?JSON.parse(s):{};}
   catch(e){return{};}
