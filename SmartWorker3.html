@@ -951,6 +951,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/p
 
 // ===== STATE =====
 let guests=[],traces=[],pyGuests=[],b2bMap={};
+var expenseList=[];
 
 // ===== INDEXEDDB PHOTO STORE =====
 var pyPhotoCache=new Map();
@@ -4213,7 +4214,7 @@ function wnPopulateDropdown(){/* TODO: not yet implemented */}
 function feedAllModules(parsedGuests, sourceModule){
   window._lastParsedGuests=parsedGuests; // Store for Handoff export
   allGuests=parsedGuests;
-  wnPopulateDropdown();
+  if(typeof wnPopulateDropdown==="function")wnPopulateDropdown();
 
   // --- Build B2B map (roomNo → note text) ---
   b2bMap={};
@@ -6745,7 +6746,18 @@ function importHandoff(file){
       if(d.pyGuests&&d.pyGuests.length){pyGuests=d.pyGuests;window.pyGuests=pyGuests;renderPYTable();}
       if(d.b2bMap){b2bMap=d.b2bMap;window.b2bMap=b2bMap;}
       if(d.parsedGuests)window._lastParsedGuests=d.parsedGuests;
-      if(d.expenseList&&d.expenseList.length){expenseList=d.expenseList;expSave();}
+      if(d.expenseList&&d.expenseList.length){expenseList=d.expenseList;}
+      if(d.bdiLogs&&d.bdiLogs.length){bdiLogs=d.bdiLogs;saveBdiLogs();}
+      if(d.vacRooms){vacRooms=d.vacRooms;}
+      if(d.radarResults&&d.radarResults.length){radarResults=d.radarResults;if(typeof renderRadarTable==="function")renderRadarTable();}
+
+      // Sync guest history from handoff data
+      if(d.guests&&d.guests.length){
+        for(var gi=0;gi<d.guests.length;gi++)recordGuestPrint(d.guests[gi]);
+      }
+      if(d.pyGuests&&d.pyGuests.length){
+        for(var pi=0;pi<d.pyGuests.length;pi++)recordPyPrint(d.pyGuests[pi]);
+      }
 
       var s=getHandoffSummary();
       statusEl.innerHTML='<span style="color:#059669;font-weight:700">✅ Başarıyla yüklendi!</span>';
@@ -6788,7 +6800,7 @@ function importHandoff(file){
   exportHandoff,
   filterRadar, handleArrPDF,
   handleRadarPDF, handleResDetailPDF, handleTracePDF, handleVacPDF,
-  handleXLS, importHandoff, loadBdiLogs, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters, toggleBdiCompare,
+  handleXLS, importHandoff, loadBdiLogs, loadBdiOccupied, saveBdiLogs, renderBdiLog, loadSample, setBdiView, renderBdiFiltered, clearBdiFilters, toggleBdiCompare,
   saveBdiOccupied, renderBdiCoverage, scanBdiGuests, showBdiMergeMode, bdiToggleAllGuests, filterGuestLibrary, clearGuestSearch, toggleGuestDetail,
   addPmRoom, removePmRoom, switchBdiTab, saveGuestNote, downloadPerfPdf, downloadPerfXlsx, exportGuestProfile,
   renderStorageDashboard, exportBdiBackup, importBdiBackup, autoArchiveBdi,
@@ -6938,6 +6950,7 @@ window.guests = guests;
 window.traces = traces;
 window.b2bMap = b2bMap;
 window.alertList = alertList;
+window.bdiLogs = bdiLogs;
 
 })(); // end IIFE
 </script>
