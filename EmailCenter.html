@@ -214,6 +214,21 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 
+<div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px">
+<label style="font-size:11px;font-weight:700;display:block;margin-bottom:6px">HTML Sablon Duzenle <span style="font-weight:400;color:#6b7280">(dikkatli duzenleyin — HTML bozulursa mail gorunumu etkilenir)</span></label>
+<div style="display:flex;gap:6px;margin-bottom:8px">
+<select id="pdTplEditKey" onchange="loadTemplateEditor('pd')" style="border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:11px">
+<option value="">-- Sablon Sec --</option>
+<option value="pd_en">Post-Departure EN</option>
+<option value="pd_tr">Post-Departure TR</option>
+</select>
+<button class="btn-sm" onclick="saveTemplateEdit('pd')" style="font-size:10px">Kaydet</button>
+<button class="btn-sm" onclick="resetTemplateEdit('pd')" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Varsayilana Don</button>
+<button class="btn-sm" onclick="previewTemplateEdit('pd')" style="font-size:10px;border-color:#7c3aed;color:#7c3aed">Onizle</button>
+</div>
+<textarea id="pdTplEditArea" style="width:100%;height:200px;font-family:monospace;font-size:11px;border:1px solid #d1d5db;border-radius:6px;padding:8px;display:none" placeholder="Sablon seciniz..."></textarea>
+</div>
+
 <div style="margin-top:10px">
 <button class="btn btn-primary" onclick="savePdTemplates();alert('Kaydedildi!')">Kaydet</button>
 </div>
@@ -265,6 +280,29 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 
+<div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px">
+<label style="font-size:11px;font-weight:700;display:block;margin-bottom:6px">HTML Sablon Duzenle <span style="font-weight:400;color:#6b7280">(dikkatli duzenleyin)</span></label>
+<div style="display:flex;gap:6px;margin-bottom:8px">
+<select id="paTplEditKey" onchange="loadTemplateEditor('pa')" style="border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:11px">
+<option value="">-- Sablon Sec --</option>
+<option value="pa_en_first">Pre-Arrival EN (First Timer)</option>
+<option value="pa_tr_first">Pre-Arrival TR (First Timer)</option>
+<option value="pa_en_repeat">Pre-Arrival EN (Repeat)</option>
+<option value="pa_tr_repeat">Pre-Arrival TR (Repeat)</option>
+<option value="bk_en_first">Booking.com EN (First)</option>
+<option value="bk_tr_first">Booking.com TR (First)</option>
+<option value="bk_en_repeat">Booking.com EN (Repeat)</option>
+<option value="bk_tr_repeat">Booking.com TR (Repeat)</option>
+<option value="so_en">Special Occasion EN</option>
+<option value="so_tr">Special Occasion TR</option>
+</select>
+<button class="btn-sm" onclick="saveTemplateEdit('pa')" style="font-size:10px">Kaydet</button>
+<button class="btn-sm" onclick="resetTemplateEdit('pa')" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Varsayilana Don</button>
+<button class="btn-sm" onclick="previewTemplateEdit('pa')" style="font-size:10px;border-color:#7c3aed;color:#7c3aed">Onizle</button>
+</div>
+<textarea id="paTplEditArea" style="width:100%;height:200px;font-family:monospace;font-size:11px;border:1px solid #d1d5db;border-radius:6px;padding:8px;display:none" placeholder="Sablon seciniz..."></textarea>
+</div>
+
 <div style="margin-top:10px">
 <button class="btn btn-primary" onclick="savePaTemplates();alert('Kaydedildi!')">Kaydet</button>
 </div>
@@ -282,19 +320,19 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div>
 <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Preference Form (EN)</label>
 <input type="file" id="pdfUpPrefEN" accept=".pdf" style="display:none" onchange="handlePdfUpload('pdfUpPrefEN','pref_form_en')">
-<button onclick="document.getElementById('pdfUpPrefEN').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yukle</button>
+<button onclick="document.getElementById('pdfUpPrefEN').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yukle / Degistir</button>
 <div id="pdfSt_pref_form_en" style="font-size:10px;margin-top:4px"></div>
 </div>
 <div>
 <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Preference Form (TR)</label>
 <input type="file" id="pdfUpPrefTR" accept=".pdf" style="display:none" onchange="handlePdfUpload('pdfUpPrefTR','pref_form_tr')">
-<button onclick="document.getElementById('pdfUpPrefTR').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yukle</button>
+<button onclick="document.getElementById('pdfUpPrefTR').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yukle / Degistir</button>
 <div id="pdfSt_pref_form_tr" style="font-size:10px;margin-top:4px"></div>
 </div>
 <div>
 <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Raffles Monthly</label>
 <input type="file" id="pdfUpMonthly" accept=".pdf" style="display:none" onchange="handlePdfUpload('pdfUpMonthly','monthly')">
-<button onclick="document.getElementById('pdfUpMonthly').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yukle</button>
+<button onclick="document.getElementById('pdfUpMonthly').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yukle / Degistir</button>
 <div id="pdfSt_monthly" style="font-size:10px;margin-top:4px"></div>
 </div>
 </div>
@@ -313,15 +351,17 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <input type="file" id="imgUpSig" accept="image/*" style="display:none" onchange="handleImageUpload('imgUpSig','sig_image')">
 <button onclick="document.getElementById('imgUpSig').click()" style="width:100%;padding:8px;border:2px dashed #c4b5fd;border-radius:6px;background:#faf5ff;cursor:pointer;font-size:11px">&#127912; Görsel Yükle</button>
 <div id="imgSt_sig_image" style="font-size:10px;margin-top:4px"></div>
+<div id="imgPreview_sig_image" style="margin-top:6px"></div>
 </div>
 <div>
 <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Banner Görseli (opsiyonel)</label>
 <input type="file" id="imgUpBanner" accept="image/*" style="display:none" onchange="handleImageUpload('imgUpBanner','banner_image')">
 <button onclick="document.getElementById('imgUpBanner').click()" style="width:100%;padding:8px;border:2px dashed #c4b5fd;border-radius:6px;background:#faf5ff;cursor:pointer;font-size:11px">&#127912; Görsel Yükle</button>
 <div id="imgSt_banner_image" style="font-size:10px;margin-top:4px"></div>
+<div id="imgPreview_banner_image" style="margin-top:6px"></div>
 </div>
 </div>
-<button onclick="clearInlineImages()" style="margin-top:8px;padding:4px 12px;font-size:11px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;border-radius:4px;cursor:pointer">Görselleri Temizle</button>
+<button onclick="if(confirm('Tüm görseller silinecek. Emin misiniz?'))clearInlineImages()" style="margin-top:8px;padding:4px 12px;font-size:11px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;border-radius:4px;cursor:pointer">Görselleri Temizle</button>
 </div>
 </div>
 
@@ -1487,7 +1527,6 @@ function handleImageUpload(inputId,storageKey){
   reader.onload=function(e){
     var b64=btoa(String.fromCharCode.apply(null,new Uint8Array(e.target.result)));
     setInlineImage(storageKey,file.name,b64,mime);
-    alert(file.name+" yüklendi!");
   };
   reader.readAsArrayBuffer(file);
 }
@@ -1495,11 +1534,14 @@ function renderImageStatus(){
   var store=getInlineImageStore();
   ["sig_image","banner_image"].forEach(function(key){
     var el=document.getElementById("imgSt_"+key);
+    var preview=document.getElementById("imgPreview_"+key);
     if(!el)return;
     if(store[key]){
-      el.innerHTML='<span style="color:#059669">&#10003; '+esc(store[key].name)+'</span> <button onclick="setInlineImage(\''+key+'\',null)" style="font-size:9px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;border-radius:3px;cursor:pointer;padding:1px 4px">Sil</button>';
+      el.innerHTML='<span style="color:#059669">&#10003; '+esc(store[key].name)+'</span> <button onclick="if(confirm(\'Bu gorseli silmek istediginize emin misiniz?\'))setInlineImage(\''+key+'\',null)" style="font-size:9px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;border-radius:3px;cursor:pointer;padding:1px 4px">Sil</button>';
+      if(preview)preview.innerHTML='<img src="data:'+store[key].mime+';base64,'+store[key].data+'" style="max-width:200px;max-height:80px;border:1px solid #e5e7eb;border-radius:4px">';
     }else{
-      el.innerHTML='<span style="color:#dc2626">Yüklenmedi</span>';
+      el.innerHTML='<span style="color:#dc2626">Yuklenmedi</span>';
+      if(preview)preview.innerHTML='';
     }
   });
 }
@@ -1513,7 +1555,6 @@ function handlePdfUpload(inputId,storageKey){
     var b64=btoa(String.fromCharCode.apply(null,new Uint8Array(e.target.result)));
     setEmailPdf(storageKey,file.name,b64);
     renderPdfStatus();
-    alert(file.name+" yuklendi!");
   };
   reader.readAsArrayBuffer(file);
 }
@@ -1521,22 +1562,86 @@ function handlePdfUpload(inputId,storageKey){
 function renderPdfStatus(){
   var store=getEmailPdfStore();
   var keys=["pref_form_en","pref_form_tr","monthly"];
-  var labels=["Preference Form EN","Preference Form TR","Raffles Monthly"];
   for(var i=0;i<keys.length;i++){
     var el=document.getElementById("pdfSt_"+keys[i]);
     if(!el)continue;
     if(store[keys[i]]){
-      el.innerHTML='<span style="color:#059669">&#10003; '+esc(store[keys[i]].name)+'</span>';
+      el.innerHTML='<span style="color:#059669">&#10003; '+esc(store[keys[i]].name)+'</span> <button onclick="if(confirm(\'Bu PDF silinecek. Emin misiniz?\'))deleteEmailPdf(\''+keys[i]+'\')" style="font-size:9px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;border-radius:3px;cursor:pointer;padding:1px 4px">Sil</button>';
     }else{
       el.innerHTML='<span style="color:#dc2626">Yuklenmedi</span>';
     }
   }
 }
+function deleteEmailPdf(key){
+  var store=getEmailPdfStore();
+  delete store[key];
+  try{localStorage.setItem("email_pdfs",JSON.stringify(store))}catch(e){}
+  renderPdfStatus();
+}
+
+// Original (default) templates stored separately for reset
+var EMAIL_TEMPLATES_DEFAULTS={};
+for(var _tk in EMAIL_TEMPLATES)EMAIL_TEMPLATES_DEFAULTS[_tk]=EMAIL_TEMPLATES[_tk];
+
+// Load any user-edited templates from localStorage
+(function(){
+  try{var s=localStorage.getItem("email_tpl_overrides");if(s){var o=JSON.parse(s);for(var k in o)EMAIL_TEMPLATES[k]=o[k]}}catch(e){}
+})();
 
 function getTemplateHtml(key){
   var b64=EMAIL_TEMPLATES[key];
   if(!b64)return null;
   return decodeURIComponent(escape(atob(b64)));
+}
+
+function loadTemplateEditor(module){
+  var sel=document.getElementById(module==="pd"?"pdTplEditKey":"paTplEditKey");
+  var area=document.getElementById(module==="pd"?"pdTplEditArea":"paTplEditArea");
+  var key=sel.value;
+  if(!key){area.style.display="none";area.value="";return}
+  var html=getTemplateHtml(key);
+  area.value=html||"(sablon bulunamadi)";
+  area.style.display="block";
+}
+
+function saveTemplateEdit(module){
+  var sel=document.getElementById(module==="pd"?"pdTplEditKey":"paTplEditKey");
+  var area=document.getElementById(module==="pd"?"pdTplEditArea":"paTplEditArea");
+  var key=sel.value;
+  if(!key){alert("Once bir sablon seciniz.");return}
+  var html=area.value;
+  var b64=btoa(unescape(encodeURIComponent(html)));
+  EMAIL_TEMPLATES[key]=b64;
+  // Save overrides to localStorage
+  var overrides={};
+  try{var s=localStorage.getItem("email_tpl_overrides");if(s)overrides=JSON.parse(s)}catch(e){}
+  overrides[key]=b64;
+  localStorage.setItem("email_tpl_overrides",JSON.stringify(overrides));
+  alert("Sablon kaydedildi: "+key);
+}
+
+function resetTemplateEdit(module){
+  var sel=document.getElementById(module==="pd"?"pdTplEditKey":"paTplEditKey");
+  var area=document.getElementById(module==="pd"?"pdTplEditArea":"paTplEditArea");
+  var key=sel.value;
+  if(!key){alert("Once bir sablon seciniz.");return}
+  if(!confirm("Bu sablon varsayilan haline donecek. Emin misiniz?"))return;
+  EMAIL_TEMPLATES[key]=EMAIL_TEMPLATES_DEFAULTS[key];
+  var overrides={};
+  try{var s=localStorage.getItem("email_tpl_overrides");if(s)overrides=JSON.parse(s)}catch(e){}
+  delete overrides[key];
+  localStorage.setItem("email_tpl_overrides",JSON.stringify(overrides));
+  area.value=getTemplateHtml(key)||"";
+  alert("Varsayilana donuldu: "+key);
+}
+
+function previewTemplateEdit(module){
+  var area=document.getElementById(module==="pd"?"pdTplEditArea":"paTplEditArea");
+  var html=area.value;
+  if(!html){alert("Once bir sablon seciniz.");return}
+  var w=window.open("","_blank","width=700,height=600");
+  w.document.write(html);
+  w.document.close();
 }
 
 function injectName(html,title,surname){
