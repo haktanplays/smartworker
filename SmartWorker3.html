@@ -1286,7 +1286,7 @@ function searchGuestHistory(){
 
   if(!results.length){wrap.innerHTML='<p class="hint">Sonuc bulunamadi.</p>';return}
 
-  var h='<table style="font-size:12px"><thead><tr><th>Isim</th><th>Konaklama</th><th>Dil</th><th>Son Gelis</th><th style="width:70px">Oda</th><th></th></tr></thead><tbody>';
+  var h='<table style="font-size:12px"><thead><tr><th>Isim</th><th>Konaklama</th><th>Dil</th><th>Son Gelis</th><th></th></tr></thead><tbody>';
   for(var i=0;i<results.length&&i<20;i++){
     var r=results[i];
     h+='<tr>';
@@ -1294,7 +1294,6 @@ function searchGuestHistory(){
     h+='<td style="text-align:center">'+r.stays+'</td>';
     h+='<td style="text-align:center">'+r.lang+'</td>';
     h+='<td style="font-size:11px;color:#6b7280">'+esc(r.lastDate)+'</td>';
-    h+='<td><input type="number" id="histRoom_'+i+'" placeholder="Oda" style="width:60px;padding:3px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;text-align:center"></td>';
     h+='<td><button class="btn-sm" style="font-size:10px;padding:2px 8px;background:#f0fdf4;border-color:#059669;color:#059669" onclick="addHistoryGuest('+i+')">+ Ekle</button></td>';
     h+='</tr>';
   }
@@ -1306,8 +1305,7 @@ function searchGuestHistory(){
 function addHistoryGuest(idx){
   var r=_historySearchResults[idx];
   if(!r)return;
-  var roomInp=document.getElementById("histRoom_"+idx);
-  var roomNo=roomInp?parseInt(roomInp.value)||0:0;
+  var roomNo=0;
   // Check if already in current guest list
   var exists=guests.some(function(g){return g.lastName.toLowerCase()===r.lastName.toLowerCase()&&g.firstName.toLowerCase()===r.firstName.toLowerCase()});
   if(exists){alert(r.firstName+" "+r.lastName+" zaten listede.");return}
