@@ -1526,6 +1526,38 @@ async function findPYGuests(buf){
   return results;
 }
 
+// ===== PY GUEST HISTORY =====
+function getPyHistory(){try{var s=localStorage.getItem("py_history");return s?JSON.parse(s):{}}catch(e){return {}}}
+function savePyHistory(h){localStorage.setItem("py_history",JSON.stringify(h))}
+function pyGuestKey(g){return(g.lastName+"|"+g.firstName).toLowerCase().trim()}
+
+function recordPyPrint(g){
+  var hist=getPyHistory();
+  var key=pyGuestKey(g);
+  if(!hist[key])hist[key]={};
+  hist[key].jobTitle=g.jobTitle||hist[key].jobTitle||"";
+  hist[key].basedIn=g.basedIn||hist[key].basedIn||"";
+  hist[key].company=g.company||hist[key].company||"";
+  hist[key].lastPyDate=new Date().toLocaleDateString("tr-TR");
+  hist[key].pyCount=(hist[key].pyCount||0)+1;
+  savePyHistory(hist);
+}
+
+function applyPyHistory(guestList){
+  var hist=getPyHistory();
+  for(var i=0;i<guestList.length;i++){
+    var g=guestList[i];
+    var key=pyGuestKey(g);
+    var rec=hist[key];
+    if(rec){
+      if(!g.jobTitle&&rec.jobTitle)g.jobTitle=rec.jobTitle;
+      if(!g.basedIn&&rec.basedIn)g.basedIn=rec.basedIn;
+      if(rec.lastPyDate&&!g.pyDate)g.pyDate=rec.lastPyDate;
+      if(rec.lastPyDate)g.hasPY=true;
+    }
+  }
+}
+
 function renderPYTable(){
   if(!pyGuests.length){document.getElementById("pyResultCard").style.display="none";return}
   document.getElementById("pyResultCard").style.display="block";
@@ -1640,6 +1672,8 @@ async function downloadPY(){
     var blob=await zip.generateAsync({type:"blob",compression:"STORE"});
     var url=URL.createObjectURL(blob);
     var a=document.createElement("a");a.href=url;a.download="PassionatelyYours_"+dateStr.replace(/\./g,"")+".pptx";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    for(var ri=0;ri<pyGuests.length;ri++)recordPyPrint(pyGuests[ri]);
+    renderPYTable();
   }catch(err){alert("PPTX hatasi: "+err.message);console.error(err)}
 }
 
@@ -3807,6 +3841,7 @@ function feedAllModules(parsedGuests, sourceModule){
     });
   }
   if(newPY.length>0){
+    applyPyHistory(newPY);
     pyGuests=newPY;window.pyGuests=pyGuests;renderPYTable();
     var pyConf=newPY.filter(function(p){return p.hasPY}).length;
     var pyAday=newPY.filter(function(p){return!p.hasPY}).length;
@@ -6247,7 +6282,8 @@ function importHandoff(file){
   exportAlertAnalyticsPdf, exportAlertAnalyticsXlsx,
   exportAlertExcel, handleChangesPDF, renderBdiPeriod,
   filterGuestTable, printSingleLetter, markLetterPrinted, unmarkLetterPrinted,
-  recordGuestPrint, applyGuestHistory
+  recordGuestPrint, applyGuestHistory,
+  recordPyPrint, applyPyHistory
 ].forEach(function(fn){ if(fn && fn.name) window[fn.name] = fn });
 
 // Also alias object-type helpers
