@@ -4067,6 +4067,7 @@ function feedAllModules(parsedGuests, sourceModule){
   // --- Feed PY (robust: search all _rawLines for "Guest has PY") ---
   var newPY=[];
   var pySeen={};
+  var pySeenName={};
   var pyKws=pyTitleKW||[];
   for(var i=0;i<parsedGuests.length;i++){
     var g=parsedGuests[i];
@@ -4104,6 +4105,9 @@ function feedAllModules(parsedGuests, sourceModule){
         jobTitle=wnText.replace(/\*+\w*\s*$/,"").replace(/\s*\/\/.*$/,"").trim();break;
       }
     }
+    var nameKey=(g.lastName+"|"+g.firstName).toLowerCase();
+    if(pySeenName[nameKey])continue;
+    pySeenName[nameKey]=true;
     newPY.push({
       roomNo:g.roomNo,lastName:g.lastName,firstName:g.firstName,title:g.title,
       company:g.company,jobTitle:jobTitle,prevStays:g.prevStays,pyDate:pyDate,basedIn:"",hasPY:true,signals:[]
@@ -4142,6 +4146,9 @@ function feedAllModules(parsedGuests, sourceModule){
     // Signal 3: Lux rate code
     if(g.rateCode&&luxCodes.indexOf(g.rateCode)>=0){signals.push("Rate: "+g.rateCode);}
     if(signals.length===0)continue;
+    var nameKey2=(g.lastName+"|"+g.firstName).toLowerCase();
+    if(pySeenName[nameKey2])continue;
+    pySeenName[nameKey2]=true;
     pySeen[g.roomNo]=true;
     newPY.push({
       roomNo:g.roomNo,lastName:g.lastName,firstName:g.firstName,title:g.title,
