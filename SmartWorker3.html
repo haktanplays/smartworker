@@ -112,7 +112,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div class="page active" id="page-letters">
 <div class="tabs">
 <div class="tab active" onclick="switchLetterTab('pdf')">Opera PDF</div>
-<div class="tab" onclick="switchLetterTab('excel')">Excel</div>
+<div class="tab" onclick="switchLetterTab('search')">Misafir Ara</div>
 <div class="tab" onclick="switchLetterTab('manual')">Elle Gir</div>
 </div>
 <div class="card" id="ltPdfCard">
@@ -124,14 +124,14 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 <div id="arrPdfStatus" style="margin-top:8px;font-size:12px;color:#6b7280"></div>
 </div>
-<div class="card" id="ltExcelCard" style="display:none">
-<h2>Excel Yukle</h2>
-<div class="upload-area" onclick="document.getElementById('xlsInput').click()">
-<div style="font-size:24px;margin-bottom:6px">&#128202;</div>
-<div style="font-size:13px;font-weight:600;color:#374151">Excel surukle veya tikla</div>
-<input type="file" id="xlsInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleXLS(this.files[0])">
+<div class="card" id="ltSearchCard" style="display:none">
+<h2>Misafir Gecmisinde Ara</h2>
+<p class="hint" style="margin-bottom:10px">Daha once mektubu basilmis misafirleri arayip tabloya ekleyin.</p>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+  <input id="historySearchInput" type="text" placeholder="Isim veya soyad yazin..." style="flex:1;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px" oninput="searchGuestHistory()" onkeydown="if(event.key==='Enter')addFirstHistoryResult()">
+  <button class="btn btn-primary" onclick="addAllHistoryResults()" style="font-size:12px">Tumunu Ekle</button>
 </div>
-<div id="xlsStatus" style="margin-top:8px;font-size:12px;color:#6b7280"></div>
+<div id="historySearchResults" style="max-height:300px;overflow-y:auto"></div>
 </div>
 <div class="card" id="ltManualCard" style="display:none">
 <div class="card-header"><h2>Misafir Listesi</h2><button class="btn-sm" onclick="loadSample()">Ornek</button></div>
@@ -1089,11 +1089,12 @@ function showPage(p){
 
 // ===== LETTER TAB SWITCHING =====
 function switchLetterTab(t){
-  ["pdf","excel","manual"].forEach(function(k,i){
-    var cards={pdf:"ltPdfCard",excel:"ltExcelCard",manual:"ltManualCard"};
+  ["pdf","search","manual"].forEach(function(k,i){
+    var cards={pdf:"ltPdfCard",search:"ltSearchCard",manual:"ltManualCard"};
     document.getElementById(cards[k]).style.display=k===t?"block":"none";
   });
-  document.querySelectorAll("#page-letters .tab").forEach(function(el,i){el.classList.toggle("active",i===(t==="pdf"?0:t==="excel"?1:2))});
+  document.querySelectorAll("#page-letters .tab").forEach(function(el,i){el.classList.toggle("active",i===(t==="pdf"?0:t==="search"?1:2))});
+  if(t==="search"){var inp=document.getElementById("historySearchInput");if(inp)inp.focus()}
 }
 
 // ===== DRAG DROP =====
@@ -1246,6 +1247,99 @@ function exportGuestHistoryXlsx(){
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Top 20 Misafir");
   XLSX.writeFile(wb,"VIP_Misafir_Raporu_"+new Date().toISOString().split("T")[0]+".xlsx");
+}
+
+// ===== GUEST HISTORY SEARCH =====
+var _historySearchResults=[];
+
+function searchGuestHistory(){
+  var q=(document.getElementById("historySearchInput").value||"").toLowerCase().trim();
+  var wrap=document.getElementById("historySearchResults");
+  if(!wrap)return;
+  if(!q||q.length<2){wrap.innerHTML='<p class="hint">En az 2 karakter yazin...</p>';_historySearchResults=[];return}
+
+  var gHist=getGuestHistory();
+  var pyHist=getPyHistory();
+  var results=[];
+  function capName(s){return(s||"").split(" ").map(function(w){return w.charAt(0).toUpperCase()+w.slice(1)}).join(" ")}
+
+  for(var k in gHist){
+    var parts=k.split("|");
+    var lastName=capName(parts[0]);
+    var firstName=capName(parts[1]);
+    var fullName=(firstName+" "+lastName).toLowerCase();
+    if(fullName.indexOf(q)>=0||lastName.toLowerCase().indexOf(q)>=0||firstName.toLowerCase().indexOf(q)>=0){
+      var g=gHist[k];
+      var p=pyHist[k]||{};
+      var stayCount=g.dates?g.dates.length:(g.stays||0);
+      results.push({
+        key:k,lastName:lastName,firstName:firstName,
+        stays:stayCount,lang:g.lang||"EN",title:g.title||"",
+        lastDate:g.lastDate||"",jobTitle:p.jobTitle||"",basedIn:p.basedIn||""
+      });
+    }
+  }
+  results.sort(function(a,b){return b.stays-a.stays});
+  _historySearchResults=results;
+
+  if(!results.length){wrap.innerHTML='<p class="hint">Sonuc bulunamadi.</p>';return}
+
+  var h='<table style="font-size:12px"><thead><tr><th>Isim</th><th>Konaklama</th><th>Dil</th><th>Son Gelis</th><th></th></tr></thead><tbody>';
+  for(var i=0;i<results.length&&i<20;i++){
+    var r=results[i];
+    h+='<tr style="cursor:pointer" onclick="addHistoryGuest('+i+')">';
+    h+='<td style="font-weight:600">'+esc(r.lastName)+', '+esc(r.firstName)+'</td>';
+    h+='<td style="text-align:center">'+r.stays+'</td>';
+    h+='<td style="text-align:center">'+r.lang+'</td>';
+    h+='<td style="font-size:11px;color:#6b7280">'+esc(r.lastDate)+'</td>';
+    h+='<td><button class="btn-sm" style="font-size:10px;padding:2px 8px" onclick="event.stopPropagation();addHistoryGuest('+i+')">+ Ekle</button></td>';
+    h+='</tr>';
+  }
+  h+='</tbody></table>';
+  if(results.length>20)h+='<p class="hint" style="margin-top:4px">+' +(results.length-20)+' daha...</p>';
+  wrap.innerHTML=h;
+}
+
+function addHistoryGuest(idx){
+  var r=_historySearchResults[idx];
+  if(!r)return;
+  // Check if already in current guest list
+  var exists=guests.some(function(g){return g.lastName.toLowerCase()===r.lastName.toLowerCase()&&g.firstName.toLowerCase()===r.firstName.toLowerCase()});
+  if(exists){alert(r.firstName+" "+r.lastName+" zaten listede.");return}
+  guests.push({
+    id:"g"+Math.random().toString(36).slice(2),
+    title:r.title,firstName:r.firstName,lastName:r.lastName,
+    lang:r.lang,type:r.stays>1?"REPEAT":"NEW",stays:r.stays,roomNo:0
+  });
+  window.guests=guests;
+  renderGuestTable();
+  // Flash feedback
+  var wrap=document.getElementById("historySearchResults");
+  var rows=wrap.querySelectorAll("tr");
+  if(rows[idx])rows[idx].style.background="#d1fae5";
+}
+
+function addFirstHistoryResult(){
+  if(_historySearchResults.length)addHistoryGuest(0);
+}
+
+function addAllHistoryResults(){
+  if(!_historySearchResults.length){alert("Once arama yapin.");return}
+  var added=0;
+  for(var i=0;i<_historySearchResults.length;i++){
+    var r=_historySearchResults[i];
+    var exists=guests.some(function(g){return g.lastName.toLowerCase()===r.lastName.toLowerCase()&&g.firstName.toLowerCase()===r.firstName.toLowerCase()});
+    if(exists)continue;
+    guests.push({
+      id:"g"+Math.random().toString(36).slice(2),
+      title:r.title,firstName:r.firstName,lastName:r.lastName,
+      lang:r.lang,type:r.stays>1?"REPEAT":"NEW",stays:r.stays,roomNo:0
+    });
+    added++;
+  }
+  window.guests=guests;
+  renderGuestTable();
+  if(added)alert(added+" misafir eklendi.");
 }
 
 function getPrintedLetters(){
@@ -6823,6 +6917,7 @@ function importHandoff(file){
   exportAlertAnalyticsPdf, exportAlertAnalyticsXlsx,
   exportAlertExcel, handleChangesPDF, renderBdiPeriod,
   filterGuestTable, printSingleLetter, markLetterPrinted, unmarkLetterPrinted,
+  searchGuestHistory, addHistoryGuest, addFirstHistoryResult, addAllHistoryResults,
   recordGuestPrint, applyGuestHistory, exportGuestHistoryXlsx,
   recordPyPrint, applyPyHistory,
   uploadPyPhoto, bulkUploadPyPhotos, exportPyPhotos, importPyPhotosZip, setPyPhotoCell
