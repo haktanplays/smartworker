@@ -1175,12 +1175,15 @@ function guestKey(g){return(g.lastName+"|"+g.firstName).toLowerCase().trim()}
 function recordGuestPrint(g){
   var hist=getGuestHistory();
   var key=guestKey(g);
+  var today=new Date().toISOString().split("T")[0];
   if(!hist[key]){
-    hist[key]={stays:g.stays||1,lang:g.lang,title:g.title,prints:0};
+    hist[key]={dates:[],lang:g.lang,title:g.title};
   }
-  hist[key].stays++;
-  hist[key].prints=(hist[key].prints||0)+1;
-  hist[key].lastDate=new Date().toISOString().split("T")[0];
+  // Migrate old format: if no dates array, create from lastDate
+  if(!hist[key].dates)hist[key].dates=hist[key].lastDate?[hist[key].lastDate]:[];
+  // Add today only if not already recorded (same day = same stay)
+  if(hist[key].dates.indexOf(today)<0)hist[key].dates.push(today);
+  hist[key].lastDate=today;
   hist[key].lang=g.lang;
   hist[key].title=g.title;
   saveGuestHistory(hist);
@@ -1193,8 +1196,9 @@ function applyGuestHistory(guestList){
     var key=guestKey(g);
     var rec=hist[key];
     if(rec){
-      g.stays=Math.max(g.stays||0,rec.stays);
-      if(rec.stays>0)g.type="REPEAT";
+      var stayCount=rec.dates?rec.dates.length:(rec.stays||0);
+      g.stays=Math.max(g.stays||0,stayCount);
+      if(stayCount>0)g.type="REPEAT";
       if(rec.lang)g.lang=rec.lang;
     }
   }
@@ -1208,81 +1212,59 @@ function exportGuestHistoryXlsx(){
   var allKeys={};
   for(var k in gHist)allKeys[k]=true;
   for(var k in pyHist)allKeys[k]=true;
-  var keys=Object.keys(allKeys).sort();
+  var keys=Object.keys(allKeys);
   if(!keys.length){alert("Henuz misafir gecmisi yok.");return}
 
-  var rows=[["Soyad","Isim","Dil","Konaklama","Mektup Basilma","Son Gelis","PY Sayisi","Title / Pozisyon","Based In","Sirket","Son PY Tarihi"]];
-  for(var i=0;i<keys.length;i++){
-    var k=keys[i];
+  // Build guest list with unique stay count
+  function capName(s){return(s||"").split(" ").map(function(w){return w.charAt(0).toUpperCase()+w.slice(1)}).join(" ")}
+  var guestList=keys.map(function(k){
     var parts=k.split("|");
-    var lastName=(parts[0]||"").split(" ").map(function(w){return w.charAt(0).toUpperCase()+w.slice(1)}).join(" ");
-    var firstName=(parts[1]||"").split(" ").map(function(w){return w.charAt(0).toUpperCase()+w.slice(1)}).join(" ");
     var g=gHist[k]||{};
     var p=pyHist[k]||{};
-    rows.push([
-      lastName,
-      firstName,
-      g.lang||"",
-      g.stays||0,
-      g.prints||0,
-      g.lastDate||"",
-      p.pyCount||0,
-      p.jobTitle||"",
-      p.basedIn||"",
-      p.company||"",
-      p.lastPyDate||""
-    ]);
+    var stayCount=g.dates?g.dates.length:(g.stays||0);
+    return{
+      key:k,lastName:capName(parts[0]),firstName:capName(parts[1]),
+      stays:stayCount,lang:g.lang||"",title:g.title||"",
+      lastDate:g.lastDate||"",
+      jobTitle:p.jobTitle||"",basedIn:p.basedIn||"",company:p.company||""
+    };
+  }).sort(function(a,b){return b.stays-a.stays});
+
+  // Top 20 sheet
+  var top20=guestList.filter(function(g){return g.stays>0}).slice(0,20);
+  if(!top20.length){alert("Henuz konaklama kaydi yok.");return}
+
+  var rows=[["#","Soyad","Isim","Konaklama","Dil","Title / Pozisyon","Based In","Sirket","Son Gelis"]];
+  for(var i=0;i<top20.length;i++){
+    var g=top20[i];
+    rows.push([i+1,g.lastName,g.firstName,g.stays,g.lang,g.jobTitle,g.basedIn,g.company,g.lastDate]);
   }
 
   var ws=XLSX.utils.aoa_to_sheet(rows);
-  // Header style
   var headerStyle={font:{bold:true,color:{rgb:"FFFFFF"}},fill:{fgColor:{rgb:"1A6B5C"}},alignment:{horizontal:"center"}};
   for(var c=0;c<rows[0].length;c++){
     var cell=ws[XLSX.utils.encode_cell({r:0,c:c})];
     if(cell)cell.s=headerStyle;
   }
-  ws["!cols"]=[{wch:18},{wch:18},{wch:5},{wch:10},{wch:12},{wch:12},{wch:10},{wch:28},{wch:16},{wch:22},{wch:14}];
+  ws["!cols"]=[{wch:4},{wch:18},{wch:18},{wch:10},{wch:5},{wch:28},{wch:16},{wch:22},{wch:12}];
 
   var wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"Misafir Gecmisi");
+  XLSX.utils.book_append_sheet(wb,ws,"Top 20 Misafir");
 
-  // Stats sheet
-  var totalGuests=keys.length;
-  var repeatGuests=keys.filter(function(k){return(gHist[k]||{}).stays>1}).length;
-  var pyGuests=keys.filter(function(k){return(pyHist[k]||{}).pyCount>0}).length;
-  var topStays=keys.slice().sort(function(a,b){return((gHist[b]||{}).stays||0)-((gHist[a]||{}).stays||0)}).slice(0,10);
-  var topPy=keys.filter(function(k){return(pyHist[k]||{}).pyCount>0}).sort(function(a,b){return(pyHist[b].pyCount||0)-(pyHist[a].pyCount||0)}).slice(0,10);
-
-  var statsRows=[
-    ["Misafir Gecmis Ozeti"],
-    [""],
-    ["Toplam Taninan Misafir",totalGuests],
-    ["Repeat Misafir (2+ konaklama)",repeatGuests],
-    ["PY Yapilan Misafir",pyGuests],
-    ["Rapor Tarihi",new Date().toLocaleDateString("tr-TR")],
-    [""],
-    ["En Sik Gelen 10 Misafir","Konaklama"],
-  ];
-  topStays.forEach(function(k){
-    var parts=k.split("|");
-    var name=parts[0].charAt(0).toUpperCase()+parts[0].slice(1)+", "+parts[1].charAt(0).toUpperCase()+parts[1].slice(1);
-    statsRows.push([name,(gHist[k]||{}).stays||0]);
+  // Full list sheet
+  var fullRows=[["Soyad","Isim","Konaklama","Dil","Title","Based In","Sirket","Son Gelis"]];
+  guestList.forEach(function(g){
+    fullRows.push([g.lastName,g.firstName,g.stays,g.lang,g.jobTitle,g.basedIn,g.company,g.lastDate]);
   });
-  statsRows.push([""]);
-  statsRows.push(["En Cok PY Yapilan 10 Misafir","PY Sayisi","Title"]);
-  topPy.forEach(function(k){
-    var parts=k.split("|");
-    var name=parts[0].charAt(0).toUpperCase()+parts[0].slice(1)+", "+parts[1].charAt(0).toUpperCase()+parts[1].slice(1);
-    statsRows.push([name,pyHist[k].pyCount||0,pyHist[k].jobTitle||""]);
-  });
+  var ws2=XLSX.utils.aoa_to_sheet(fullRows);
+  for(var c=0;c<fullRows[0].length;c++){
+    var cell=ws2[XLSX.utils.encode_cell({r:0,c:c})];
+    if(cell)cell.s=headerStyle;
+  }
+  ws2["!cols"]=[{wch:18},{wch:18},{wch:10},{wch:5},{wch:28},{wch:16},{wch:22},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws2,"Tum Misafirler");
 
-  var ws2=XLSX.utils.aoa_to_sheet(statsRows);
-  ws2["!cols"]=[{wch:32},{wch:14},{wch:28}];
-  var titleStyle={font:{bold:true,sz:14,color:{rgb:"1A6B5C"}}};
-  if(ws2["A1"])ws2["A1"].s=titleStyle;
-  XLSX.utils.book_append_sheet(wb,ws2,"Ozet");
-
-  XLSX.writeFile(wb,"Misafir_Gecmis_Raporu_"+new Date().toISOString().split("T")[0]+".xlsx");
+  XLSX.writeFile(wb,"VIP_Misafir_Raporu_"+new Date().toISOString().split("T")[0]+".xlsx");
 }
 
 function getPrintedLetters(){
@@ -1314,8 +1296,9 @@ function printSingleLetter(idx){
   h+='<div class="letter"><p class="date">'+l.date+'</p><div class="spacer"></div><p>'+l.greeting+'</p><div class="spacer"></div><p>'+l.welcome+'</p><div class="spacer"></div><p>'+l.body+'</p><div class="spacer"></div><p>'+l.body2+'</p><div class="spacer"></div><p>'+l.closing+'</p><img class="sig" src="'+SIG+'" alt="" /><p>'+l.name+'</p><p>'+l.jobtitle+'</p></div></body></html>';
   dl(h,"mektup_"+g.lastName+"_"+g.firstName+".html");
   recordGuestPrint(g);
-  g.stays=(g.stays||0)+1;
-  g.type="REPEAT";
+  var rec=getGuestHistory()[guestKey(g)];
+  if(rec&&rec.dates)g.stays=rec.dates.length;
+  if(g.stays>1)g.type="REPEAT";
   markLetterPrinted(g.id);
 }
 
@@ -3671,7 +3654,7 @@ function removeKW(cat,idx){var kws=getKW(cat);kws.splice(idx,1);setKW(cat,kws);r
 
 // ===== DOWNLOADS =====
 function dl(h,fn){ dlFile(h,fn,"text/html") }
-function downloadLetters(){var ds=document.getElementById("dateInput").value,ls=guests.map(function(g){return genLetter(g,ds)});var css="@page{size:148mm 210mm;margin:25mm 20mm 15mm 20mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',Times,serif;font-size:13pt;line-height:1;color:#000;font-style:italic}.letter{page-break-after:always;padding-top:32mm}.letter:last-child{page-break-after:auto}p{margin:0}.spacer{height:18pt}.date{text-align:right}.sig{width:34mm;height:auto;display:block;margin:0}.toolbar{position:fixed;top:0;left:0;right:0;background:#1a6b5c;color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100;font-family:system-ui,sans-serif;font-style:normal}.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer}.bp{background:#fff;color:#1a6b5c}@media print{.toolbar{display:none!important}}@media screen{body{background:#e5e7eb;padding:60px 20px 20px}.letter{background:#fff;width:148mm;min-height:210mm;margin:0 auto 20px;padding:32mm 20mm 15mm;box-shadow:0 2px 8px rgba(0,0,0,.15)}}";var h='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><div class="toolbar"><button class="bp" onclick="window.print()">Yazdir</button><span style="font-size:13px;opacity:.8">'+ls.length+' mektup - A5</span></div>';for(var i=0;i<ls.length;i++){var l=ls[i];h+='<div class="letter"><p class="date">'+l.date+'</p><div class="spacer"></div><p>'+l.greeting+'</p><div class="spacer"></div><p>'+l.welcome+'</p><div class="spacer"></div><p>'+l.body+'</p><div class="spacer"></div><p>'+l.body2+'</p><div class="spacer"></div><p>'+l.closing+'</p><img class="sig" src="'+SIG+'" alt="" /><p>'+l.name+'</p><p>'+l.jobtitle+'</p></div>'}h+='</body></html>';dl(h,"welcome_letters_"+ds+".html");var pm=getPrintedLetters();var now=new Date();for(var mi=0;mi<guests.length;mi++){if(!pm[guests[mi].id])pm[guests[mi].id]={time:now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}),date:now.toLocaleDateString("tr-TR")};}savePrintedLetters(pm);for(var mi=0;mi<guests.length;mi++){recordGuestPrint(guests[mi]);guests[mi].stays=(guests[mi].stays||0)+1;guests[mi].type="REPEAT";}renderGuestTable()}
+function downloadLetters(){var ds=document.getElementById("dateInput").value,ls=guests.map(function(g){return genLetter(g,ds)});var css="@page{size:148mm 210mm;margin:25mm 20mm 15mm 20mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',Times,serif;font-size:13pt;line-height:1;color:#000;font-style:italic}.letter{page-break-after:always;padding-top:32mm}.letter:last-child{page-break-after:auto}p{margin:0}.spacer{height:18pt}.date{text-align:right}.sig{width:34mm;height:auto;display:block;margin:0}.toolbar{position:fixed;top:0;left:0;right:0;background:#1a6b5c;color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100;font-family:system-ui,sans-serif;font-style:normal}.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer}.bp{background:#fff;color:#1a6b5c}@media print{.toolbar{display:none!important}}@media screen{body{background:#e5e7eb;padding:60px 20px 20px}.letter{background:#fff;width:148mm;min-height:210mm;margin:0 auto 20px;padding:32mm 20mm 15mm;box-shadow:0 2px 8px rgba(0,0,0,.15)}}";var h='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><div class="toolbar"><button class="bp" onclick="window.print()">Yazdir</button><span style="font-size:13px;opacity:.8">'+ls.length+' mektup - A5</span></div>';for(var i=0;i<ls.length;i++){var l=ls[i];h+='<div class="letter"><p class="date">'+l.date+'</p><div class="spacer"></div><p>'+l.greeting+'</p><div class="spacer"></div><p>'+l.welcome+'</p><div class="spacer"></div><p>'+l.body+'</p><div class="spacer"></div><p>'+l.body2+'</p><div class="spacer"></div><p>'+l.closing+'</p><img class="sig" src="'+SIG+'" alt="" /><p>'+l.name+'</p><p>'+l.jobtitle+'</p></div>'}h+='</body></html>';dl(h,"welcome_letters_"+ds+".html");var pm=getPrintedLetters();var now=new Date();for(var mi=0;mi<guests.length;mi++){if(!pm[guests[mi].id])pm[guests[mi].id]={time:now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}),date:now.toLocaleDateString("tr-TR")};}savePrintedLetters(pm);for(var mi=0;mi<guests.length;mi++){recordGuestPrint(guests[mi]);var _rec=getGuestHistory()[guestKey(guests[mi])];if(_rec&&_rec.dates)guests[mi].stays=_rec.dates.length;if(guests[mi].stays>1)guests[mi].type="REPEAT";}renderGuestTable()}
 function downloadEnvelopes(){var ds=document.getElementById("dateInput").value;var css="@page{size:162mm 114mm landscape;margin:18mm 25mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',Times,serif;font-size:17pt;line-height:1.2;color:#000;font-style:italic}.envelope{page-break-after:always;height:78mm;display:flex;align-items:flex-end;justify-content:flex-end;padding-bottom:2mm}.envelope:last-child{page-break-after:auto}.envelope p{text-align:right}.toolbar{position:fixed;top:0;left:0;right:0;background:#1e293b;color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100;font-family:system-ui,sans-serif;font-style:normal}.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer}.bp{background:#fff;color:#1e293b}@media print{.toolbar{display:none!important}}@media screen{body{background:#e5e7eb;padding:60px 20px 20px}.envelope{background:#fff;width:162mm;height:114mm;margin:0 auto 20px;padding:18mm 25mm;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;align-items:flex-end;justify-content:flex-end;padding-bottom:20mm}}";var h='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body><div class="toolbar"><button class="bp" onclick="window.print()">Yazdir</button><span style="font-size:13px;opacity:.8">'+guests.length+' zarf - C6</span></div>';for(var i=0;i<guests.length;i++){var g=guests[i];var n=g.lang==="TR"?"Say\u0131n "+g.firstName+" "+g.lastName:(g.title?g.title+" ":"")+g.firstName+" "+g.lastName;h+='<div class="envelope"><p>'+n+'</p></div>'}h+='</body></html>';dl(h,"envelopes_"+ds+".html")}
 
 // Init
