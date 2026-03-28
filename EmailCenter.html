@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SmartWorker - Email Center</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f4;min-height:100vh}
@@ -332,6 +333,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/p
 
 // ===== SHARED HELPERS =====
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1).toLowerCase():""}
+function parseDDMMYY(dateStr){if(!dateStr)return null;var p=dateStr.split("-");if(p.length<3)return null;var yr=parseInt(p[2],10);if(yr<100)yr+=2000;return new Date(yr,parseInt(p[1],10)-1,parseInt(p[0],10))}
+var Store={get:function(k){try{var s=localStorage.getItem(k);return s?JSON.parse(s):null}catch(e){return null}},set:function(k,v){localStorage.setItem(k,JSON.stringify(v))}};
 function getKW(cat){try{var s=localStorage.getItem("kw_"+cat);return s?JSON.parse(s):["Ahmet","Mehmet","Elif","Bekir","Selin"]}catch(e){return ["Ahmet","Mehmet","Elif","Bekir","Selin"]}}
 function dlFile(data,filename,mime){var b=new Blob([data],{type:mime||"text/html"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
 function fmtDateDMY(ds){var d=new Date(ds+"T00:00:00");return ("0"+d.getDate()).slice(-2)+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+d.getFullYear()}
