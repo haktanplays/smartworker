@@ -1229,17 +1229,6 @@ function pdApplyFilter(){
       pdGuests[ci].skipReason="";
     }
   }
-  // Auto-skip guests without email — only if Rehber has data
-  var rehberHasData=Object.keys(getRehberContacts()).length>0;
-  if(rehberHasData){
-    for(var ai=0;ai<pdGuests.length;ai++){
-      var ag=pdGuests[ai];
-      if(!ag.email && !ag.mailSent && !ag.skipReason){
-        recordSkip(ag.surname,ag.firstName,"pd","no_email","AUTO");
-        ag.skipReason="no_email";
-      }
-    }
-  }
   console.log("Post-dep guests after filter:",pdGuests.length);
   renderPdTable();
   if(pdGuests.length){
@@ -1601,17 +1590,6 @@ function paApplyFilter(){
       paGuests[ci].skipReason="";
     }
   }
-  // Auto-skip guests without email — only if Rehber has data
-  var rehberHasData=Object.keys(getRehberContacts()).length>0;
-  if(rehberHasData){
-    for(var ai=0;ai<paGuests.length;ai++){
-      var ag=paGuests[ai];
-      if(!ag.email && !ag.mailSent && !ag.skipReason){
-        recordSkip(ag.surname||"",ag.firstName||"","pa","no_email","AUTO");
-        ag.skipReason="no_email";
-      }
-    }
-  }
   renderPaTable();
   var st=document.getElementById("paStatus");
   if(paGuests.length){
@@ -1937,8 +1915,16 @@ async function handleOSRPdf(file){
           if(d<bestDist){bestDist=d;bestCol=ck;}
         }
         if(bestDist<80){
-          if(bestCol==="name") row.name=(row.name?row.name+" ":"")+it.t;
-          else if(bestCol==="email" && it.t.indexOf("@")>=0) row.email=it.t;
+          if(bestCol==="name") row.name=(row.name||"")+it.t;
+          else if(bestCol==="email"){
+            if(it.t.indexOf("@")>=0){
+              row.email=(row.email||"")+it.t;
+            } else if(row.email && row.email.indexOf("@")>=0){
+              row.email+=it.t;
+            } else {
+              row.email=(row.email||"")+it.t;
+            }
+          }
           else if(bestCol==="phone" && /[0-9+]/.test(it.t)) row.phone=(row.phone?row.phone+" ":"")+it.t;
           else if(bestCol==="nat") row.nat=it.t;
           else if(bestCol==="arr" && /\d/.test(it.t)) row.arr=it.t;
@@ -1953,7 +1939,7 @@ async function handleOSRPdf(file){
       var key=rehberKey(sn,fn);
       if(!newContacts[key]) newContacts[key]={};
       // Only update if new data exists (don't overwrite with empty)
-      if(row.email) newContacts[key].email=row.email;
+      if(row.email && row.email.indexOf("@")>=0) newContacts[key].email=row.email;
       if(row.phone) newContacts[key].phone=row.phone;
       if(row.nat) newContacts[key].nationality=row.nat;
       if(row.arr) newContacts[key].arrDate=row.arr;
@@ -2722,9 +2708,13 @@ function injectName(html,title,surname){
   if(!done) html=html.replace(/Dear\s*[\u2026…]/g,function(){done=true;return enGreet});
   // EN: "Dear Mr. " followed by template text (no comma in template)
   if(!done) html=html.replace(/Dear\s+(Mr\.|Mrs\.|Ms\.?)\s+/,function(){done=true;return enGreet+" "});
+  // EN: "Dear Mr." followed directly by HTML tag (no comma, no space)
+  if(!done) html=html.replace(/Dear\s+(Mr\.|Mrs\.|Ms\.?)(\s*<)/,function(m,title,after){done=true;return enGreet+after});
   // TR: "Sayın ," or "Sayın…"
   html=html.replace(/Say\u0131n\s*,/g,trGreet);
   html=html.replace(/Say\u0131n\s*[\u2026…]/g,trGreet);
+  // TR: "Sayın" followed directly by HTML tag (no comma, no ellipsis)
+  html=html.replace(/Say\u0131n\s*(<)/g,function(m,after){return trGreet+after});
   return html;
 }
 
