@@ -340,10 +340,65 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 <div><code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{BUTLER}}</code> → Butler adı (web note formatında)</div>
 </div>
 </div>
+
+<!-- Operasyonel Mailler -->
+<div class="card" style="margin-top:16px">
+<h2 style="margin-bottom:12px">Operasyonel Mail Şablonları</h2>
+<div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+
+<!-- Şablon Seçimi -->
+<div style="flex:0 0 220px">
+<div id="opTplList" style="display:flex;flex-direction:column;gap:4px"></div>
+<div style="margin-top:10px;border-top:1px solid #e2e8f0;padding-top:10px">
+<button onclick="opTplAdd()" class="btn-sm" style="font-size:10px;border-color:#059669;color:#059669;width:100%">+ Yeni Şablon Ekle</button>
 </div>
 </div>
 
-<div class="page" id="page-settings">
+<!-- Form + Çıktı -->
+<div style="flex:1;min-width:300px">
+<div id="opTplForm" style="display:none">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+<div>
+<label style="font-size:10px;font-weight:600;display:block;margin-bottom:2px">Oda No</label>
+<input id="opRoom" type="text" placeholder="1304" oninput="opTplGenerate()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px">
+</div>
+<div>
+<label style="font-size:10px;font-weight:600;display:block;margin-bottom:2px">Misafir Adı</label>
+<input id="opName" type="text" placeholder="Mr. Smith" oninput="opTplGenerate()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px">
+</div>
+<div>
+<label style="font-size:10px;font-weight:600;display:block;margin-bottom:2px">Tarih</label>
+<input id="opDate" type="date" oninput="opTplGenerate()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px">
+</div>
+<div>
+<label style="font-size:10px;font-weight:600;display:block;margin-bottom:2px">Saat</label>
+<input id="opTime" type="time" oninput="opTplGenerate()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px">
+</div>
+<div>
+<label style="font-size:10px;font-weight:600;display:block;margin-bottom:2px">Kişi Sayısı</label>
+<input id="opPax" type="number" min="1" value="2" oninput="opTplGenerate()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px">
+</div>
+<div>
+<label style="font-size:10px;font-weight:600;display:block;margin-bottom:2px">Butler</label>
+<input id="opButler" type="text" placeholder="HD" oninput="opTplGenerate()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px">
+</div>
+</div>
+<div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+<span style="font-size:11px;font-weight:600;color:#374151">Çıktı</span>
+<div style="display:flex;gap:4px">
+<button onclick="opTplCopy()" class="btn-sm" style="font-size:10px;border-color:#1a6b5c;color:#1a6b5c">Kopyala</button>
+<button onclick="opTplEditBody()" class="btn-sm" style="font-size:10px;border-color:#6366f1;color:#6366f1">Şablon Metnini Düzenle</button>
+<button onclick="opTplDelete()" class="btn-sm" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Sil</button>
+</div>
+</div>
+<textarea id="opOutput" readonly style="width:100%;height:180px;padding:10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;background:#f8fafc;resize:vertical"></textarea>
+</div>
+<div id="opTplEmpty" style="text-align:center;color:#94a3b8;padding:30px;font-size:12px">Soldaki listeden bir şablon seçin</div>
+</div>
+</div>
+</div>
+</div>
+</div>
 <div class="card">
 <h2>Email Ayarlari</h2>
 <div class="settings-segment">
@@ -2646,6 +2701,110 @@ function exportKutuphaneExcel(){
   dlFile(csv,"mail_kutuphanesi_"+new Date().toISOString().split("T")[0]+".csv","text/csv;charset=utf-8");
 }
 
+// ===== OPERASYONEL MAIL ŞABLONLARI =====
+var opSelectedKey="";
+var DEF_OP_TEMPLATES={
+  "early_box":{title:"Early Breakfast Box",body:"Merhabalar,\n\nYarın sabah ({{TARIH}}) {{SAAT}}'te {{ODA}}'te konaklayan {{ISIM}} isimli misafirimiz için {{KISI}} kişilik avokadolu tost ve taze sıkılmış portakal suyu içeren breakfast box resepsiyona teslim edilecek şekilde hazırlanması rica olunur.\n\nSaygılarımla,"},
+  "early_breakfast":{title:"Early Breakfast",body:"Merhaba,\n\n{{TARIH}} tarihinde early arrival {{ODA}} numaralı odaya giriş yapacak olan {{ISIM}} adına {{KISI}} kişilik sabah {{SAAT}}'te odada olacak şekilde early breakfast talebimiz olacaktır. Yardımlarınızı rica ederiz.\n\nSaygılarımla,"},
+  "dnd_rooms":{title:"DND Rooms",body:"Merhaba,\n\nDND olduğu için refresh verilemeyen odaları aşağıda bulabilirsiniz;\n\n[Yapıştırınız]\n\nSaygılarımla,"},
+  "cicek_folyosu":{title:"Çiçek Folyosu",body:"Merhaba,\n\n{{ODA}}'e ait çiçek folyosunu ekte bulabilirsiniz.\n\nİyi çalışmalar,"},
+  "damaged_item":{title:"Damaged Item",body:"Merhabalar,\n\n{{ODA}} numaralı odadan check out eden misafirimiz ({{ISIM}}) oda kontrolü sırasında hasarlı eşya tespit edilmiştir.\nGereğinin yapılmasını rica ederiz.\n\nSaygılarımızla,"}
+};
+
+function getOpTemplates(){
+  try{var s=localStorage.getItem("op_templates");if(s)return JSON.parse(s)}catch(e){}
+  return JSON.parse(JSON.stringify(DEF_OP_TEMPLATES));
+}
+function saveOpTemplates(t){localStorage.setItem("op_templates",JSON.stringify(t))}
+
+function renderOpTplList(){
+  var tpls=getOpTemplates();
+  var keys=Object.keys(tpls);
+  var h="";
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i],t=tpls[k];
+    h+='<button onclick="opTplSelect(\''+esc(k)+'\')" style="text-align:left;padding:8px 10px;border:1px solid '+(opSelectedKey===k?"#1a6b5c":"#e2e8f0")+';border-radius:6px;background:'+(opSelectedKey===k?"#f0f7f5":"#fff")+';cursor:pointer;font-size:11px;font-weight:'+(opSelectedKey===k?"700":"400")+';color:#1e293b">'+esc(t.title)+'</button>';
+  }
+  document.getElementById("opTplList").innerHTML=h;
+}
+
+function opTplSelect(key){
+  opSelectedKey=key;
+  var tpls=getOpTemplates();
+  if(!tpls[key]){opSelectedKey="";return}
+  document.getElementById("opTplForm").style.display="block";
+  document.getElementById("opTplEmpty").style.display="none";
+  // Set today's date as default
+  if(!document.getElementById("opDate").value) document.getElementById("opDate").value=new Date().toISOString().split("T")[0];
+  opTplGenerate();
+  renderOpTplList();
+}
+
+function opTplGenerate(){
+  if(!opSelectedKey)return;
+  var tpls=getOpTemplates();
+  var t=tpls[opSelectedKey];
+  if(!t)return;
+  var room=document.getElementById("opRoom").value||"";
+  var name=document.getElementById("opName").value||"";
+  var dateRaw=document.getElementById("opDate").value||"";
+  var date=dateRaw?fmtDateDMY(dateRaw):"";;
+  var time=document.getElementById("opTime").value||"";
+  var pax=document.getElementById("opPax").value||"";
+  var butler=document.getElementById("opButler").value||"";
+  var out=t.body;
+  out=out.replace(/\{\{ODA\}\}/g,room||"___");
+  out=out.replace(/\{\{ISIM\}\}/g,name||"___");
+  out=out.replace(/\{\{TARIH\}\}/g,date||"___");
+  out=out.replace(/\{\{SAAT\}\}/g,time||"___");
+  out=out.replace(/\{\{KISI\}\}/g,pax||"___");
+  out=out.replace(/\{\{BUTLER\}\}/g,butler||"___");
+  document.getElementById("opOutput").value=out;
+}
+
+function opTplCopy(){
+  var out=document.getElementById("opOutput").value;
+  if(!out)return;
+  navigator.clipboard.writeText(out).then(function(){alert("Kopyalandı!")});
+}
+
+function opTplEditBody(){
+  if(!opSelectedKey)return;
+  var tpls=getOpTemplates();
+  var t=tpls[opSelectedKey];
+  if(!t)return;
+  var newBody=prompt("Şablon metnini düzenleyin:\n\nDeğişkenler: {{ODA}} {{ISIM}} {{TARIH}} {{SAAT}} {{KISI}} {{BUTLER}}",t.body);
+  if(newBody===null)return;
+  t.body=newBody;
+  saveOpTemplates(tpls);
+  opTplGenerate();
+}
+
+function opTplDelete(){
+  if(!opSelectedKey)return;
+  var tpls=getOpTemplates();
+  if(!confirm("'"+tpls[opSelectedKey].title+"' silinecek. Emin misiniz?"))return;
+  delete tpls[opSelectedKey];
+  saveOpTemplates(tpls);
+  opSelectedKey="";
+  document.getElementById("opTplForm").style.display="none";
+  document.getElementById("opTplEmpty").style.display="block";
+  renderOpTplList();
+}
+
+function opTplAdd(){
+  var title=prompt("Yeni şablon adı:");
+  if(!title)return;
+  var body=prompt("Şablon metni:\n\nDeğişkenler: {{ODA}} {{ISIM}} {{TARIH}} {{SAAT}} {{KISI}} {{BUTLER}}","Merhaba,\n\n{{ODA}} numaralı odada konaklayan {{ISIM}} için...\n\nSaygılarımla,");
+  if(body===null)return;
+  var key="custom_"+Date.now();
+  var tpls=getOpTemplates();
+  tpls[key]={title:title,body:body};
+  saveOpTemplates(tpls);
+  opTplSelect(key);
+  renderOpTplList();
+}
+
 // ===== ŞABLONLAR PAGE =====
 var tplEditKey="";
 var TPL_META={
@@ -2684,6 +2843,7 @@ function renderTplCards(){
     h+='</div>';
   }
   document.getElementById("tplCards").innerHTML=h;
+  renderOpTplList();
 }
 
 function tplOpen(key){
