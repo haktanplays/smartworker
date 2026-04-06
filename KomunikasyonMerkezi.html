@@ -242,11 +242,30 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 </div>
 </div>
 <div id="kutStats" style="font-size:12px;color:#6b7280;margin-bottom:8px"></div>
+
+<!-- Misafir Kartları -->
+<div id="kutGuestCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:20px"></div>
+
+<!-- Genişletilmiş Misafir Detayı -->
+<div id="guestCardWrap" style="display:none;margin-bottom:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<h3 id="guestCardName" style="font-size:16px;font-weight:700;color:#1e293b;margin:0"></h3>
+<button onclick="document.getElementById('guestCardWrap').style.display='none'" style="border:none;background:none;font-size:18px;cursor:pointer;color:#94a3b8">&times;</button>
+</div>
+<div id="guestCardInfo" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;color:#475569"></div>
+<div id="guestCardHistory"></div>
+</div>
+
+<!-- Zaman Çizelgesi -->
+<details open style="margin-top:8px">
+<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#374151;padding:8px 0;user-select:none">Zaman Çizelgesi</summary>
 <div style="overflow-x:auto">
 <table id="kutTable" class="data-table" style="width:100%;font-size:11px">
 <thead><tr>
 <th><input type="checkbox" onchange="kutToggleAll(this.checked)" title="Tümünü sec/kaldir"></th>
 <th style="cursor:pointer" onclick="kutSort('name')">Misafir ↕</th>
+<th>Oda</th>
+<th>E-posta</th>
 <th style="cursor:pointer" onclick="kutSort('date')">Tarih ↕</th>
 <th>Tür</th>
 <th>Butler</th>
@@ -257,14 +276,7 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 </table>
 </div>
 <div id="kutPagination"></div>
-<div id="guestCardWrap" style="display:none;margin-top:16px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-<h3 id="guestCardName" style="font-size:16px;font-weight:700;color:#1e293b;margin:0"></h3>
-<button onclick="document.getElementById('guestCardWrap').style.display='none'" style="border:none;background:none;font-size:18px;cursor:pointer;color:#94a3b8">&times;</button>
-</div>
-<div id="guestCardInfo" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;color:#475569"></div>
-<div id="guestCardHistory"></div>
-</div>
+</details>
 </div>
 </div>
 
@@ -2317,9 +2329,11 @@ function kutSort(field){
 }
 
 var kutRows=[];
+var kutGuestCards=[];
 function renderKutuphane(){
   kutPage=0;
   var h=getMailHistory();
+  var contacts=getRehberContacts();
   var notes=getSkipNotes();
   var search=(document.getElementById("kutSearch").value||"").toLowerCase().replace(/\s+/g,"");
   var typeF=document.getElementById("kutTypeFilter").value;
@@ -2327,23 +2341,36 @@ function renderKutuphane(){
   var cutoff="";
   if(dateF>0){var d=new Date();d.setDate(d.getDate()-dateF);cutoff=d.toISOString().split("T")[0]}
   kutRows=[];
+  // Build guest summary map for cards
+  var guestMap={};
   var keys=Object.keys(h);
   for(var k=0;k<keys.length;k++){
     var gKey=keys[k];
     var entries=h[gKey];
     var parts=gKey.split(",");
     var displayName=(parts[0]||"").charAt(0).toUpperCase()+(parts[0]||"").slice(1)+" "+(parts[1]||"").charAt(0).toUpperCase()+(parts[1]||"").slice(1);
+    if(search && gKey.indexOf(search)<0) continue;
+    var c=contacts[gKey]||null;
+    if(!guestMap[gKey]) guestMap[gKey]={name:displayName,key:gKey,email:c?c.email:"",phone:c?c.phone:"",pdCount:0,paCount:0,skipCount:0,lastDate:"",records:[]};
+    var gm=guestMap[gKey];
     for(var e=0;e<entries.length;e++){
       var r=entries[e];
-      if(search && gKey.indexOf(search)<0) continue;
       if(cutoff && r.date<cutoff) continue;
       if(typeF==="pd" && (r.type!=="pd" || r.skip)) continue;
       if(typeF==="pa" && (r.type!=="pa" || r.skip)) continue;
       if(typeF==="skip" && !r.skip) continue;
+      // Update email from record if available and not in rehber
+      if(r.email && !gm.email) gm.email=r.email;
+      if(r.skip) gm.skipCount++;
+      else if(r.type==="pd") gm.pdCount++;
+      else if(r.type==="pa") gm.paCount++;
+      if(r.date>gm.lastDate) gm.lastDate=r.date;
       var noteText=r.skip?(notes[r.reason]||r.note||r.reason||""):"";
-      kutRows.push({name:displayName,key:gKey,date:r.date,type:r.type,butler:r.butler||"?",skip:r.skip,reason:r.reason,note:noteText,checked:false});
+      kutRows.push({name:displayName,key:gKey,date:r.date,type:r.type,butler:r.butler||"?",skip:r.skip,reason:r.reason,note:noteText,room:r.room||"",email:r.email||"",checked:false});
     }
   }
+  // Sort guest cards by last contact date desc
+  kutGuestCards=Object.keys(guestMap).map(function(k){return guestMap[k]}).sort(function(a,b){return b.lastDate.localeCompare(a.lastDate)});
   kutRows.sort(function(a,b){
     var cmp=0;
     if(kutSortField==="name") cmp=a.name.localeCompare(b.name);
@@ -2361,7 +2388,6 @@ function kutRenderUI(){
   var totalSkip=kutRows.filter(function(r){return r.skip}).length;
   var totalPd=kutRows.filter(function(r){return r.type==="pd"&&!r.skip}).length;
   var totalPa=kutRows.filter(function(r){return r.type==="pa"&&!r.skip}).length;
-  var uniqueGuests={};kutRows.forEach(function(r){uniqueGuests[r.key]=true});
   var selCount=kutRows.filter(function(r){return r.checked}).length;
   // Pagination calc
   var totalPages=Math.max(1,Math.ceil(kutRows.length/KUT_PAGE_SIZE));
@@ -2372,10 +2398,31 @@ function kutRenderUI(){
   var pageRows=kutRows.slice(startIdx,endIdx);
 
   document.getElementById("kutStats").innerHTML=
-    '<b>'+kutRows.length+'</b> kayıt | <b>'+Object.keys(uniqueGuests).length+'</b> farklı misafir | '+
+    '<b>'+kutGuestCards.length+'</b> misafir | <b>'+kutRows.length+'</b> kayıt | '+
     '<span style="color:#166534">'+totalSent+' gönderildi</span> (PD:'+totalPd+' PA:'+totalPa+') | '+
     '<span style="color:#dc2626">'+totalSkip+' atılmadı</span>'+
     (selCount?' | <b style="color:#1a6b5c">'+selCount+' seçili</b>':'');
+
+  // Render guest cards grid
+  var gc="";
+  for(var gi=0;gi<kutGuestCards.length;gi++){
+    var g=kutGuestCards[gi];
+    var total=g.pdCount+g.paCount+g.skipCount;
+    gc+='<div onclick="showGuestCard(\''+esc(g.key)+'\')" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;cursor:pointer;transition:box-shadow .15s" onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,.1)\'" onmouseleave="this.style.boxShadow=\'none\'">';
+    gc+='<div style="font-weight:700;font-size:13px;color:#1e293b;margin-bottom:4px">'+esc(g.name)+'</div>';
+    if(g.email) gc+='<div style="font-size:10px;color:#6b7280;margin-bottom:6px">'+esc(g.email)+'</div>';
+    gc+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    if(g.pdCount) gc+='<span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600">PD '+g.pdCount+'</span>';
+    if(g.paCount) gc+='<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600">PA '+g.paCount+'</span>';
+    if(g.skipCount) gc+='<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600">'+g.skipCount+' atlanmış</span>';
+    gc+='</div>';
+    if(g.lastDate) gc+='<div style="font-size:10px;color:#94a3b8;margin-top:6px">Son: '+fmtHistDate(g.lastDate)+'</div>';
+    gc+='</div>';
+  }
+  if(!kutGuestCards.length) gc='<p style="text-align:center;color:#9ca3af;padding:20px;grid-column:1/-1">Kayıt bulunamadı</p>';
+  document.getElementById("kutGuestCards").innerHTML=gc;
+
+  // Render timeline table
   var tb="";
   for(var i=0;i<pageRows.length;i++){
     var r=pageRows[i];
@@ -2388,6 +2435,8 @@ function kutRenderUI(){
     tb+='<tr style="'+(r.skip?"background:#fef2f2":"")+'">'+
       '<td><input type="checkbox" '+(r.checked?'checked ':'')+' onchange="kutCheck('+realIdx+',this.checked)"></td>'+
       '<td><a href="javascript:void(0)" onclick="showGuestCard(\''+esc(r.key)+'\')" style="color:#1a6b5c;text-decoration:none;font-weight:600">'+esc(r.name)+'</a></td>'+
+      '<td style="text-align:center;font-size:10px">'+(r.room?esc(r.room):'')+'</td>'+
+      '<td style="font-size:10px;color:#6b7280">'+(r.email?esc(r.email):'')+'</td>'+
       '<td>'+fmtHistDate(r.date)+'</td>'+
       '<td>'+typeBadge+'</td>'+
       '<td>'+esc(r.butler)+'</td>'+
@@ -2395,7 +2444,7 @@ function kutRenderUI(){
       '<td style="font-size:10px;color:#6b7280">'+esc(r.note)+'</td>'+
       '</tr>';
   }
-  if(!kutRows.length) tb='<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:20px">Kayıt bulunamadı</td></tr>';
+  if(!kutRows.length) tb='<tr><td colspan="9" style="text-align:center;color:#9ca3af;padding:20px">Kayıt bulunamadı</td></tr>';
   document.getElementById("kutBody").innerHTML=tb;
   // Pagination controls
   var pagEl=document.getElementById("kutPagination");
@@ -2497,16 +2546,18 @@ async function kutDownloadSelectedZip(){
 
 function exportKutuphaneExcel(){
   var h=getMailHistory();
-  var rows=[["Misafir","Tarih","Tür","Butler","Durum","Not"]];
+  var contacts=getRehberContacts();
+  var rows=[["Misafir","Oda","E-posta","Tarih","Tür","Butler","Durum","Not"]];
   var keys=Object.keys(h);
   for(var k=0;k<keys.length;k++){
     var gKey=keys[k];
     var entries=h[gKey];
     var parts=gKey.split(",");
     var name=(parts[0]||"")+" "+(parts[1]||"");
+    var c=contacts[gKey]||{};
     for(var e=0;e<entries.length;e++){
       var r=entries[e];
-      rows.push([name,r.date,r.type==="pd"?"Post-Departure":"Pre-Arrival",r.butler||"?",r.skip?"Atılmadı":"Gönderildi",r.note||r.reason||""]);
+      rows.push([name,r.room||"",r.email||c.email||"",r.date,r.type==="pd"?"Post-Departure":"Pre-Arrival",r.butler||"?",r.skip?"Atılmadı":"Gönderildi",r.note||r.reason||""]);
     }
   }
   // Simple CSV export
