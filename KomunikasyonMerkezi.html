@@ -93,6 +93,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <button class="nav-btn" onclick="showEmailPage('prearr')">Pre-Arrival</button>
 <button class="nav-btn" onclick="showEmailPage('rehber')">Rehber</button>
 <button class="nav-btn" onclick="showEmailPage('kutuphane')">Kütüphane</button>
+<button class="nav-btn" onclick="showEmailPage('sablonlar')">Şablonlar</button>
 <button class="nav-btn" onclick="showEmailPage('settings')">Ayarlar</button>
 </div>
 
@@ -277,6 +278,68 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 </div>
 <div id="kutPagination"></div>
 </details>
+</div>
+</div>
+
+<!-- ===== ŞABLONLAR PAGE ===== -->
+<div class="page" id="page-sablonlar">
+<div class="card">
+<h2 style="margin-bottom:12px">Mail Şablonları</h2>
+
+<!-- Şablon Kartları -->
+<div id="tplCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:16px"></div>
+
+<!-- Düzenleyici -->
+<div id="tplEditorWrap" style="display:none;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+<div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+<span id="tplEditorTitle" style="font-weight:700;font-size:13px;color:#1e293b"></span>
+<div style="display:flex;gap:6px">
+<button onclick="tplPreview()" class="btn-sm" style="font-size:10px;border-color:#7c3aed;color:#7c3aed">Önizle</button>
+<button onclick="tplPreviewWithName()" class="btn-sm" style="font-size:10px;border-color:#1a6b5c;color:#1a6b5c">Test: İsim Yerleştir</button>
+<button onclick="tplSave()" class="btn-sm" style="font-size:10px;border-color:#059669;color:#059669">Kaydet</button>
+<button onclick="tplReset()" class="btn-sm" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Varsayılana Dön</button>
+<button onclick="tplClose()" style="border:none;background:none;font-size:16px;cursor:pointer;color:#94a3b8">&times;</button>
+</div>
+</div>
+<textarea id="tplEditArea" style="width:100%;height:350px;font-family:'Cascadia Code',monospace;font-size:11px;border:none;padding:12px;resize:vertical;outline:none" spellcheck="false"></textarea>
+</div>
+
+<!-- Yeni Şablon Yükleme -->
+<div style="margin-top:16px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+<div style="font-weight:700;font-size:12px;color:#374151;margin-bottom:8px">Şablon Yükle</div>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<select id="tplUploadKey" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+<option value="">-- Hedef Şablon --</option>
+<option value="pd_en">Post-Departure EN</option>
+<option value="pd_tr">Post-Departure TR</option>
+<option value="pa_en_first">Pre-Arrival EN (First)</option>
+<option value="pa_tr_first">Pre-Arrival TR (First)</option>
+<option value="pa_en_repeat">Pre-Arrival EN (Repeat)</option>
+<option value="pa_tr_repeat">Pre-Arrival TR (Repeat)</option>
+<option value="bk_en_first">Booking EN (First)</option>
+<option value="bk_tr_first">Booking TR (First)</option>
+<option value="bk_en_repeat">Booking EN (Repeat)</option>
+<option value="bk_tr_repeat">Booking TR (Repeat)</option>
+<option value="so_en">Special Occasion EN</option>
+<option value="so_tr">Special Occasion TR</option>
+</select>
+<input type="file" id="tplFileInput" accept=".html,.htm" style="display:none" onchange="tplUploadFile()">
+<button onclick="var k=document.getElementById('tplUploadKey').value;if(!k){alert('Önce hedef şablon seçin.');return;}document.getElementById('tplFileInput').click()" class="btn-sm" style="font-size:10px;border-color:#1a6b5c;color:#1a6b5c">HTML Dosyası Yükle</button>
+</div>
+</div>
+
+<!-- Değişken Referansı -->
+<div style="margin-top:16px;padding:12px;background:#f0f7f5;border:1px solid #d1e7dd;border-radius:8px">
+<div style="font-weight:700;font-size:12px;color:#065f46;margin-bottom:8px">Değişken Referansı</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;font-size:11px;color:#374151">
+<div><code style="background:#d1fae5;padding:1px 4px;border-radius:3px">Dear Mr. ,</code> veya <code style="background:#d1fae5;padding:1px 4px;border-radius:3px">Dear…</code> → İngilizce hitap</div>
+<div><code style="background:#d1fae5;padding:1px 4px;border-radius:3px">Sayın ,</code> veya <code style="background:#d1fae5;padding:1px 4px;border-radius:3px">Sayın…</code> → Türkçe hitap</div>
+<div><code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{TITLE}}</code> → Mr./Mrs./Ms. (düz metin şablonlarda)</div>
+<div><code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{SURNAME}}</code> → Misafir soyadı (düz metin şablonlarda)</div>
+<div><code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{DATE}}</code> → Tarih (web note formatında)</div>
+<div><code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{BUTLER}}</code> → Butler adı (web note formatında)</div>
+</div>
+</div>
 </div>
 </div>
 
@@ -591,12 +654,14 @@ function showEmailPage(p){
       (p==="prearr"&&t.indexOf("Pre-Arrival")>=0)||
       (p==="rehber"&&t.indexOf("Rehber")>=0)||
       (p==="kutuphane"&&t.indexOf("K\u00fct\u00fcphane")>=0)||
+      (p==="sablonlar"&&t.indexOf("\u015eablon")>=0)||
       (p==="settings"&&t.indexOf("Ayar")>=0));
   });
   if(p==="kutuphane")renderKutuphane();
   if(p==="postdep")initPostDep();
   if(p==="prearr")initPreArrival();
   if(p==="rehber")renderRehber();
+  if(p==="sablonlar")renderTplCards();
   if(p==="settings"){populatePdSettingsUI();populatePaSettingsUI();renderPdfStatus();renderImageStatus();loadBannerLink();loadFromAddress();populateSkipNotesEditor()}
 }
 
@@ -2579,6 +2644,140 @@ function exportKutuphaneExcel(){
     csv+=rows[i].map(function(c){return '"'+String(c).replace(/"/g,'""')+'"'}).join(";")+String.fromCharCode(13,10);
   }
   dlFile(csv,"mail_kutuphanesi_"+new Date().toISOString().split("T")[0]+".csv","text/csv;charset=utf-8");
+}
+
+// ===== ŞABLONLAR PAGE =====
+var tplEditKey="";
+var TPL_META={
+  pd_en:{label:"Post-Departure EN",cat:"PD",lang:"EN"},
+  pd_tr:{label:"Post-Departure TR",cat:"PD",lang:"TR"},
+  pa_en_first:{label:"Pre-Arrival EN (First)",cat:"PA",lang:"EN"},
+  pa_tr_first:{label:"Pre-Arrival TR (First)",cat:"PA",lang:"TR"},
+  pa_en_repeat:{label:"Pre-Arrival EN (Repeat)",cat:"PA",lang:"EN"},
+  pa_tr_repeat:{label:"Pre-Arrival TR (Repeat)",cat:"PA",lang:"TR"},
+  bk_en_first:{label:"Booking EN (First)",cat:"BK",lang:"EN"},
+  bk_tr_first:{label:"Booking TR (First)",cat:"BK",lang:"TR"},
+  bk_en_repeat:{label:"Booking EN (Repeat)",cat:"BK",lang:"EN"},
+  bk_tr_repeat:{label:"Booking TR (Repeat)",cat:"BK",lang:"TR"},
+  so_en:{label:"Special Occasion EN",cat:"SO",lang:"EN"},
+  so_tr:{label:"Special Occasion TR",cat:"SO",lang:"TR"}
+};
+var TPL_CAT_COLORS={PD:"background:#dbeafe;color:#1e40af",PA:"background:#d1fae5;color:#065f46",BK:"background:#fef3c7;color:#92400e",SO:"background:#fce7f3;color:#9d174d"};
+
+function renderTplCards(){
+  var overrides={};
+  try{var s=localStorage.getItem("email_tpl_overrides");if(s)overrides=JSON.parse(s)}catch(e){}
+  var h="";
+  for(var key in TPL_META){
+    var m=TPL_META[key];
+    var isCustom=!!overrides[key];
+    var catStyle=TPL_CAT_COLORS[m.cat]||"";
+    h+='<div onclick="tplOpen(\''+key+'\')" style="background:#fff;border:1px solid '+(tplEditKey===key?"#1a6b5c":"#e2e8f0")+';border-radius:8px;padding:10px 12px;cursor:pointer;transition:box-shadow .15s'+(tplEditKey===key?";box-shadow:0 0 0 2px #1a6b5c":"")+'" onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,.1)\'" onmouseleave="this.style.boxShadow=\''+(tplEditKey===key?"0 0 0 2px #1a6b5c":"none")+'\'">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+    h+='<span style="font-weight:600;font-size:12px;color:#1e293b">'+esc(m.label)+'</span>';
+    h+='<span style="'+catStyle+';padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700">'+m.cat+'</span>';
+    h+='</div>';
+    h+='<div style="display:flex;gap:4px;align-items:center">';
+    h+='<span style="font-size:10px;padding:1px 5px;border-radius:3px;'+(m.lang==="TR"?"background:#fef3c7;color:#92400e":"background:#dbeafe;color:#1e40af")+'">'+m.lang+'</span>';
+    if(isCustom) h+='<span style="font-size:9px;color:#059669;font-weight:600">özelleştirilmiş</span>';
+    h+='</div>';
+    h+='</div>';
+  }
+  document.getElementById("tplCards").innerHTML=h;
+}
+
+function tplOpen(key){
+  tplEditKey=key;
+  var m=TPL_META[key];
+  if(!m)return;
+  var html=getTemplateHtml(key);
+  document.getElementById("tplEditorTitle").textContent=m.label;
+  document.getElementById("tplEditArea").value=html||"(şablon bulunamadı)";
+  document.getElementById("tplEditorWrap").style.display="block";
+  renderTplCards();
+}
+
+function tplClose(){
+  tplEditKey="";
+  document.getElementById("tplEditorWrap").style.display="none";
+  renderTplCards();
+}
+
+function tplSave(){
+  if(!tplEditKey){alert("Şablon seçilmedi.");return}
+  var html=document.getElementById("tplEditArea").value;
+  var b64=btoa(unescape(encodeURIComponent(html)));
+  EMAIL_TEMPLATES[tplEditKey]=b64;
+  var overrides={};
+  try{var s=localStorage.getItem("email_tpl_overrides");if(s)overrides=JSON.parse(s)}catch(e){}
+  overrides[tplEditKey]=b64;
+  localStorage.setItem("email_tpl_overrides",JSON.stringify(overrides));
+  alert("Kaydedildi: "+(TPL_META[tplEditKey]||{}).label);
+  renderTplCards();
+}
+
+function tplReset(){
+  if(!tplEditKey)return;
+  if(!confirm("Bu şablon varsayılan haline dönecek. Emin misiniz?"))return;
+  EMAIL_TEMPLATES[tplEditKey]=EMAIL_TEMPLATES_DEFAULTS[tplEditKey];
+  var overrides={};
+  try{var s=localStorage.getItem("email_tpl_overrides");if(s)overrides=JSON.parse(s)}catch(e){}
+  delete overrides[tplEditKey];
+  localStorage.setItem("email_tpl_overrides",JSON.stringify(overrides));
+  document.getElementById("tplEditArea").value=getTemplateHtml(tplEditKey)||"";
+  alert("Varsayılana dönüldü.");
+  renderTplCards();
+}
+
+function tplPreview(){
+  var html=document.getElementById("tplEditArea").value;
+  if(!html){alert("Şablon boş.");return}
+  previewTemplateEdit_generic(html);
+}
+
+function tplPreviewWithName(){
+  var html=document.getElementById("tplEditArea").value;
+  if(!html){alert("Şablon boş.");return}
+  html=injectName(html,"Mr.","Test");
+  previewTemplateEdit_generic(html);
+}
+
+function previewTemplateEdit_generic(html){
+  html=previewCleanHtml(html);
+  var overlay=document.createElement("div");
+  overlay.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center";
+  overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:10px;width:90%;max-width:750px;height:80vh;display:flex;flex-direction:column;overflow:hidden";
+  var header=document.createElement("div");
+  header.style.cssText="padding:10px 16px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center";
+  header.innerHTML='<span style="font-weight:600;font-size:13px">\u015eablon \u00d6nizleme</span><button style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280" onclick="this.closest(\'div[style*=fixed]\').remove()">&times;</button>';
+  var frame=document.createElement("iframe");
+  frame.style.cssText="flex:1;border:none;width:100%";
+  frame.sandbox="allow-same-origin";
+  box.appendChild(header);box.appendChild(frame);overlay.appendChild(box);document.body.appendChild(overlay);
+  frame.contentDocument.open();frame.contentDocument.write(html);frame.contentDocument.close();
+}
+
+function tplUploadFile(){
+  var input=document.getElementById("tplFileInput");
+  var key=document.getElementById("tplUploadKey").value;
+  if(!key||!input.files||!input.files[0])return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var html=e.target.result;
+    var b64=btoa(unescape(encodeURIComponent(html)));
+    EMAIL_TEMPLATES[key]=b64;
+    var overrides={};
+    try{var s=localStorage.getItem("email_tpl_overrides");if(s)overrides=JSON.parse(s)}catch(e2){}
+    overrides[key]=b64;
+    localStorage.setItem("email_tpl_overrides",JSON.stringify(overrides));
+    alert("Yüklendi: "+(TPL_META[key]||{}).label);
+    input.value="";
+    renderTplCards();
+    if(tplEditKey===key) tplOpen(key);
+  };
+  reader.readAsText(input.files[0],"utf-8");
 }
 
 // ===== MAIL HISTORY (kalıcı takip) =====
