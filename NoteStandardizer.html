@@ -1165,7 +1165,8 @@ async function parseResDetail(buf){
     if(g.adl===0&&g.roomNo>=300)g.adl=1;
     if((g.roomNo>0&&g.roomNo<300)||g.roomNo>9999){guests.splice(i,1);i--;continue;}
     var ln=g.lastName.toLowerCase();
-    if(ln==="spare"||ln==="tba"||ln==="coach"||ln==="test"||ln==="house"||ln==="pm"||ln==="hold"){guests.splice(i,1);i--;continue;}
+    if(ln==="spare"||ln==="tba"||ln==="coach"||ln==="test"||ln==="house"||ln==="pm"||ln==="hold"||ln==="valued"||ln==="valued guest"){guests.splice(i,1);i--;continue;}
+    var fl2=(g.lastName+" "+g.firstName).toLowerCase();if(fl2.indexOf("hold hold")>=0||fl2.indexOf("valued guest")>=0){guests.splice(i,1);i--;continue;}
   }
   return guests;
 }
