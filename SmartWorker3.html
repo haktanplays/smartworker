@@ -1131,7 +1131,7 @@ function processArrEntries(entries){
     var e=entries[i];
     if(e.isIncognito)continue;
     var fl=(e.lastName+","+e.firstName).toLowerCase();
-    if(fl.indexOf("spare,spare")>=0||fl.indexOf("tba,tba")>=0||fl.indexOf("coach driver")>=0||fl.indexOf("hold,hold")>=0)continue;
+    if(fl.indexOf("spare,spare")>=0||fl.indexOf("tba,tba")>=0||fl.indexOf("coach driver")>=0||fl.indexOf("hold,hold")>=0||fl.indexOf("valued guest")>=0||fl.indexOf("valued,guest")>=0)continue;
     var rn=e.roomNo;
     var isReal=(rn>=300&&rn<=499)||(rn>=700&&rn<=2799);
     if(!isReal)continue;
@@ -1157,7 +1157,7 @@ function processArrEntries(entries){
 
 // ===== EXCEL =====
 function handleXLS(file){if(!file)return;document.getElementById("xlsStatus").textContent="Okunuyor...";var r=new FileReader();r.onload=function(ev){try{var wb=XLSX.read(new Uint8Array(ev.target.result),{type:"array"});parseExcel(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""}));document.getElementById("xlsStatus").innerHTML='<span style="color:#059669">&#10003; '+guests.length+' misafir</span>'}catch(e){document.getElementById("xlsStatus").innerHTML='<span style="color:#dc2626">'+e.message+'</span>'}};r.readAsArrayBuffer(file)}
-function parseExcel(rows){var seen={},result=[];for(var i=0;i<rows.length;i++){var r=rows[i];var nm=r["FULL_NAME_NO_SHR_IND"]||r["FULL_NAME"]||"";if(!nm||nm.indexOf(",")<0)continue;var nl=nm.toLowerCase();if(nl.indexOf("spare,spare")>=0||nl.indexOf("tba,tba")>=0||nl.indexOf("coach driver")>=0||nl.indexOf("hold,hold")>=0)continue;var rid=String(r["RESV_NAME_ID"]||"");if(rid&&seen[rid])continue;if(rid)seen[rid]=true;var mc=String(r["MARKET_CODE"]||"").toUpperCase();var rn=parseInt(r["ROOM_NO"],10)||0;var isR=(rn>=300&&rn<=499)||(rn>=700&&rn<=2799);if(mc==="PM"&&!isR)continue;var ad=parseInt(r["ADULTS"],10)||0,pq=parseInt(r["PHYSICAL_QUANTITY"],10)||0;if(ad===0&&pq===0&&!isR)continue;var fl=Math.floor(rn/100),un=rn%100,isSu=false;if(fl>=7&&fl<=18)isSu=[2,3,12].indexOf(un)>=0;else if(fl>=19&&fl<=20)isSu=[2,3,4,12].indexOf(un)>=0;else if(fl>=21)isSu=[2,3,4,7,12].indexOf(un)>=0;if(isSu)continue;var ps=nm.split(",").map(function(s){return s.trim()});var ln=ps[0]||"",fn=ps[1]||"",ti=ps[2]||"";var st=parseInt(r["NO_OF_STAYS"],10)||0;var ty=st>1?"REPEAT":"NEW";var la="EN",tl=ti.toLowerCase().replace(/\.$/,"");if(["bay","bayan","sn"].indexOf(tl)>=0)la="TR";if(["mr","bay"].indexOf(tl)>=0)ti=la==="TR"?"":"Mr.";else if(["mrs","bayan"].indexOf(tl)>=0)ti=la==="TR"?"":"Mrs.";else if(["ms","miss"].indexOf(tl)>=0)ti=la==="TR"?"":"Ms.";else if(tl==="sn"){ti="";la="TR"}else if(ti&&!ti.endsWith("."))ti+=".";fn=fn.split(/\s+/).map(cap).join(" ");ln=ln.split(/\s+/).map(cap).join(" ");if(ln)result.push({id:"g"+Math.random().toString(36).slice(2),title:ti,firstName:fn,lastName:ln,lang:la,type:ty,stays:st,roomNo:rn})}applyGuestHistory(result);guests=result;window.guests=guests;renderGuestTable()}
+function parseExcel(rows){var seen={},result=[];for(var i=0;i<rows.length;i++){var r=rows[i];var nm=r["FULL_NAME_NO_SHR_IND"]||r["FULL_NAME"]||"";if(!nm||nm.indexOf(",")<0)continue;var nl=nm.toLowerCase();if(nl.indexOf("spare,spare")>=0||nl.indexOf("tba,tba")>=0||nl.indexOf("coach driver")>=0||nl.indexOf("hold,hold")>=0||nl.indexOf("valued guest")>=0||nl.indexOf("valued,guest")>=0)continue;var rid=String(r["RESV_NAME_ID"]||"");if(rid&&seen[rid])continue;if(rid)seen[rid]=true;var mc=String(r["MARKET_CODE"]||"").toUpperCase();var rn=parseInt(r["ROOM_NO"],10)||0;var isR=(rn>=300&&rn<=499)||(rn>=700&&rn<=2799);if(mc==="PM"&&!isR)continue;var ad=parseInt(r["ADULTS"],10)||0,pq=parseInt(r["PHYSICAL_QUANTITY"],10)||0;if(ad===0&&pq===0&&!isR)continue;var fl=Math.floor(rn/100),un=rn%100,isSu=false;if(fl>=7&&fl<=18)isSu=[2,3,12].indexOf(un)>=0;else if(fl>=19&&fl<=20)isSu=[2,3,4,12].indexOf(un)>=0;else if(fl>=21)isSu=[2,3,4,7,12].indexOf(un)>=0;if(isSu)continue;var ps=nm.split(",").map(function(s){return s.trim()});var ln=ps[0]||"",fn=ps[1]||"",ti=ps[2]||"";var st=parseInt(r["NO_OF_STAYS"],10)||0;var ty=st>1?"REPEAT":"NEW";var la="EN",tl=ti.toLowerCase().replace(/\.$/,"");if(["bay","bayan","sn"].indexOf(tl)>=0)la="TR";if(["mr","bay"].indexOf(tl)>=0)ti=la==="TR"?"":"Mr.";else if(["mrs","bayan"].indexOf(tl)>=0)ti=la==="TR"?"":"Mrs.";else if(["ms","miss"].indexOf(tl)>=0)ti=la==="TR"?"":"Ms.";else if(tl==="sn"){ti="";la="TR"}else if(ti&&!ti.endsWith("."))ti+=".";fn=fn.split(/\s+/).map(cap).join(" ");ln=ln.split(/\s+/).map(cap).join(" ");if(ln)result.push({id:"g"+Math.random().toString(36).slice(2),title:ti,firstName:fn,lastName:ln,lang:la,type:ty,stays:st,roomNo:rn})}applyGuestHistory(result);guests=result;window.guests=guests;renderGuestTable()}
 
 // ===== MANUAL =====
 var SAMPLE="Acar,Alper,Bay\nAlarcon Gonzalez,Luis Francisc,Mr.\nDumont,Laurent Charles,Mr.\nHaydar,Elif,Bayan\nKarabulut,Batuhan,Bay";
@@ -4266,7 +4266,8 @@ async function parseResDetail(buf){
     if(g.adl===0&&g.roomNo>=300)g.adl=1;
     if((g.roomNo>0&&g.roomNo<300)||g.roomNo>9999){guests.splice(i,1);i--;continue;}
     var ln=g.lastName.toLowerCase();
-    if(ln==="spare"||ln==="tba"||ln==="coach"||ln==="test"||ln==="house"||ln==="pm"||ln==="hold"){guests.splice(i,1);i--;continue;}
+    if(ln==="spare"||ln==="tba"||ln==="coach"||ln==="test"||ln==="house"||ln==="pm"||ln==="hold"||ln==="valued"||ln==="valued guest"){guests.splice(i,1);i--;continue;}
+    var fl2=(g.lastName+" "+g.firstName).toLowerCase();if(fl2.indexOf("hold hold")>=0||fl2.indexOf("valued guest")>=0){guests.splice(i,1);i--;continue;}
   }
   return guests;
 }
