@@ -1883,7 +1883,7 @@ async function handleOSRPdf(file){
     }
     // OSR format: Name | Arrival | Departure | Country | Nationality | Email | Phone | Status
     // Detect columns from header row
-    var colMap={};var headerFound=false;var newContacts={};
+    var colMap={};var headerFound=false;var newContacts={};var curRow=null;
     for(var li=0;li<lines.length;li++){
       var txt=lines[li].items.map(function(it){return it.t}).join(" ");
       if(txt.indexOf("Full Name")>=0 || txt.indexOf("Guest Name")>=0 || (txt.indexOf("Name")>=0 && txt.indexOf("Email")>=0)){
@@ -1904,9 +1904,42 @@ async function handleOSRPdf(file){
       if(!headerFound)continue;
       // Skip non-data lines
       if(txt.indexOf("Page ")>=0 || txt.indexOf("Total:")>=0 || txt.indexOf("Filter:")>=0) continue;
-      if(lines[li].items.length<2)continue;
-      // Extract fields by closest column X
-      var row={name:"",email:"",phone:"",nat:"",arr:"",dep:""};
+      if(lines[li].items.length<1)continue;
+
+      // Determine if this line starts a new data row or is a continuation
+      var hasNameWithComma=false;
+      for(var j=0;j<lines[li].items.length;j++){
+        var it=lines[li].items[j];
+        if(colMap.name!==undefined && Math.abs(it.x-colMap.name)<80 && it.t.indexOf(",")>=0){
+          hasNameWithComma=true; break;
+        }
+      }
+      var isNewRow=hasNameWithComma || lines[li].items.length>=3;
+
+      if(isNewRow){
+        // Flush previous curRow
+        if(curRow && curRow.name && curRow.name.length>=3){
+          var parts=curRow.name.split(",").map(function(s){return s.trim()});
+          if(parts.length>=2){
+            var sn=parts[0], fn=parts[1];
+            var key=rehberKey(sn,fn);
+            if(!newContacts[key]) newContacts[key]={};
+            if(curRow.email && curRow.email.indexOf("@")>=0) newContacts[key].email=curRow.email;
+            if(curRow.phone) newContacts[key].phone=curRow.phone;
+            if(curRow.nat) newContacts[key].nationality=curRow.nat;
+            if(curRow.arr) newContacts[key].arrDate=curRow.arr;
+            if(curRow.dep) newContacts[key].depDate=curRow.dep;
+            newContacts[key].surname=sn;
+            newContacts[key].firstName=fn;
+            newContacts[key].updatedAt=new Date().toISOString().split("T")[0];
+          }
+        }
+        curRow={name:"",email:"",phone:"",nat:"",arr:"",dep:""};
+      }
+
+      if(!curRow)continue;
+
+      // Assign items to closest column (works for both new rows and continuations)
       for(var j=0;j<lines[li].items.length;j++){
         var it=lines[li].items[j];
         var bestCol="",bestDist=9999;
@@ -1915,38 +1948,39 @@ async function handleOSRPdf(file){
           if(d<bestDist){bestDist=d;bestCol=ck;}
         }
         if(bestDist<80){
-          if(bestCol==="name") row.name=(row.name||"")+it.t;
+          if(bestCol==="name") curRow.name=(curRow.name||"")+it.t;
           else if(bestCol==="email"){
             if(it.t.indexOf("@")>=0){
-              row.email=(row.email||"")+it.t;
-            } else if(row.email && row.email.indexOf("@")>=0){
-              row.email+=it.t;
+              curRow.email=(curRow.email||"")+it.t;
+            } else if(curRow.email && curRow.email.indexOf("@")>=0){
+              curRow.email+=it.t;
             } else {
-              row.email=(row.email||"")+it.t;
+              curRow.email=(curRow.email||"")+it.t;
             }
           }
-          else if(bestCol==="phone" && /[0-9+]/.test(it.t)) row.phone=(row.phone?row.phone+" ":"")+it.t;
-          else if(bestCol==="nat") row.nat=it.t;
-          else if(bestCol==="arr" && /\d/.test(it.t)) row.arr=it.t;
-          else if(bestCol==="dep" && /\d/.test(it.t)) row.dep=it.t;
+          else if(bestCol==="phone" && /[0-9+]/.test(it.t)) curRow.phone=(curRow.phone?curRow.phone+" ":"")+it.t;
+          else if(bestCol==="nat") curRow.nat=it.t;
+          else if(bestCol==="arr" && /\d/.test(it.t)) curRow.arr=it.t;
+          else if(bestCol==="dep" && /\d/.test(it.t)) curRow.dep=it.t;
         }
       }
-      if(!row.name || row.name.length<3)continue;
-      // Parse name: "Surname,FirstName,Title" or "Surname, FirstName"
-      var parts=row.name.split(",").map(function(s){return s.trim()});
-      if(parts.length<2)continue;
-      var sn=parts[0], fn=parts[1];
-      var key=rehberKey(sn,fn);
-      if(!newContacts[key]) newContacts[key]={};
-      // Only update if new data exists (don't overwrite with empty)
-      if(row.email && row.email.indexOf("@")>=0) newContacts[key].email=row.email;
-      if(row.phone) newContacts[key].phone=row.phone;
-      if(row.nat) newContacts[key].nationality=row.nat;
-      if(row.arr) newContacts[key].arrDate=row.arr;
-      if(row.dep) newContacts[key].depDate=row.dep;
-      newContacts[key].surname=sn;
-      newContacts[key].firstName=fn;
-      newContacts[key].updatedAt=new Date().toISOString().split("T")[0];
+    }
+    // Flush final curRow after loop ends
+    if(curRow && curRow.name && curRow.name.length>=3){
+      var parts=curRow.name.split(",").map(function(s){return s.trim()});
+      if(parts.length>=2){
+        var sn=parts[0], fn=parts[1];
+        var key=rehberKey(sn,fn);
+        if(!newContacts[key]) newContacts[key]={};
+        if(curRow.email && curRow.email.indexOf("@")>=0) newContacts[key].email=curRow.email;
+        if(curRow.phone) newContacts[key].phone=curRow.phone;
+        if(curRow.nat) newContacts[key].nationality=curRow.nat;
+        if(curRow.arr) newContacts[key].arrDate=curRow.arr;
+        if(curRow.dep) newContacts[key].depDate=curRow.dep;
+        newContacts[key].surname=sn;
+        newContacts[key].firstName=fn;
+        newContacts[key].updatedAt=new Date().toISOString().split("T")[0];
+      }
     }
     // Merge newContacts into existing (cumulative)
     for(var mk in newContacts){
