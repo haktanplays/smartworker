@@ -2022,58 +2022,71 @@ async function handleOSRAndRefresh(file,module){
   var stId=module==='pd'?'pdStatus':'paStatus';
   var stEl=document.getElementById(stId);
   if(stEl) stEl.innerHTML='<span style="color:#d97706">OSR okunuyor: '+esc(file.name)+'...</span>';
-  await handleOSRPdf(file);
-  var cnt=Object.keys(getRehberContacts()).length;
-  // Refresh emails in current table from Rehber
-  if(module==='pd'){
-    if(pdGuests.length>0){
-      for(var i=0;i<pdGuests.length;i++){
-        if(!pdGuests[i].email) pdGuests[i].email=lookupRehberEmail(pdGuests[i].surname,pdGuests[i].firstName);
-        // Clear auto no_email skip if email was found
-        if(pdGuests[i].email && pdGuests[i].skipReason==="no_email"){
-          removeSkip(pdGuests[i].surname,pdGuests[i].firstName,"pd");
-          pdGuests[i].skipReason="";
-        }
-      }
-      // Auto-skip guests still without email
-      for(var ai=0;ai<pdGuests.length;ai++){
-        var ag=pdGuests[ai];
-        if(!ag.email && !ag.mailSent && !ag.skipReason){
-          recordSkip(ag.surname,ag.firstName,"pd","no_email","AUTO");
-          ag.skipReason="no_email";
-        }
-      }
-      renderPdTable();
-      var matched=pdGuests.filter(function(g){return g.email}).length;
-      if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi ('+cnt+' kisi) — '+matched+'/'+pdGuests.length+' e-posta eslesti</span>';
-    } else {
-      if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi — '+cnt+' kisi rehbere eklendi. Simdi Departure PDF yukleyin.</span>';
-    }
+  try{
+    await handleOSRPdf(file);
+  }catch(err){
+    console.error("handleOSRPdf error:",err);
+    if(stEl) stEl.innerHTML='<span style="color:#dc2626">OSR hata: '+esc(err.message)+'</span>';
+    return;
   }
-  if(module==='pa'){
-    if(typeof paGuests!=='undefined' && paGuests.length>0){
-      for(var i=0;i<paGuests.length;i++){
-        if(!paGuests[i].email) paGuests[i].email=lookupRehberEmail(paGuests[i].surname,paGuests[i].firstName);
-        // Clear auto no_email skip if email was found
-        if(paGuests[i].email && paGuests[i].skipReason==="no_email"){
-          removeSkip(paGuests[i].surname||paGuests[i].lastName||"",paGuests[i].firstName||"","pa");
-          paGuests[i].skipReason="";
+  try{
+    var cnt=Object.keys(getRehberContacts()).length;
+    // Refresh emails in current table from Rehber
+    if(module==='pd'){
+      if(pdGuests.length>0){
+        for(var i=0;i<pdGuests.length;i++){
+          if(!pdGuests[i].email) pdGuests[i].email=lookupRehberEmail(pdGuests[i].surname,pdGuests[i].firstName);
+          // Clear auto no_email skip if email was found
+          if(pdGuests[i].email && pdGuests[i].skipReason==="no_email"){
+            removeSkip(pdGuests[i].surname,pdGuests[i].firstName,"pd");
+            pdGuests[i].skipReason="";
+          }
         }
-      }
-      // Auto-skip guests still without email
-      for(var ai=0;ai<paGuests.length;ai++){
-        var ag=paGuests[ai];
-        if(!ag.email && !ag.mailSent && !ag.skipReason){
-          recordSkip(ag.surname||ag.lastName||"",ag.firstName||"","pa","no_email","AUTO");
-          ag.skipReason="no_email";
+        // Auto-skip guests still without email
+        for(var ai=0;ai<pdGuests.length;ai++){
+          var ag=pdGuests[ai];
+          if(!ag.email && !ag.mailSent && !ag.skipReason){
+            recordSkip(ag.surname,ag.firstName,"pd","no_email","AUTO");
+            ag.skipReason="no_email";
+          }
         }
+        renderPdTable();
+        var matched=pdGuests.filter(function(g){return g.email}).length;
+        if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi ('+cnt+' kisi) — '+matched+'/'+pdGuests.length+' e-posta eslesti</span>';
+      } else {
+        if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi — '+cnt+' kisi rehbere eklendi. Simdi Departure PDF yukleyin.</span>';
       }
-      renderPaTable();
-      var matched=paGuests.filter(function(g){return g.email}).length;
-      if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi ('+cnt+' kisi) — '+matched+'/'+paGuests.length+' e-posta eslesti</span>';
-    } else {
-      if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi — '+cnt+' kisi rehbere eklendi. Simdi Arrival PDF yukleyin.</span>';
     }
+    if(module==='pa'){
+      if(typeof paGuests!=='undefined' && paGuests.length>0){
+        for(var i=0;i<paGuests.length;i++){
+          if(!paGuests[i].email) paGuests[i].email=lookupRehberEmail(paGuests[i].surname,paGuests[i].firstName);
+          // Clear auto no_email skip if email was found
+          if(paGuests[i].email && paGuests[i].skipReason==="no_email"){
+            removeSkip(paGuests[i].surname||paGuests[i].lastName||"",paGuests[i].firstName||"","pa");
+            paGuests[i].skipReason="";
+          }
+        }
+        // Auto-skip guests still without email
+        for(var ai=0;ai<paGuests.length;ai++){
+          var ag=paGuests[ai];
+          if(!ag.email && !ag.mailSent && !ag.skipReason){
+            recordSkip(ag.surname||ag.lastName||"",ag.firstName||"","pa","no_email","AUTO");
+            ag.skipReason="no_email";
+          }
+        }
+        renderPaTable();
+        var matched=paGuests.filter(function(g){return g.email}).length;
+        if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi ('+cnt+' kisi) — '+matched+'/'+paGuests.length+' e-posta eslesti</span>';
+      } else {
+        if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi — '+cnt+' kisi rehbere eklendi. Simdi Arrival PDF yukleyin.</span>';
+      }
+    }
+  }catch(err){
+    console.error("OSR refresh error:",err);
+    if(stEl) stEl.innerHTML='<span style="color:#dc2626">OSR guncelleme hatasi: '+esc(err.message)+'</span>';
+    // Still try to render the table even if refresh had an error
+    try{ if(module==='pd') renderPdTable(); else renderPaTable(); }catch(e){}
   }
 }
 
