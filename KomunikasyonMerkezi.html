@@ -1458,14 +1458,15 @@ function pdSetStatus(idx,val){
   var g=pdGuests[idx];
   var butler=document.getElementById("pdButler").value||"HD";
   var butlerInit=butler.split(" ").map(function(w){return w.charAt(0).toUpperCase()}).join("");
+  var ext={email:g.email||"",room:String(g.room||""),lang:g.lang||"EN",template:g.lang==="TR"?"pd_tr":"pd_en"};
   if(val==="sent"){
     g.mailSent=true;g.skipReason="";
     removeSkip(g.surname,g.firstName,"pd");
-    recordMail(g.surname,g.firstName,"pd",butlerInit);
+    recordMail(g.surname,g.firstName,"pd",butlerInit,ext);
   } else if(val&&val!=="sent"){
     g.mailSent=false;g.skipReason=val;
     removeMail(g.surname,g.firstName,"pd");
-    recordSkip(g.surname,g.firstName,"pd",val,butlerInit);
+    recordSkip(g.surname,g.firstName,"pd",val,butlerInit,ext);
   } else {
     g.mailSent=false;g.skipReason="";
     removeMail(g.surname,g.firstName,"pd");
@@ -1798,18 +1799,20 @@ function paSetStatus(idx,val){
   var g=paGuests[idx];
   var butler=document.getElementById("paButler").value||"HD";
   var butlerInit=butler.split(" ").map(function(w){return w.charAt(0).toUpperCase()}).join("");
+  var tplKey=(g.lang==="TR"?"pa_tr":"pa_en")+(g.type==="REPEAT"?"_repeat":"_first");
+  var ext={email:g.email||"",room:String(g.room||""),lang:g.lang||"EN",template:tplKey};
   if(val==="sent"){
     g.mailSent=true;g.skipReason="";
-    removeSkip(g.surname,g.firstName,"pa");
-    recordMail(g.surname,g.firstName,"pa",butlerInit);
+    removeSkip(g.surname||"",g.firstName||"","pa");
+    recordMail(g.surname||"",g.firstName||"","pa",butlerInit,ext);
   } else if(val&&val!=="sent"){
     g.mailSent=false;g.skipReason=val;
-    removeMail(g.surname,g.firstName,"pa");
-    recordSkip(g.surname,g.firstName,"pa",val,butlerInit);
+    removeMail(g.surname||"",g.firstName||"","pa");
+    recordSkip(g.surname||"",g.firstName||"","pa",val,butlerInit,ext);
   } else {
     g.mailSent=false;g.skipReason="";
-    removeMail(g.surname,g.firstName,"pa");
-    removeSkip(g.surname,g.firstName,"pa");
+    removeMail(g.surname||"",g.firstName||"","pa");
+    removeSkip(g.surname||"",g.firstName||"","pa");
   }
   renderPaTable();
 }
@@ -2062,7 +2065,7 @@ async function handleOSRAndRefresh(file,module){
         for(var ai=0;ai<pdGuests.length;ai++){
           var ag=pdGuests[ai];
           if(!ag.email && !ag.mailSent && !ag.skipReason){
-            recordSkip(ag.surname,ag.firstName,"pd","no_email","AUTO");
+            recordSkip(ag.surname,ag.firstName,"pd","no_email","AUTO",{room:String(ag.room||"")});
             ag.skipReason="no_email";
           }
         }
@@ -2087,7 +2090,7 @@ async function handleOSRAndRefresh(file,module){
         for(var ai=0;ai<paGuests.length;ai++){
           var ag=paGuests[ai];
           if(!ag.email && !ag.mailSent && !ag.skipReason){
-            recordSkip(ag.surname||ag.lastName||"",ag.firstName||"","pa","no_email","AUTO");
+            recordSkip(ag.surname||ag.lastName||"",ag.firstName||"","pa","no_email","AUTO",{room:String(ag.room||"")});
             ag.skipReason="no_email";
           }
         }
@@ -2528,14 +2531,23 @@ function mailHistoryKey(surname,firstName){
   return normTR(surname+","+firstName).replace(/\s+/g,"").replace(/[.]/g,"");
 }
 
-function recordMail(surname,firstName,type,butler){
+function recordMail(surname,firstName,type,butler,extra){
   var h=getMailHistory();
   var key=mailHistoryKey(surname,firstName);
   if(!h[key])h[key]=[];
   var today=new Date().toISOString().split("T")[0];
   // Aynı gün + aynı tip varsa tekrar ekleme
-  var dup=h[key].some(function(r){return r.date===today&&r.type===type});
-  if(!dup)h[key].push({date:today,type:type,butler:butler||"?"});
+  var dup=h[key].some(function(r){return r.date===today&&r.type===type&&!r.skip});
+  if(!dup){
+    var rec={date:today,type:type,butler:butler||"?"};
+    if(extra){
+      if(extra.email)rec.email=extra.email;
+      if(extra.room)rec.room=extra.room;
+      if(extra.lang)rec.lang=extra.lang;
+      if(extra.template)rec.template=extra.template;
+    }
+    h[key].push(rec);
+  }
   saveMailHistory(h);
 }
 
@@ -2576,7 +2588,7 @@ function fmtHistDate(ds){
   var p=ds.split("-");return p[2]+"."+p[1]+"."+p[0];
 }
 
-function recordSkip(surname,firstName,type,reason,butler){
+function recordSkip(surname,firstName,type,reason,butler,extra){
   var h=getMailHistory();
   var key=mailHistoryKey(surname,firstName);
   if(!h[key])h[key]=[];
@@ -2584,7 +2596,12 @@ function recordSkip(surname,firstName,type,reason,butler){
   // Remove any existing skip for today+type, then add
   h[key]=h[key].filter(function(r){return!(r.date===today&&r.type===type&&r.skip)});
   var sn=getSkipNotes();var note=(sn&&sn[reason])||reason;
-  h[key].push({date:today,type:type,butler:butler||"?",skip:true,reason:reason,note:note});
+  var rec={date:today,type:type,butler:butler||"?",skip:true,reason:reason,note:note};
+  if(extra){
+    if(extra.room)rec.room=extra.room;
+    if(extra.email)rec.email=extra.email;
+  }
+  h[key].push(rec);
   saveMailHistory(h);
 }
 
