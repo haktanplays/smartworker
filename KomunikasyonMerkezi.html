@@ -264,8 +264,8 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 <thead><tr>
 <th><input type="checkbox" onchange="kutToggleAll(this.checked)" title="Tümünü sec/kaldir"></th>
 <th style="cursor:pointer" onclick="kutSort('name')">Misafir ↕</th>
-<th>Oda</th>
 <th>E-posta</th>
+<th>Telefon</th>
 <th style="cursor:pointer" onclick="kutSort('date')">Tarih ↕</th>
 <th>Tür</th>
 <th>Butler</th>
@@ -1470,7 +1470,7 @@ function pdSetStatus(idx,val){
   var g=pdGuests[idx];
   var butler=document.getElementById("pdButler").value||"HD";
   var butlerInit=butler.split(" ").map(function(w){return w.charAt(0).toUpperCase()}).join("");
-  var ext={email:g.email||"",room:String(g.room||""),lang:g.lang||"EN",template:g.lang==="TR"?"pd_tr":"pd_en"};
+  var ext={email:g.email||"",phone:lookupRehberPhone(g.surname,g.firstName)||""};
   if(val==="sent"){
     g.mailSent=true;g.skipReason="";
     removeSkip(g.surname,g.firstName,"pd");
@@ -1811,8 +1811,7 @@ function paSetStatus(idx,val){
   var g=paGuests[idx];
   var butler=document.getElementById("paButler").value||"HD";
   var butlerInit=butler.split(" ").map(function(w){return w.charAt(0).toUpperCase()}).join("");
-  var tplKey=(g.lang==="TR"?"pa_tr":"pa_en")+(g.type==="REPEAT"?"_repeat":"_first");
-  var ext={email:g.email||"",room:String(g.room||""),lang:g.lang||"EN",template:tplKey};
+  var ext={email:g.email||"",phone:lookupRehberPhone(g.surname||"",g.firstName||"")||""};
   if(val==="sent"){
     g.mailSent=true;g.skipReason="";
     removeSkip(g.surname||"",g.firstName||"","pa");
@@ -2077,7 +2076,7 @@ async function handleOSRAndRefresh(file,module){
         for(var ai=0;ai<pdGuests.length;ai++){
           var ag=pdGuests[ai];
           if(!ag.email && !ag.mailSent && !ag.skipReason){
-            recordSkip(ag.surname,ag.firstName,"pd","no_email","AUTO",{room:String(ag.room||"")});
+            recordSkip(ag.surname,ag.firstName,"pd","no_email","AUTO");
             ag.skipReason="no_email";
           }
         }
@@ -2102,7 +2101,7 @@ async function handleOSRAndRefresh(file,module){
         for(var ai=0;ai<paGuests.length;ai++){
           var ag=paGuests[ai];
           if(!ag.email && !ag.mailSent && !ag.skipReason){
-            recordSkip(ag.surname||ag.lastName||"",ag.firstName||"","pa","no_email","AUTO",{room:String(ag.room||"")});
+            recordSkip(ag.surname||ag.lastName||"",ag.firstName||"","pa","no_email","AUTO");
             ag.skipReason="no_email";
           }
         }
@@ -2185,10 +2184,21 @@ function showGuestCard(histKey){
   wrap.style.display="block";
   document.getElementById("guestCardName").textContent=displaySurname+" "+displayFirst;
   var info="";
-  if(c&&c.email) info+='<div><b>E-posta:</b> '+esc(c.email)+'</div>';
-  if(c&&c.phone) info+='<div><b>Telefon:</b> '+esc(c.phone)+'</div>';
+  var email=c?c.email:"";
+  var phone=c?c.phone:"";
+  // Also check mail records for email/phone if not in rehber
+  if(!email||!phone){
+    var recs=records||[];
+    for(var ri=0;ri<recs.length;ri++){
+      if(!email&&recs[ri].email)email=recs[ri].email;
+      if(!phone&&recs[ri].phone)phone=recs[ri].phone;
+      if(email&&phone)break;
+    }
+  }
+  if(email) info+='<div><b>E-posta:</b> '+esc(email)+'</div>';
+  if(phone) info+='<div><b>Telefon:</b> '+esc(phone)+'</div>';
   if(c&&c.nationality) info+='<div><b>Milliyet:</b> '+esc(c.nationality)+'</div>';
-  if(!c) info+='<span style="color:#94a3b8">Rehberde kayıt yok</span>';
+  if(!email&&!phone&&!c) info+='<span style="color:#94a3b8">İletişim bilgisi yok</span>';
   document.getElementById("guestCardInfo").innerHTML=info;
   // Mail history
   var hd=document.getElementById("guestCardHistory");
@@ -2366,7 +2376,7 @@ function renderKutuphane(){
       else if(r.type==="pa") gm.paCount++;
       if(r.date>gm.lastDate) gm.lastDate=r.date;
       var noteText=r.skip?(notes[r.reason]||r.note||r.reason||""):"";
-      kutRows.push({name:displayName,key:gKey,date:r.date,type:r.type,butler:r.butler||"?",skip:r.skip,reason:r.reason,note:noteText,room:r.room||"",email:r.email||"",checked:false});
+      kutRows.push({name:displayName,key:gKey,date:r.date,type:r.type,butler:r.butler||"?",skip:r.skip,reason:r.reason,note:noteText,email:r.email||c&&c.email||"",phone:r.phone||c&&c.phone||"",checked:false});
     }
   }
   // Sort guest cards by last contact date desc
@@ -2410,7 +2420,10 @@ function kutRenderUI(){
     var total=g.pdCount+g.paCount+g.skipCount;
     gc+='<div onclick="showGuestCard(\''+esc(g.key)+'\')" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;cursor:pointer;transition:box-shadow .15s" onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,.1)\'" onmouseleave="this.style.boxShadow=\'none\'">';
     gc+='<div style="font-weight:700;font-size:13px;color:#1e293b;margin-bottom:4px">'+esc(g.name)+'</div>';
-    if(g.email) gc+='<div style="font-size:10px;color:#6b7280;margin-bottom:6px">'+esc(g.email)+'</div>';
+    var contactLine=[];
+    if(g.email) contactLine.push(esc(g.email));
+    if(g.phone) contactLine.push(esc(g.phone));
+    if(contactLine.length) gc+='<div style="font-size:10px;color:#6b7280;margin-bottom:6px">'+contactLine.join(' · ')+'</div>';
     gc+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
     if(g.pdCount) gc+='<span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600">PD '+g.pdCount+'</span>';
     if(g.paCount) gc+='<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600">PA '+g.paCount+'</span>';
@@ -2435,8 +2448,8 @@ function kutRenderUI(){
     tb+='<tr style="'+(r.skip?"background:#fef2f2":"")+'">'+
       '<td><input type="checkbox" '+(r.checked?'checked ':'')+' onchange="kutCheck('+realIdx+',this.checked)"></td>'+
       '<td><a href="javascript:void(0)" onclick="showGuestCard(\''+esc(r.key)+'\')" style="color:#1a6b5c;text-decoration:none;font-weight:600">'+esc(r.name)+'</a></td>'+
-      '<td style="text-align:center;font-size:10px">'+(r.room?esc(r.room):'')+'</td>'+
       '<td style="font-size:10px;color:#6b7280">'+(r.email?esc(r.email):'')+'</td>'+
+      '<td style="font-size:10px;color:#6b7280">'+(r.phone?esc(r.phone):'')+'</td>'+
       '<td>'+fmtHistDate(r.date)+'</td>'+
       '<td>'+typeBadge+'</td>'+
       '<td>'+esc(r.butler)+'</td>'+
@@ -2547,7 +2560,7 @@ async function kutDownloadSelectedZip(){
 function exportKutuphaneExcel(){
   var h=getMailHistory();
   var contacts=getRehberContacts();
-  var rows=[["Misafir","Oda","E-posta","Tarih","Tür","Butler","Durum","Not"]];
+  var rows=[["Misafir","E-posta","Telefon","Tarih","Tür","Butler","Durum","Not"]];
   var keys=Object.keys(h);
   for(var k=0;k<keys.length;k++){
     var gKey=keys[k];
@@ -2557,7 +2570,7 @@ function exportKutuphaneExcel(){
     var c=contacts[gKey]||{};
     for(var e=0;e<entries.length;e++){
       var r=entries[e];
-      rows.push([name,r.room||"",r.email||c.email||"",r.date,r.type==="pd"?"Post-Departure":"Pre-Arrival",r.butler||"?",r.skip?"Atılmadı":"Gönderildi",r.note||r.reason||""]);
+      rows.push([name,r.email||c.email||"",r.phone||c.phone||"",r.date,r.type==="pd"?"Post-Departure":"Pre-Arrival",r.butler||"?",r.skip?"Atılmadı":"Gönderildi",r.note||r.reason||""]);
     }
   }
   // Simple CSV export
@@ -2593,9 +2606,7 @@ function recordMail(surname,firstName,type,butler,extra){
     var rec={date:today,type:type,butler:butler||"?"};
     if(extra){
       if(extra.email)rec.email=extra.email;
-      if(extra.room)rec.room=extra.room;
-      if(extra.lang)rec.lang=extra.lang;
-      if(extra.template)rec.template=extra.template;
+      if(extra.phone)rec.phone=extra.phone;
     }
     h[key].push(rec);
   }
@@ -2649,8 +2660,8 @@ function recordSkip(surname,firstName,type,reason,butler,extra){
   var sn=getSkipNotes();var note=(sn&&sn[reason])||reason;
   var rec={date:today,type:type,butler:butler||"?",skip:true,reason:reason,note:note};
   if(extra){
-    if(extra.room)rec.room=extra.room;
     if(extra.email)rec.email=extra.email;
+    if(extra.phone)rec.phone=extra.phone;
   }
   h[key].push(rec);
   saveMailHistory(h);
