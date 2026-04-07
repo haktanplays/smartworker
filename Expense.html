@@ -118,6 +118,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <button id="exp_tab_invoice" onclick="expShowTab('invoice')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:700;color:#1a6b5c;border-bottom:2px solid #1a6b5c;margin-bottom:-2px">Fatura (PDF)</button>
   <button id="exp_tab_receipt" onclick="expShowTab('receipt')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Fis (Manuel)</button>
   <button id="exp_tab_list" onclick="expShowTab('list')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Liste</button>
+  <button id="exp_tab_tracking" onclick="expShowTab('tracking')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Takip</button>
   <button id="exp_tab_log" onclick="expShowTab('log')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Kasa Log</button>
 </div>
 
@@ -156,20 +157,34 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
         <label style="font-size:11px;color:#6b7280;font-weight:600">Satici</label>
-        <input id="expRcpVendor" list="expVendorList" placeholder="Satici adi" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;box-sizing:border-box">
+        <input id="expRcpVendor" list="expVendorList" placeholder="Satici adi" oninput="expOnVendorInput()" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;box-sizing:border-box">
         <datalist id="expVendorList"></datalist>
+        <div id="expVendorSuggestion" style="display:none;background:#ecfdf5;border:1px solid #86efac;border-radius:5px;padding:4px 10px;font-size:10px;color:#065f46;margin-top:3px"></div>
       </div>
       <div>
         <label style="font-size:11px;color:#6b7280;font-weight:600">Tarih</label>
         <input id="expRcpDate" type="date" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;box-sizing:border-box">
       </div>
       <div>
-        <label style="font-size:11px;color:#6b7280;font-weight:600">Misafir</label>
-        <input id="expRcpGuest" placeholder="Oda veya isim" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;box-sizing:border-box">
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Misafir (Oda + Isim)</label>
+        <input id="expRcpGuest" placeholder="1902 Lockwood" oninput="expAutoDesc()" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;box-sizing:border-box">
       </div>
       <div>
         <label style="font-size:11px;color:#6b7280;font-weight:600">Kim Aldi</label>
         <select id="expRcpButler" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;box-sizing:border-box"></select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Ne Alindi</label>
+        <input id="expRcpItem" list="expItemList" placeholder="Ornek: Lavender scent" oninput="expAutoDesc()" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;box-sizing:border-box">
+        <datalist id="expItemList"></datalist>
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Amac</label>
+        <select id="expRcpPurpose" onchange="expAutoDesc()" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;box-sizing:border-box">
+          <option value="">- Seciniz -</option>
+        </select>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
@@ -203,7 +218,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
         <label style="font-size:11px;color:#6b7280;font-weight:600">Fis/Fatura No</label>
         <input id="expRcpNo" placeholder="Opsiyonel" style="width:120px;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;box-sizing:border-box">
       </div>
-      <input id="expRcpDesc" placeholder="Aciklama (opsiyonel)" style="flex:1;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+      <input id="expRcpDesc" placeholder="Aciklama (otomatik olusturulur)" style="flex:1;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px;background:#f9fafb;color:#374151">
       <button class="btn btn-primary" style="padding:6px 16px;font-size:12px" onclick="expAddReceipt()">Ekle</button>
       <button class="btn btn-outline" style="padding:6px 12px;font-size:12px" onclick="expRepeatLast()">Tekrar</button>
     </div>
@@ -213,6 +228,11 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <!-- TAB: LISTE -->
 <div id="exp_tabcontent_list" style="display:none">
   <div id="expListWrap"></div>
+</div>
+
+<!-- TAB: TAKIP -->
+<div id="exp_tabcontent_tracking" style="display:none">
+  <div id="expTrackingWrap"></div>
 </div>
 
 <!-- TAB: KASA LOG -->
@@ -260,10 +280,25 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 
-<div>
+<div style="margin-bottom:16px">
 <button class="btn btn-dark" style="font-size:12px;padding:6px 14px" onclick="expDownloadTemplate()">&#128196; Sablon Indir (XLSX)</button>
 </div>
 
+</div>
+</div>
+
+<div class="settings-segment">
+<div class="settings-header" onclick="toggleSettingsSection(this)">
+<span>&#129504; Ogrenilmis Profiller</span><span class="settings-arrow">&#9660;</span>
+</div>
+<div class="settings-body" style="display:none">
+<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+  <button class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="expRebuildProfiles();renderExpVendorProfiles();alert('Profiller yeniden olusturuldu.')">Profilleri Yenile</button>
+  <button class="btn-sm" style="font-size:10px" onclick="expExportProfiles()">&#128190; Disa Aktar</button>
+  <button class="btn-sm" style="font-size:10px" onclick="document.getElementById('expProfileImport').click()">&#128194; Ice Aktar</button>
+  <input type="file" id="expProfileImport" accept=".json" style="display:none" onchange="expImportProfiles(this.files[0])">
+</div>
+<div id="expProfileList"></div>
 </div>
 </div>
 </div>
@@ -279,7 +314,7 @@ function toggleSettingsSection(header){var body=header.nextElementSibling;if(bod
 
 // EXPENSE MODULE
 // ============================================================
-var EXP_CATEGORIES_DEFAULT=["Guest Amenity","Decoration","Minibar Preference","F&B","Office Supplies","Transportation","Other"];
+var EXP_CATEGORIES_DEFAULT=["Ulaşım","Yiyecek/İçecek","Eczane","Kırtasiye","Misafir Talebi","Operasyonel","Diğer"];
 var EXP_BUDGET_DEFAULT=50000;
 var EXP_KASA_DEFAULT=27100;
 let expenseList=[];
@@ -288,6 +323,9 @@ var exp_currentMonth=new Date().getMonth()+1;
 var exp_currentYear=new Date().getFullYear();
 var _expParsedData=null;
 var _expLastReceipt=null;
+var EXP_PURPOSES_DEFAULT=["butler touch","departure gift","meet & greet","special set","room setup","welcome amenity","birthday setup","anniversary setup","transfer fee"];
+function getExpPurposes(){try{var s=localStorage.getItem("exp_purposes");return s?JSON.parse(s):EXP_PURPOSES_DEFAULT.slice()}catch(e){return EXP_PURPOSES_DEFAULT.slice()}}
+function setExpPurposes(arr){localStorage.setItem("exp_purposes",JSON.stringify(arr))}
 
 function getExpCategories(){try{var s=localStorage.getItem("exp_categories");return s?JSON.parse(s):EXP_CATEGORIES_DEFAULT.slice()}catch(e){return EXP_CATEGORIES_DEFAULT.slice()}}
 function setExpCategories(arr){localStorage.setItem("exp_categories",JSON.stringify(arr))}
@@ -313,14 +351,25 @@ function expPopulateButlers(){
   });
 }
 
+function expPopulatePurposes(){
+  var purposes=getExpPurposes();
+  var sel=document.getElementById("expRcpPurpose");
+  if(!sel)return;
+  sel.innerHTML='<option value="">- Seciniz -</option>';
+  purposes.forEach(function(p){var o=document.createElement("option");o.value=p;o.textContent=p;sel.appendChild(o)});
+}
+
 function expInit(){
   document.getElementById("exp_monthSel").value=exp_currentMonth;
   document.getElementById("exp_yearSel").value=exp_currentYear;
   expPopulateCategories();
   expPopulateButlers();
+  expPopulatePurposes();
   expLoad();
   expLoadLog();
+  if(!localStorage.getItem("exp_vendor_profiles"))expRebuildProfiles();
   expUpdateVendorList();
+  expUpdateItemList();
   expRenderAll();
   renderExpenseSettings();
   var d=document.getElementById("expRcpDate");
@@ -338,7 +387,7 @@ function expPopulateCategories(){
 }
 
 function expShowTab(tab){
-  ["invoice","receipt","list","log"].forEach(function(t){
+  ["invoice","receipt","list","tracking","log"].forEach(function(t){
     var el=document.getElementById("exp_tabcontent_"+t);
     var btn=document.getElementById("exp_tab_"+t);
     if(el)el.style.display=t===tab?"":"none";
@@ -347,6 +396,7 @@ function expShowTab(tab){
   var listBtn=document.getElementById("exp_tab_list");
   if(listBtn)listBtn.textContent="Liste"+(expenseList.length?" ("+expenseList.length+")":"");
   if(tab==="list")expRenderList();
+  if(tab==="tracking")expRenderTracking();
   if(tab==="log")expRenderLog();
 }
 
@@ -374,6 +424,8 @@ function expRenderAll(){
   expRenderList();
   var listBtn=document.getElementById("exp_tab_list");
   if(listBtn)listBtn.textContent="Liste"+(expenseList.length?" ("+expenseList.length+")":"");
+  var trackBtn=document.getElementById("exp_tab_tracking");
+  if(trackBtn)trackBtn.textContent="Takip"+(expenseList.length?" ("+expenseList.length+")":"");
   var logBtn=document.getElementById("exp_tab_log");
   if(logBtn)logBtn.textContent="Kasa Log"+(expKasaLog.length?" ("+expKasaLog.length+")":"");
 }
@@ -719,6 +771,7 @@ function showParsedPreview(p){
     '<strong>KDV:</strong> <span style="font-size:12px">'+fmt(p.vatAmount)+(p.vatRate?" (%"+p.vatRate+")":"")+'</span>'+
     '<strong>Odenecek Tutar:</strong> <input id="expE_total" type="number" step="0.01" value="'+(p.totalAmount||0)+'" style="border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px;font-weight:700;color:#059669">'+
     '</div>';
+  setTimeout(function(){expAutoFillInvoice(p.vendor,p.invoiceNo)},50);
 }
 
 function expAddFromParsed(){
@@ -766,6 +819,9 @@ function expAddFromParsed(){
   expenseList.push(entry);
   expSave();
   expAddLog("add",entry);
+  expUpdateProfile(entry);
+  expUpdateKeywords(entry);
+  expUpdateVendorList();
   expCancelParsed();
   expRenderAll();
   expShowTab("list");
@@ -799,6 +855,8 @@ function expAddReceipt(){
   var guest=(document.getElementById("expRcpGuest")||{}).value||"";
   var butler=(document.getElementById("expRcpButler")||{}).value||"";
   var payType=(document.getElementById("expRcpPayType")||{}).value||"expense";
+  var item=(document.getElementById("expRcpItem")||{}).value||"";
+  var purpose=(document.getElementById("expRcpPurpose")||{}).value||"";
   if(!vendor){alert("Satici adi giriniz.");return;}
   if(!amt){alert("Tutar giriniz.");return;}
   var net=vatPct>0?amt/(1+vatPct/100):amt;
@@ -814,12 +872,16 @@ function expAddReceipt(){
     vatRate:vatPct,
     category:cat||"",
     description:desc||"",
+    item:item,
+    purpose:purpose,
     guest:guest,
     butler:butler,
     payType:payType,
     status:"bekliyor",
     fileRef:""
   };
+  // Save new purpose if custom
+  if(purpose){var purposes=getExpPurposes();if(purposes.indexOf(purpose)<0){purposes.push(purpose);setExpPurposes(purposes);expPopulatePurposes()}}
   var entryDate=entry.date;
   var ed=new Date(entryDate);
   var em=ed.getMonth()+1,ey=ed.getFullYear();
@@ -831,15 +893,21 @@ function expAddReceipt(){
     expLoadLog();
   }
   expenseList.push(entry);
-  _expLastReceipt={vendor:vendor,vatPct:vatPct,cat:cat,butler:butler,payType:payType};
+  _expLastReceipt={vendor:vendor,vatPct:vatPct,cat:cat,butler:butler,payType:payType,item:item,purpose:purpose};
   expSave();
   expAddLog("add",entry);
+  expUpdateProfile(entry);
+  expUpdateKeywords(entry);
   expUpdateVendorList();
+  expUpdateItemList();
+  expClearSuggestion();
   document.getElementById("expRcpAmount").value="";
   document.getElementById("expRcpNo").value="";
   document.getElementById("expRcpDesc").value="";
   document.getElementById("expRcpNet").value="";
   document.getElementById("expRcpGuest").value="";
+  if(document.getElementById("expRcpItem"))document.getElementById("expRcpItem").value="";
+  if(document.getElementById("expRcpPurpose"))document.getElementById("expRcpPurpose").value="";
   expRenderAll();
   expShowTab("list");
 }
@@ -849,18 +917,13 @@ function expRepeatLast(){
   document.getElementById("expRcpVendor").value=_expLastReceipt.vendor||"";
   document.getElementById("expRcpVat").value=_expLastReceipt.vatPct||20;
   document.getElementById("expRcpCategory").value=_expLastReceipt.cat||"";
+  if(document.getElementById("expRcpButler"))document.getElementById("expRcpButler").value=_expLastReceipt.butler||"";
+  if(document.getElementById("expRcpPayType"))document.getElementById("expRcpPayType").value=_expLastReceipt.payType||"expense";
+  if(document.getElementById("expRcpItem"))document.getElementById("expRcpItem").value=_expLastReceipt.item||"";
+  if(document.getElementById("expRcpPurpose"))document.getElementById("expRcpPurpose").value=_expLastReceipt.purpose||"";
 }
 
-function expUpdateVendorList(){
-  var dl=document.getElementById("expVendorList");
-  if(!dl)return;
-  var vendors={};
-  expenseList.forEach(function(e){if(e.vendor)vendors[e.vendor]=1});
-  dl.innerHTML="";
-  Object.keys(vendors).forEach(function(v){
-    var o=document.createElement("option");o.value=v;dl.appendChild(o);
-  });
-}
+// expUpdateVendorList moved to Learning Model section below
 
 // ---- EXCEL EXPORT ----
 // ---- EXPENSE TEMPLATE ----
@@ -940,7 +1003,7 @@ async function expDownloadXLSX(){
       tNet+=(e.netAmount||0);tV10+=v10;tV20+=v20;tV1+=v1;tAll+=(e.totalAmount||0);
 
       xml=setCell(xml,"B"+r,e.vendor||"");
-      xml=setCell(xml,"C"+r,e.description||e.category||"");
+      xml=setCell(xml,"C"+r,e.description||e.item||e.category||"");
       xml=setCell(xml,"D"+r,e.date?e.date.replace(/(\d{4})-(\d{2})-(\d{2})/,"$3.$2.$1"):"");
       xml=setCell(xml,"E"+r,e.invoiceNo||"");
       xml=setCell(xml,"F"+r,e.netAmount||0);
@@ -1012,12 +1075,15 @@ function renderExpenseSettings(){
   // Categories
   var cats=getExpCategories();
   var el=document.getElementById("expCategoryTags");
-  if(!el)return;
-  el.innerHTML="";
-  cats.forEach(function(c,i){
-    el.innerHTML+='<span style="display:inline-flex;align-items:center;gap:3px;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">'+
-      esc(c)+' <button onclick="removeExpCategory('+i+')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-weight:700;font-size:12px;padding:0 2px">&times;</button></span>';
-  });
+  if(el){
+    el.innerHTML="";
+    cats.forEach(function(c,i){
+      el.innerHTML+='<span style="display:inline-flex;align-items:center;gap:3px;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">'+
+        esc(c)+' <button onclick="removeExpCategory('+i+')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-weight:700;font-size:12px;padding:0 2px">&times;</button></span>';
+    });
+  }
+  // Vendor profiles
+  renderExpVendorProfiles();
 }
 
 function saveExpBudget(){
@@ -1037,6 +1103,482 @@ function addExpCategory(){
 
 function removeExpCategory(idx){
   var cats=getExpCategories();cats.splice(idx,1);setExpCategories(cats);renderExpenseSettings();expPopulateCategories();
+}
+
+// ============================================================
+// LEARNING MODEL — Vendor Profiles, Auto-fill, Invoice Prefix, Keywords
+// ============================================================
+
+// --- Vendor Profile System ---
+function expGetProfiles(){try{var s=localStorage.getItem("exp_vendor_profiles");return s?JSON.parse(s):{}}catch(e){return {}}}
+function expSaveProfiles(p){localStorage.setItem("exp_vendor_profiles",JSON.stringify(p))}
+function expNormVendor(name){return String(name||"").trim().toUpperCase().replace(/İ/g,"I").replace(/\s+/g," ")}
+
+function expTopValue(freqMap){
+  if(!freqMap)return"";
+  var best="",bestN=0;
+  for(var k in freqMap){if(freqMap[k]>bestN){bestN=freqMap[k];best=k}}
+  return best;
+}
+
+function expIncFreq(map,key){
+  if(!key)return;
+  map[key]=(map[key]||0)+1;
+}
+
+function expUpdateProfile(entry){
+  var profiles=expGetProfiles();
+  var vk=expNormVendor(entry.vendor);
+  if(!vk)return;
+  var p=profiles[vk]||{count:0,lastUsed:"",categories:{},vatRates:{},butlers:{},payTypes:{},items:{},purposes:{},avgAmount:0,invoicePrefixes:{}};
+  var oldTotal=p.avgAmount*p.count;
+  p.count++;
+  p.lastUsed=entry.date||new Date().toISOString().split("T")[0];
+  expIncFreq(p.categories,entry.category);
+  expIncFreq(p.vatRates,String(entry.vatRate||0));
+  expIncFreq(p.butlers,entry.butler);
+  expIncFreq(p.payTypes,entry.payType);
+  expIncFreq(p.items,entry.item);
+  expIncFreq(p.purposes,entry.purpose);
+  p.avgAmount=Math.round((oldTotal+(entry.totalAmount||0))/p.count*100)/100;
+  if(entry.invoiceNo){
+    var pfx=expExtractInvPrefix(entry.invoiceNo);
+    if(pfx)expIncFreq(p.invoicePrefixes,pfx);
+  }
+  profiles[vk]=p;
+  expSaveProfiles(profiles);
+  expUpdateInvPrefix(entry.invoiceNo,vk);
+}
+
+function expRebuildProfiles(){
+  var profiles={};
+  var prefixMap={};
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!/^exp_\d+_\d+$/.test(key))continue;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      list.forEach(function(entry){
+        var vk=expNormVendor(entry.vendor);
+        if(!vk)return;
+        var p=profiles[vk]||{count:0,lastUsed:"",categories:{},vatRates:{},butlers:{},payTypes:{},items:{},purposes:{},avgAmount:0,invoicePrefixes:{}};
+        var oldTotal=p.avgAmount*p.count;
+        p.count++;
+        if(entry.date>p.lastUsed)p.lastUsed=entry.date;
+        expIncFreq(p.categories,entry.category);
+        expIncFreq(p.vatRates,String(entry.vatRate||0));
+        expIncFreq(p.butlers,entry.butler);
+        expIncFreq(p.payTypes,entry.payType);
+        expIncFreq(p.items,entry.item);
+        expIncFreq(p.purposes,entry.purpose);
+        p.avgAmount=Math.round((oldTotal+(entry.totalAmount||0))/p.count*100)/100;
+        if(entry.invoiceNo){
+          var pfx=expExtractInvPrefix(entry.invoiceNo);
+          if(pfx){
+            expIncFreq(p.invoicePrefixes,pfx);
+            if(!prefixMap[pfx])prefixMap[pfx]={vendor:vk,count:0};
+            prefixMap[pfx].count++;
+          }
+        }
+        profiles[vk]=p;
+      });
+    }catch(e){}
+  }
+  expSaveProfiles(profiles);
+  localStorage.setItem("exp_inv_prefix_map",JSON.stringify(prefixMap));
+  expRebuildKeywords();
+}
+
+// --- Invoice Prefix → Vendor Matching ---
+function expExtractInvPrefix(invoiceNo){
+  if(!invoiceNo)return"";
+  var m=String(invoiceNo).match(/^([A-ZÇĞİÖŞÜa-zçğıöşü]{2,4})/);
+  return m?m[1].toUpperCase():"";
+}
+
+function expUpdateInvPrefix(invoiceNo,vendor){
+  if(!invoiceNo||!vendor)return;
+  var pfx=expExtractInvPrefix(invoiceNo);
+  if(!pfx)return;
+  var map;
+  try{map=JSON.parse(localStorage.getItem("exp_inv_prefix_map"))||{}}catch(e){map={}}
+  if(!map[pfx])map[pfx]={vendor:expNormVendor(vendor),count:0};
+  map[pfx].count++;
+  localStorage.setItem("exp_inv_prefix_map",JSON.stringify(map));
+}
+
+function expLookupByInvPrefix(invoiceNo){
+  var pfx=expExtractInvPrefix(invoiceNo);
+  if(!pfx)return null;
+  try{var map=JSON.parse(localStorage.getItem("exp_inv_prefix_map"))||{};return map[pfx]||null}catch(e){return null}
+}
+
+// --- Keyword → Category Suggestion ---
+function expGetKeywords(){try{var s=localStorage.getItem("exp_keyword_cats");return s?JSON.parse(s):{}}catch(e){return {}}}
+function expSaveKeywords(kw){localStorage.setItem("exp_keyword_cats",JSON.stringify(kw))}
+
+function expExtractWords(text){
+  return String(text||"").toLowerCase().replace(/[^a-zçğıöşüa-z0-9\s]/gi,"").split(/\s+/).filter(function(w){return w.length>=3});
+}
+
+function expUpdateKeywords(entry){
+  var kw=expGetKeywords();
+  var cat=entry.category;
+  if(!cat)return;
+  var words=expExtractWords((entry.vendor||"")+" "+(entry.item||"")+" "+(entry.description||""));
+  words.forEach(function(w){
+    if(!kw[w])kw[w]={};
+    kw[w][cat]=(kw[w][cat]||0)+1;
+  });
+  expSaveKeywords(kw);
+}
+
+function expSuggestCategory(text){
+  var kw=expGetKeywords();
+  var words=expExtractWords(text);
+  var scores={};
+  words.forEach(function(w){
+    if(!kw[w])return;
+    for(var cat in kw[w])scores[cat]=(scores[cat]||0)+kw[w][cat];
+  });
+  return expTopValue(scores);
+}
+
+function expRebuildKeywords(){
+  var kw={};
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!/^exp_\d+_\d+$/.test(key))continue;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      list.forEach(function(entry){
+        var cat=entry.category;if(!cat)return;
+        var words=expExtractWords((entry.vendor||"")+" "+(entry.item||"")+" "+(entry.description||""));
+        words.forEach(function(w){if(!kw[w])kw[w]={};kw[w][cat]=(kw[w][cat]||0)+1});
+      });
+    }catch(e){}
+  }
+  expSaveKeywords(kw);
+}
+
+// --- Auto-Description Builder ---
+function expBuildDescription(item,purpose,guestField){
+  if(!item)return"";
+  if(purpose==="transfer fee")return"Transfer fee for the "+item.toLowerCase();
+  var guestStr="";
+  var gv=(guestField||"").trim();
+  if(gv){
+    var roomMatch=gv.match(/^(\d+)\s*(.*)/);
+    if(roomMatch&&roomMatch[1]){
+      guestStr="our guest that stays at "+roomMatch[1];
+      if(roomMatch[2])guestStr+=" ("+roomMatch[2].trim()+")";
+    }else{
+      guestStr="our guest "+gv;
+    }
+  }
+  if(!guestStr)return item+" was bought"+(purpose?" for "+purpose:"");
+  if(purpose==="departure gift")return item+" was bought as a departure gift for "+guestStr;
+  return item+" was bought"+(purpose?" for a "+purpose:"")+" for "+guestStr;
+}
+
+function expAutoDesc(){
+  var item=(document.getElementById("expRcpItem")||{}).value||"";
+  var purpose=(document.getElementById("expRcpPurpose")||{}).value||"";
+  var guest=(document.getElementById("expRcpGuest")||{}).value||"";
+  var desc=expBuildDescription(item,purpose,guest);
+  var el=document.getElementById("expRcpDesc");
+  if(el)el.value=desc;
+}
+
+// --- Auto-Fill on Vendor Selection ---
+var _expVendorDebounce=null;
+function expOnVendorInput(){
+  clearTimeout(_expVendorDebounce);
+  _expVendorDebounce=setTimeout(function(){
+    var v=(document.getElementById("expRcpVendor")||{}).value||"";
+    expAutoFill(v);
+  },300);
+}
+
+function expAutoFill(vendorName){
+  var vk=expNormVendor(vendorName);
+  var profiles=expGetProfiles();
+  var p=profiles[vk];
+  var sugEl=document.getElementById("expVendorSuggestion");
+  if(!p||p.count<1){
+    if(sugEl)sugEl.style.display="none";
+    var catSug=expSuggestCategory(vendorName);
+    if(catSug){var cs=document.getElementById("expRcpCategory");if(cs)cs.value=catSug}
+    return;
+  }
+  var topCat=expTopValue(p.categories);
+  var topVat=expTopValue(p.vatRates);
+  var topButler=expTopValue(p.butlers);
+  var topPay=expTopValue(p.payTypes);
+  var topPurpose=expTopValue(p.purposes);
+  if(topCat){var cs=document.getElementById("expRcpCategory");if(cs)cs.value=topCat}
+  if(topVat){var vs=document.getElementById("expRcpVat");if(vs)vs.value=topVat;expCalcNet()}
+  if(topButler){var bs=document.getElementById("expRcpButler");if(bs)bs.value=topButler}
+  if(topPay){var ps=document.getElementById("expRcpPayType");if(ps)ps.value=topPay}
+  if(topPurpose){var pp=document.getElementById("expRcpPurpose");if(pp)pp.value=topPurpose}
+  if(sugEl){
+    sugEl.style.display="";
+    sugEl.innerHTML='<span style="font-weight:700">&#10003; '+esc(vendorName)+' tanindi:</span> '
+      +(topCat?esc(topCat):"?")+" | "
+      +(topVat?"%"+topVat:"?")+" KDV | "
+      +(topPay||"?")+" | "
+      +(topButler||"?")
+      +' <span style="margin-left:6px;color:#6b7280">('+p.count+'x)</span>'
+      +' <button onclick="expClearSuggestion()" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:11px;margin-left:4px">&times;</button>';
+  }
+}
+
+function expClearSuggestion(){
+  var s=document.getElementById("expVendorSuggestion");if(s)s.style.display="none";
+}
+
+// --- PDF Invoice Auto-Fill from Profile ---
+function expAutoFillInvoice(vendorName,invoiceNo){
+  var vk=expNormVendor(vendorName);
+  var profiles=expGetProfiles();
+  var p=profiles[vk];
+  var source="profil";
+  if(!p&&invoiceNo){
+    var pfxResult=expLookupByInvPrefix(invoiceNo);
+    if(pfxResult){p=profiles[pfxResult.vendor];source="fatura no";vk=pfxResult.vendor}
+  }
+  if(!p)return;
+  var topCat=expTopValue(p.categories);
+  var topButler=expTopValue(p.butlers);
+  var topPay=expTopValue(p.payTypes);
+  if(topCat){var cs=document.getElementById("expInvCategory");if(cs)cs.value=topCat}
+  if(topButler){var bs=document.getElementById("expInvButler");if(bs)bs.value=topButler}
+  if(topPay){var ps=document.getElementById("expInvPayType");if(ps)ps.value=topPay}
+  var preview=document.getElementById("expParsedPreview");
+  if(preview){
+    var bar=document.getElementById("expInvSuggestion");
+    if(!bar){bar=document.createElement("div");bar.id="expInvSuggestion";bar.style.cssText="background:#ecfdf5;border:1px solid #86efac;border-radius:5px;padding:4px 10px;font-size:10px;color:#065f46;margin-top:6px";preview.appendChild(bar)}
+    bar.innerHTML='<span style="font-weight:700">&#10003; '+esc(source==="fatura no"?"Fatura no\'dan tanindi: "+vk:vk)+'</span> — '
+      +(topCat||"?")+" | "+(topPay||"?")+" | "+(topButler||"?")
+      +' <span style="color:#6b7280">('+p.count+'x)</span>';
+  }
+}
+
+// --- Expanded Datalist ---
+function expUpdateVendorList(){
+  var dl=document.getElementById("expVendorList");
+  if(!dl)return;
+  var vendors={};
+  expenseList.forEach(function(e){if(e.vendor)vendors[e.vendor]=1});
+  var profiles=expGetProfiles();
+  for(var vk in profiles){
+    var name=vk.charAt(0)+vk.slice(1).toLowerCase();
+    vendors[name]=1;
+    if(profiles[vk].count>0){var orig=null;
+      expenseList.forEach(function(e){if(expNormVendor(e.vendor)===vk&&!orig)orig=e.vendor});
+      if(orig)vendors[orig]=1;
+    }
+  }
+  dl.innerHTML="";
+  Object.keys(vendors).sort().forEach(function(v){var o=document.createElement("option");o.value=v;dl.appendChild(o)});
+}
+
+function expUpdateItemList(){
+  var dl=document.getElementById("expItemList");
+  if(!dl)return;
+  var items={};
+  var profiles=expGetProfiles();
+  for(var vk in profiles){
+    var p=profiles[vk];
+    if(p.items){for(var it in p.items)items[it]=1}
+  }
+  expenseList.forEach(function(e){if(e.item)items[e.item]=1});
+  dl.innerHTML="";
+  Object.keys(items).sort().forEach(function(v){var o=document.createElement("option");o.value=v;dl.appendChild(o)});
+}
+
+// --- Tracking Tab (Excel-matching) ---
+function expRenderTracking(){
+  var el=document.getElementById("expTrackingWrap");
+  if(!el)return;
+  var fmt=function(v){return(v||0).toLocaleString("tr-TR",{minimumFractionDigits:2})};
+  var kasaBasi=getExpKasa();
+  var totalExp=0,totalCep=0,yatanExp=0,bekleyenExp=0,yapildiAmaYatmadi=0;
+  var catTotals={};
+  var cats=getExpCategories();
+  cats.forEach(function(c){catTotals[c]=0});
+  catTotals["Kategorisiz"]=0;
+
+  expenseList.forEach(function(e){
+    var amt=e.totalAmount||0;
+    if(e.payType==="cep")totalCep+=amt;
+    else{
+      totalExp+=amt;
+      if(e.status==="yatti")yatanExp+=amt;
+      else if(e.status==="yapildi")yapildiAmaYatmadi+=amt;
+      else bekleyenExp+=amt;
+    }
+    var cat=e.category||"Kategorisiz";
+    if(typeof catTotals[cat]==="undefined")catTotals[cat]=0;
+    catTotals[cat]+=amt;
+  });
+  var guncelKasa=kasaBasi-totalExp-totalCep+yatanExp;
+  var toplamHarcama=totalExp+totalCep;
+
+  // KPI bars
+  var h='<div style="margin-bottom:14px">';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:6px">';
+  h+='<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:6px;padding:8px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#9a3412;text-transform:uppercase">AY BAŞI KASA (₺)</div><div style="font-size:15px;font-weight:700;color:#c2410c">₺'+fmt(kasaBasi)+'</div></div>';
+  h+='<div style="background:#fefce8;border:1px solid #fde047;border-radius:6px;padding:8px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#854d0e;text-transform:uppercase">TOPLAM HARCAMA (₺)</div><div style="font-size:15px;font-weight:700;color:#a16207">₺'+fmt(toplamHarcama)+'</div></div>';
+  h+='<div style="background:#f9fafb;border:1px solid #d1d5db;border-radius:6px;padding:8px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#374151;text-transform:uppercase">YATAN EXPENSE (₺)</div><div style="font-size:15px;font-weight:700;color:#374151">₺'+fmt(yatanExp)+'</div></div>';
+  h+='<div style="background:#ecfdf5;border:1px solid #86efac;border-radius:6px;padding:8px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#065f46;text-transform:uppercase">GÜNCEL KASA (₺)</div><div style="font-size:15px;font-weight:700;color:#059669">₺'+fmt(guncelKasa)+'</div></div>';
+  h+='</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">';
+  h+='<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#991b1b;text-transform:uppercase">BEKLEYEN EXPENSE (₺)</div><div style="font-size:15px;font-weight:700;color:#dc2626">₺'+fmt(bekleyenExp)+'</div></div>';
+  h+='<div style="background:#fefce8;border:1px solid #fde047;border-radius:6px;padding:8px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#854d0e;text-transform:uppercase">YAPILDI AMA YATMADI</div><div style="font-size:15px;font-weight:700;color:#a16207">₺'+fmt(yapildiAmaYatmadi)+'</div></div>';
+  h+='<div style="background:#f9fafb;border:1px solid #d1d5db;border-radius:6px;padding:8px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#374151;text-transform:uppercase">TOPLAM İŞLEM SAYISI</div><div style="font-size:15px;font-weight:700;color:#374151">'+expenseList.length+'</div></div>';
+  h+='<div style="background:#fdf2f8;border:1px solid #f9a8d4;border-radius:6px;padding:8px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#9d174d;text-transform:uppercase">CEP HARCAMASI</div><div style="font-size:15px;font-weight:700;color:#db2777">₺'+fmt(totalCep)+'</div></div>';
+  h+='</div></div>';
+
+  // Main layout: table + category panel
+  h+='<div style="display:grid;grid-template-columns:1fr 220px;gap:12px">';
+
+  // Table
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:#1a6b5c;color:#fff">';
+  h+='<th style="padding:5px 6px;text-align:left">Misafir</th>';
+  h+='<th style="padding:5px 6px;text-align:left">Ne Alindi</th>';
+  h+='<th style="padding:5px 6px;text-align:right">Ne Kadar</th>';
+  h+='<th style="padding:5px 6px;text-align:left">Kim Aldi</th>';
+  h+='<th style="padding:5px 6px;text-align:left">Tarih</th>';
+  h+='<th style="padding:5px 6px;text-align:center">E/C</th>';
+  h+='<th style="padding:5px 6px;text-align:center">Yapildi?</th>';
+  h+='<th style="padding:5px 6px;text-align:center">Yatti?</th>';
+  h+='<th style="padding:5px 6px;text-align:left">Dosya Ref</th>';
+  h+='<th style="padding:5px 6px;text-align:left">Kategori</th>';
+  h+='</tr></thead><tbody>';
+
+  if(!expenseList.length){
+    h+='<tr><td colspan="10" style="text-align:center;color:#9ca3af;padding:30px">Kayit yok</td></tr>';
+  }else{
+    expenseList.forEach(function(e,idx){
+      var bg=idx%2===0?"#fff":"#f9fafb";
+      var payBg=e.payType==="cep"?"background:#fdf2f8;color:#db2777":"background:#ecfdf5;color:#059669";
+      var yapildi=(e.status==="yapildi"||e.status==="yatti");
+      var yatti=e.status==="yatti";
+      h+='<tr style="background:'+bg+'">';
+      h+='<td style="padding:4px 6px">'+esc(e.guest||"")+'</td>';
+      h+='<td style="padding:4px 6px">'+esc(e.item||e.description||"")+'</td>';
+      h+='<td style="padding:4px 6px;text-align:right;font-weight:600">₺'+fmt(e.totalAmount)+'</td>';
+      h+='<td style="padding:4px 6px">'+esc(e.butler||"")+'</td>';
+      h+='<td style="padding:4px 6px;white-space:nowrap">'+esc(e.date||"")+'</td>';
+      h+='<td style="padding:4px 6px;text-align:center"><span style="padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;'+payBg+'">'+(e.payType==="cep"?"C":"E")+'</span></td>';
+      h+='<td style="padding:4px 6px;text-align:center">'+(yapildi?'<span style="color:#059669;font-weight:700">&#10003;</span>':'')+'</td>';
+      h+='<td style="padding:4px 6px;text-align:center">'+(yatti?'<span style="color:#059669;font-weight:700">&#10003;</span>':'')+'</td>';
+      h+='<td style="padding:4px 6px;font-size:10px">'+esc(e.fileRef||"")+'</td>';
+      h+='<td style="padding:4px 6px"><span class="badge" style="background:#e0e7ff;color:#3730a3">'+esc(e.category||"")+'</span></td>';
+      h+='</tr>';
+    });
+  }
+  h+='</tbody></table></div>';
+
+  // Category breakdown panel
+  h+='<div style="background:#ecfdf5;border:1px solid #86efac;border-radius:8px;padding:12px 14px">';
+  h+='<div style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Kategori Kirilimi</div>';
+  var toplamHacim=0;
+  for(var c in catTotals)toplamHacim+=catTotals[c];
+  for(var c in catTotals){
+    if(c==="Kategorisiz"&&catTotals[c]===0)continue;
+    h+='<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid #d1fae5">';
+    h+='<span style="color:#374151">'+esc(c)+'</span>';
+    h+='<span style="font-weight:600;color:#065f46">₺'+fmt(catTotals[c])+'</span></div>';
+  }
+  h+='<div style="display:flex;justify-content:space-between;padding:6px 0 0;font-size:12px;font-weight:700;border-top:2px solid #059669;margin-top:4px">';
+  h+='<span style="color:#065f46">TOPLAM HACİM</span>';
+  h+='<span style="color:#059669">₺'+fmt(toplamHacim)+'</span></div>';
+  h+='</div>';
+
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+// --- Settings: Profile Management ---
+function renderExpVendorProfiles(){
+  var el=document.getElementById("expProfileList");
+  if(!el)return;
+  var profiles=expGetProfiles();
+  var keys=Object.keys(profiles).sort(function(a,b){return(profiles[b].count||0)-(profiles[a].count||0)});
+  if(!keys.length){el.innerHTML='<p style="font-size:11px;color:#9ca3af">Henuz ogrenilmis profil yok.</p>';return}
+  var h='<div style="font-size:10px;color:#6b7280;margin-bottom:6px">'+keys.length+' vendor profili</div>';
+  keys.forEach(function(vk,idx){
+    var p=profiles[vk];
+    var topCat=expTopValue(p.categories);
+    var topVat=expTopValue(p.vatRates);
+    var topPfx=expTopValue(p.invoicePrefixes);
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:5px;margin-bottom:2px;background:'+(idx%2===0?"#f9fafb":"#fff")+';cursor:pointer" onclick="expToggleProfileDetail(\''+esc(vk)+'\')">';
+    h+='<div style="font-size:11px"><span style="font-weight:700;color:#1e293b">'+esc(vk)+'</span>';
+    h+=' <span style="color:#6b7280">('+p.count+'x)</span>';
+    h+=' — <span style="color:#1a6b5c">'+(topCat||"?")+'</span>';
+    h+=(topVat?' | %'+topVat:'');
+    h+=(topPfx?' | <span style="font-family:monospace;font-size:10px;color:#7c3aed">'+esc(topPfx)+'*</span>':'');
+    h+='</div>';
+    h+='<button onclick="event.stopPropagation();expDeleteProfile(\''+esc(vk)+'\')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:13px;font-weight:700">&times;</button>';
+    h+='</div>';
+    h+='<div id="expProfileDetail_'+esc(vk)+'" style="display:none;padding:6px 12px 10px;margin-bottom:4px;background:#f0f9ff;border-left:3px solid #3b82f6;border-radius:0 6px 6px 0;font-size:10px;line-height:1.8">';
+    h+='<div><b>Kategoriler:</b> '+Object.keys(p.categories||{}).map(function(k){return esc(k)+" ("+p.categories[k]+")"}).join(", ")+'</div>';
+    h+='<div><b>KDV Oranlari:</b> '+Object.keys(p.vatRates||{}).map(function(k){return "%"+k+" ("+p.vatRates[k]+")"}).join(", ")+'</div>';
+    h+='<div><b>Butler:</b> '+Object.keys(p.butlers||{}).map(function(k){return esc(k)+" ("+p.butlers[k]+")"}).join(", ")+'</div>';
+    h+='<div><b>Odeme:</b> '+Object.keys(p.payTypes||{}).map(function(k){return k+" ("+p.payTypes[k]+")"}).join(", ")+'</div>';
+    if(p.items&&Object.keys(p.items).length)h+='<div><b>Items:</b> '+Object.keys(p.items).map(function(k){return esc(k)+" ("+p.items[k]+")"}).join(", ")+'</div>';
+    h+='<div><b>Ort. Tutar:</b> '+((p.avgAmount||0).toLocaleString("tr-TR",{minimumFractionDigits:2}))+' TL | <b>Son:</b> '+(p.lastUsed||"-")+'</div>';
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+
+function expToggleProfileDetail(vk){
+  var el=document.getElementById("expProfileDetail_"+vk);
+  if(!el)return;
+  el.style.display=el.style.display==="none"?"":"none";
+}
+
+function expDeleteProfile(vk){
+  var profiles=expGetProfiles();
+  delete profiles[vk];
+  expSaveProfiles(profiles);
+  renderExpVendorProfiles();
+}
+
+function expExportProfiles(){
+  var data={version:"EXP_PROFILES_v1",profiles:expGetProfiles(),prefixMap:JSON.parse(localStorage.getItem("exp_inv_prefix_map")||"{}"),keywords:expGetKeywords()};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;a.download="ExpenseProfiles_"+new Date().toISOString().split("T")[0]+".json";
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function expImportProfiles(file){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var data=JSON.parse(ev.target.result);
+      if(data.profiles){
+        var existing=expGetProfiles();
+        for(var vk in data.profiles){if(!existing[vk])existing[vk]=data.profiles[vk]}
+        expSaveProfiles(existing);
+      }
+      if(data.prefixMap){
+        var existPfx=JSON.parse(localStorage.getItem("exp_inv_prefix_map")||"{}");
+        for(var pfx in data.prefixMap){if(!existPfx[pfx])existPfx[pfx]=data.prefixMap[pfx]}
+        localStorage.setItem("exp_inv_prefix_map",JSON.stringify(existPfx));
+      }
+      renderExpVendorProfiles();
+      alert("Profiller iceri aktarildi.");
+    }catch(err){alert("Dosya okunamadi: "+err.message)}
+  };
+  reader.readAsText(file);
 }
 
 // ---- HANDOFF INTEGRATION ----
