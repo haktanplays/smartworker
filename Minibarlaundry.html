@@ -117,7 +117,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
  <option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option>
  <option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
  </select>
- <button id="mb_rangeToggle" onclick="mbToggleRange()" style="cursor:pointer;border:1.5px solid #c4b5fd;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:600;background:#fff;color:#7c3aed;transition:all .15s" title="Çoklu ay aralığı seç">Aralık</button>
+ <button id="mb_rangeToggle" onclick="mbToggleRange()" style="cursor:pointer;border:1.5px solid #c4b5fd;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:600;background:#fff;color:#7c3aed;transition:all .15s" title="Çoklu ay seçimi">Dönem</button>
  <button id="mb_compareToggle" onclick="mbToggleCompare()" style="cursor:pointer;border:1.5px solid #e5e7eb;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:600;background:#fff;color:#6b7280;transition:all .15s" title="İki dönemi karşılaştır">Karşılaştır</button>
  <span id="mb_monthStatus" style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#f3f4f6;color:#6b7280">Veri yok</span>
  <span style="margin-left:4px;margin-right:4px;color:#d1d5db">|</span>
@@ -170,11 +170,11 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
  <div class="card" style="padding:9px 14px;margin-bottom:10px">
  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
  <span style="font-size:11px;font-weight:700;color:#1a6b5c;text-transform:uppercase;letter-spacing:.4px">Otel İstat.</span>
- <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">OCC %<input type="number" id="mb_occ" min="0" max="100" step="0.01" placeholder="62.12" style="width:60px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
- <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">Room Nights<input type="number" id="mb_rooms" placeholder="3210" style="width:65px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
- <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">PAX<input type="number" id="mb_pax" placeholder="4861" style="width:65px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
- <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">Kids<input type="number" id="mb_kids" placeholder="224" style="width:55px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
- <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">COMP<input type="number" id="mb_comp" placeholder="133" style="width:55px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
+ <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">OCC %<input type="number" id="mb_occ" min="0" max="100" step="0.01" placeholder="62.12" onchange="mbAutoSaveStats()" style="width:60px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
+ <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">Room Nights<input type="number" id="mb_rooms" placeholder="3210" onchange="mbAutoSaveStats()" style="width:65px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
+ <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">PAX<input type="number" id="mb_pax" placeholder="4861" onchange="mbAutoSaveStats()" style="width:65px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
+ <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">Kids<input type="number" id="mb_kids" placeholder="224" onchange="mbAutoSaveStats()" style="width:55px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
+ <label style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px">COMP<input type="number" id="mb_comp" placeholder="133" onchange="mbAutoSaveStats()" style="width:55px;border:1px solid #d1d5db;border-radius:3px;padding:2px 5px;font-size:12px"></label>
  <div id="mb_quickKpi" style="margin-left:auto;font-size:12px;color:#1a6b5c;font-weight:700"></div>
  </div>
  </div>
@@ -316,6 +316,20 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
  </div>
  </div>
 
+
+ <!-- Yeni Ürün Ekle -->
+ <div class="card" style="margin-bottom:14px;border:1px solid #d1fae5;padding:12px 16px">
+ <div style="font-size:13px;font-weight:700;color:#059669;margin-bottom:8px">+ Yeni Ürün Ekle</div>
+ <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Ürün Adı</label><input type="text" id="mb_newName" placeholder="Örn: Coca Cola Zero" style="width:180px;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px"></div>
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Kategori</label><select id="mb_newCat" style="border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px"><option>Snacks</option><option>Soft Drinks</option><option>Alcohols</option><option>Raffles Souvenirs</option></select></div>
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Satış ₺</label><input type="number" id="mb_newSell" min="0" step="0.01" value="0" style="width:90px;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px;text-align:right"></div>
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Alış ₺</label><input type="number" id="mb_newBuy" min="0" step="0.01" value="0" style="width:90px;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px;text-align:right"></div>
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Protel Kodu</label><input type="text" id="mb_newCode" placeholder="Opsiyonel" style="width:80px;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px"></div>
+  <button class="btn btn-primary" style="padding:5px 14px;font-size:12px" onclick="mbAddProduct()">Ekle</button>
+  <span id="mb_addStatus" style="font-size:11px;color:#6b7280"></span>
+ </div>
+ </div>
  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
  <span style="font-size:13px;font-weight:700;color:#1a6b5c">Ürün Kataloğu</span>
  <span style="font-size:11px;color:#6b7280">· Satış / alış fiyatlarını buradan güncelle — Excel exporta yansır</span>
@@ -332,6 +346,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
  <th style="padding:7px 8px;text-align:center;font-weight:700;white-space:nowrap">Alış Fiyatı ₺</th>
  <th style="padding:7px 8px;text-align:center;font-weight:700;white-space:nowrap">Kâr Marjı</th>
  <th style="padding:7px 8px;text-align:center;font-weight:700;white-space:nowrap" title="Tutarlılık takibi için bu ayda en az kaç adet satılmalı?">Min. Satış ✓</th>
+ <th style="padding:7px 6px;text-align:center;font-weight:700;width:40px"></th>
  </tr>
  </thead>
  <tbody id="mb_priceBody"></tbody>
@@ -386,11 +401,10 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
  <option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option>
  <option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
  </select>
- <button id="ld_rangeToggle" onclick="ldToggleRange()" style="cursor:pointer;border:1.5px solid #c4b5fd;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:600;background:#fff;color:#7c3aed;transition:all .15s" title="Çoklu ay aralığı seç">Aralık</button>
+ <button id="ld_rangeToggle" onclick="ldToggleRange()" style="cursor:pointer;border:1.5px solid #c4b5fd;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:600;background:#fff;color:#7c3aed;transition:all .15s" title="Çoklu ay seçimi">Dönem</button>
  <button id="ld_compareToggle" onclick="ldToggleCompare()" style="cursor:pointer;border:1.5px solid #e5e7eb;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:600;background:#fff;color:#6b7280;transition:all .15s" title="İki dönemi karşılaştır">Karşılaştır</button>
  <span id="ld_monthStatus" style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#f3f4f6;color:#6b7280">Veri yok</span>
  <span style="margin-left:4px;margin-right:4px;color:#d1d5db">|</span>
- <button class="btn btn-primary" style="padding:5px 12px;font-size:12px" onclick="ldSaveData()">Kaydet</button>
  <button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="ldDownloadXLSX()">Excel İndir</button>
  <button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="document.getElementById('ld_pdfInput').click()">PDF Yükle</button>
  <input type="file" id="ld_pdfInput" accept=".pdf" style="display:none" onchange="ldHandlePdf(this)">
@@ -445,7 +459,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
  </div>
  </div>
  <!-- 4-Category Tables -->
- <div id="ld_tableWrap" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px"></div>
+ <div id="ld_tableWrap" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
  </div><!-- /ld_dropZone -->
 </div>
 
@@ -577,6 +591,20 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
  </div>
  </div>
 
+
+ <!-- Yeni Ürün Ekle -->
+ <div class="card" style="margin-bottom:14px;border:1px solid #d1fae5;padding:12px 16px">
+ <div style="font-size:13px;font-weight:700;color:#059669;margin-bottom:8px">+ Yeni Ürün Ekle</div>
+ <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Ürün Adı</label><input type="text" id="ld_newName" placeholder="Örn: Jacket [DC]" style="width:180px;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px"></div>
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Kategori</label><select id="ld_newCat" style="border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px"><option>Pressing</option><option>Laundry</option><option>Dry Cleaning</option></select></div>
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Satış ₺</label><input type="number" id="ld_newSell" min="0" step="0.01" value="0" style="width:90px;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px;text-align:right"></div>
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Alış ₺</label><input type="number" id="ld_newBuy" min="0" step="0.01" value="0" style="width:90px;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px;text-align:right"></div>
+  <div><label style="font-size:10px;color:#6b7280;display:block;margin-bottom:2px">Protel Kodu</label><input type="text" id="ld_newCode" placeholder="Opsiyonel" style="width:80px;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px"></div>
+  <button class="btn btn-primary" style="padding:5px 14px;font-size:12px" onclick="ldAddProduct()">Ekle</button>
+  <span id="ld_addStatus" style="font-size:11px;color:#6b7280"></span>
+ </div>
+ </div>
  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
  <span style="font-size:13px;font-weight:700;color:#1a6b5c">Ürün Kataloğu</span>
  <span style="font-size:11px;color:#6b7280">· Satış / alış fiyatlarını buradan güncelle — Excel exporta yansır</span>
@@ -593,6 +621,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
  <th style="padding:7px 8px;text-align:center;font-weight:700;white-space:nowrap">Alış Fiyatı ₺</th>
  <th style="padding:7px 8px;text-align:center;font-weight:700;white-space:nowrap">Kâr Marjı</th>
  <th style="padding:7px 8px;text-align:center;font-weight:700;white-space:nowrap" title="Tutarlılık takibi için bu ayda en az kaç adet satılmalı?">Min. Satış ✓</th>
+ <th style="padding:7px 6px;text-align:center;font-weight:700;width:40px"></th>
  </tr>
  </thead>
  <tbody id="ld_priceBody"></tbody>
@@ -962,7 +991,7 @@ function mbRenderQuickKpi(data){
  if(el)el.innerHTML="<span style='color:#1a6b5c'>"+mbFmtRev(totalRev)+"</span> ciro &nbsp;·&nbsp; <span style='color:#059669'>"+mbFmtRev(totalProfit)+"</span> kar &nbsp;·&nbsp; <span style='color:"+(margin<70?"#dc2626":"#1a6b5c")+"'>"+margin.toFixed(1)+"%</span> marj &nbsp;·&nbsp; "+totalQty+" adet";
 }
 
-// ---- TABLE (4 category cards, 2x2 grid) ----
+// ---- TABLE (category cards, 2-col grid) ----
 function mbRenderTable(data){
  var products=mbGetProducts(),items=data.items||{};
  var wrap=document.getElementById("mb_tableWrap");
@@ -1045,6 +1074,21 @@ function mbSaveData(){
  if(el){el.textContent="✓ Kaydedildi";el.style.color="#059669";}
  setTimeout(function(){if(el&&el.textContent==="✓ Kaydedildi")el.textContent="";},2000);
  mbRenderStatus(data);
+}
+
+// ---- AUTO-SAVE STATS (instant save on input change) ----
+function mbAutoSaveStats(){
+ var data=mbGetData();
+ var occ=parseFloat(document.getElementById("mb_occ").value)||0;
+ if(occ<0)occ=0;if(occ>100)occ=100;
+ data.stats={
+ occ:occ,
+ rooms:Math.max(0,parseInt(document.getElementById("mb_rooms").value)||0),
+ pax:Math.max(0,parseInt(document.getElementById("mb_pax").value)||0),
+ kids:Math.max(0,parseInt(document.getElementById("mb_kids").value)||0),
+ comp:Math.max(0,parseInt(document.getElementById("mb_comp").value)||0)
+ };
+ mbSaveMonthData(data);
 }
 
 // ---- CLEAR MONTH ----
@@ -1784,11 +1828,11 @@ function mbRenderAnalytics(){
  var col=MB_CAT_COLORS[p.cat]||"#6b7280";
  var w=Math.round(p.ppu/ppuMax*100);
  ppuH+="<div style='display:flex;align-items:center;gap:6px;margin-bottom:4px;cursor:pointer' onclick='showMbProductDetail(\""+p.name.replace(/"/g,"&quot;")+"\")'>"
- +"<span style='min-width:16px;font-size:10px;font-weight:700;color:#9ca3af'>"+(i+1)+"</span>"
- +"<span style='min-width:120px;font-size:11px;font-weight:600;color:#1e293b'>"+p.name+"</span>"
+ +"<span style='width:16px;font-size:10px;font-weight:700;color:#9ca3af;text-align:right;flex-shrink:0'>"+(i+1)+"</span>"
+ +"<span style='width:200px;font-size:11px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0' title='"+p.name+"'>"+p.name+"</span>"
  +"<div style='flex:1;background:#f3f4f6;border-radius:3px;height:14px;position:relative'>"
  +"<div style='height:100%;border-radius:3px;background:"+col+";width:"+w+"%;opacity:.7'></div></div>"
- +"<span style='min-width:55px;text-align:right;font-size:11px;font-weight:700;color:#059669'>₺"+p.ppu.toFixed(0)+"/ad</span></div>";
+ +"<span style='width:80px;text-align:right;font-size:11px;font-weight:700;color:#059669;flex-shrink:0'>₺"+p.ppu.toFixed(0)+"/ad</span></div>";
  });
  if(!ppuH)ppuH="<p style='font-size:11px;color:#9ca3af'>Veri yok</p>";
  ppuEl.innerHTML=ppuH;
@@ -1809,9 +1853,9 @@ function mbRenderAnalytics(){
  rtData.push({month:rti,pct:rtPct,ch:rtCh,rb:rtRb});
  }
  var rtMax=Math.max.apply(null,rtData.map(function(d){return d.pct}))||10;
- var rtH="<div style='display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:6px'>";
+ var rtH="<div style='display:flex;align-items:flex-end;gap:4px;height:110px;margin-bottom:6px'>";
  rtData.forEach(function(d,i){
- var h=rtMax>0?Math.round(d.pct/rtMax*70):0;
+ var h=rtMax>0?Math.round(d.pct/rtMax*90):0;
  var isCur=i+1===mb_currentMonth;
  var isFut=i+1>mb_currentMonth;
  var col=d.pct>15?"#dc2626":d.pct>8?"#f59e0b":"#059669";
@@ -1840,9 +1884,9 @@ function mbRenderAnalytics(){
  rpData.push({month:rpi,revpar:rpVal,rev:rpRev,rooms:rpRooms});
  }
  var rpMax=Math.max.apply(null,rpData.map(function(d){return d.revpar}))||1;
- var rpH="<div style='display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:6px'>";
+ var rpH="<div style='display:flex;align-items:flex-end;gap:4px;height:110px;margin-bottom:6px'>";
  rpData.forEach(function(d,i){
- var h=rpMax>0?Math.round(d.revpar/rpMax*70):0;
+ var h=rpMax>0?Math.round(d.revpar/rpMax*90):0;
  var isCur=i+1===mb_currentMonth;
  var isFut=i+1>mb_currentMonth;
  rpH+="<div style='flex:1;display:flex;flex-direction:column;align-items:center'>"
@@ -2128,7 +2172,7 @@ function mbRenderPrices(){
  if(p.cat!==currentCat){
  currentCat=p.cat;
  var col=catColors[p.cat]||"#1a6b5c";
- html+="<tr><td colspan='6' style='padding:5px 10px;background:"+col+"1a;border-top:2px solid "+col+";font-weight:700;font-size:11px;color:"+col+";letter-spacing:.4px;text-transform:uppercase'>"+p.cat+"</td></tr>";
+ html+="<tr><td colspan='7' style='padding:5px 10px;background:"+col+"1a;border-top:2px solid "+col+";font-weight:700;font-size:11px;color:"+col+";letter-spacing:.4px;text-transform:uppercase'>"+p.cat+"</td></tr>";
  }
  var margin=p.sell>0?((p.sell-(p.buy||0))/p.sell*100):0;
  var mColor=margin<50?"#dc2626":margin<70?"#f59e0b":"#059669";
@@ -2144,10 +2188,47 @@ function mbRenderPrices(){
  +"title='Bu ürün için aylık tutarlılık eşiği — kaç adet satılırsa yeşil nokta?' "
  +"style='width:60px;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;text-align:center;font-size:12px;background:#fafaf8'>"
  +"</td>"
+ +"<td style='padding:3px 4px;text-align:center'><button onclick='mbRemoveProduct("+idx+")' style='border:none;background:none;color:#dc2626;cursor:pointer;font-size:14px' title='Ürünü sil'>✗</button></td>"
  +"</tr>";
  });
  body.innerHTML=html;
  mbRenderTargetTable();
+}
+
+function mbAddProduct(){
+ var name=(document.getElementById("mb_newName").value||"").trim();
+ var cat=document.getElementById("mb_newCat").value;
+ var sell=parseFloat(document.getElementById("mb_newSell").value)||0;
+ var buy=parseFloat(document.getElementById("mb_newBuy").value)||0;
+ var code=(document.getElementById("mb_newCode").value||"").trim();
+ var st=document.getElementById("mb_addStatus");
+ if(!name){if(st){st.textContent="Ürün adı gir";st.style.color="#dc2626";}return;}
+ var products=window._mbPricesDraft||mbGetProducts();
+ if(products.some(function(p){return p.name===name;})){if(st){st.textContent="Bu isimde ürün zaten var";st.style.color="#dc2626";}return;}
+ products.push({name:name,cat:cat,sell:sell,buy:buy,codes:code?[code]:[],minQty:1});
+ // Sort by category order then name
+ var catOrder={};MB_CATS.forEach(function(c,i){catOrder[c]=i;});
+ products.sort(function(a,b){return(catOrder[a.cat]||99)-(catOrder[b.cat]||99)||a.name.localeCompare(b.name);});
+ localStorage.setItem("mb_products",JSON.stringify(products));
+ window._mbPricesDraft=null;
+ document.getElementById("mb_newName").value="";
+ document.getElementById("mb_newSell").value="0";
+ document.getElementById("mb_newBuy").value="0";
+ document.getElementById("mb_newCode").value="";
+ mbRenderPrices();mbRenderAll();
+ if(st){st.textContent="✓ "+name+" eklendi";st.style.color="#059669";}
+ setTimeout(function(){if(st)st.textContent="";},2500);
+}
+
+function mbRemoveProduct(idx){
+ var products=window._mbPricesDraft||mbGetProducts();
+ if(idx<0||idx>=products.length)return;
+ var name=products[idx].name;
+ if(!confirm(name+" ürününü silmek istiyor musun?"))return;
+ products.splice(idx,1);
+ localStorage.setItem("mb_products",JSON.stringify(products));
+ window._mbPricesDraft=null;
+ mbRenderPrices();mbRenderAll();
 }
 
 function mbPriceChanged(input){
@@ -2264,6 +2345,7 @@ function mbParsePdfItems(items,statusEl){
  });
 
  var result={},unmatched=[],compCount=0;
+ var priceLookup={};
  var products=mbGetProducts();
  var reverseMap={};products.forEach(function(p){(p.codes||[]).forEach(function(c){reverseMap[c]=p.name;});});
 
@@ -2305,6 +2387,14 @@ function mbParsePdfItems(items,statusEl){
  if(qty<0)result[productName].rebated+=Math.abs(qty);
  else result[productName].charged+=qty;
  }
+
+ // Birim fiyat: amount/qty (pozitif satırlardan, en yüksek qty'li)
+ if(amount>0&&qty>0){
+ var unitPrice=Math.round(amount/qty*100)/100;
+ if(!priceLookup[productName]||qty>priceLookup[productName].qty){
+  priceLookup[productName]={price:unitPrice,qty:qty};
+ }
+ }
  });
 
  var matched=Object.keys(result).length;
@@ -2317,10 +2407,25 @@ function mbParsePdfItems(items,statusEl){
  }
  Object.keys(result).forEach(function(name){monthData.items[name]=result[name];});
  mbSaveMonthData(monthData);
+
+ // Satış fiyatlarını PDF ortalamasıyla güncelle (her PDF yüklemesinde)
+ var priceUpdated=0;
+ if(Object.keys(priceLookup).length>0){
+ products=mbGetProducts();
+ products.forEach(function(p){
+  if(priceLookup[p.name]){
+  p.sell=priceLookup[p.name].price;
+  priceUpdated++;
+  }
+ });
+ if(priceUpdated>0)localStorage.setItem("mb_products",JSON.stringify(products));
+ }
+
  mbRenderAll();
 
  var realUnm=unmatched.filter(function(u){return!MB_CODE_MAP.hasOwnProperty(u.code)||MB_CODE_MAP[u.code]!==null;});
  var msg="✓ "+matched+" ürün aktarıldı";
+ if(priceUpdated>0)msg+=" · "+priceUpdated+" fiyat güncellendi";
  if(compCount>0)msg+=" · "+compCount+" comp atlandı";
  if(realUnm.length>0)msg+=" · ! "+realUnm.length+" bilinmeyen: "+realUnm.slice(0,4).map(function(u){return u.code;}).join(", ");
  if(statusEl){statusEl.textContent=msg;statusEl.style.color=realUnm.length>0?"#f59e0b":"#059669";}
@@ -2828,61 +2933,94 @@ var ld_B_year=null;
 
 var LD_CODE_MAP={
  // Pressing
- "144":"Shirt [P]","145":"Trousers [P]","142":"Suit 2 Pcs [P]",
- "143":"Jacket / Blazer [P]","154":"Polo Tshirt [P]","156":"Pull Over [P]",
+ "142":"Suit 2 Pcs [P]","143":"Jacket / Blazer [P]",
+ "144":"Shirt [P]","145":"Trousers [P]","148":"Dress [P]","149":"Overcoat [P]",
+ "150":"Skirt [P]","151":"Raincoat [P]","152":"Blouse [P]","153":"Scarf [P]",
+ "154":"Polo / T-Shirt [P]","155":"Waistcoat [P]","156":"Pull Over [P]",
  // Laundry
- "122":"Shirt [L]","111":"Trousers [L]","124":"Suit 2 Pcs [L]",
- "125":"Jacket / Blazer [L]","135":"Polo Tshirt [L]",
- "110":"Shorts","112":"Pyjama","113":"Undershirt","114":"Socks",
- "116":"Panties / Underwear","134":"Scarf","139":"Tracksuit","162":"Yukata",
+ "110":"Shorts [L]","111":"Trousers [L]","112":"Pyjamas [L]","113":"Undershirts [L]",
+ "114":"Socks [L]","115":"Blouse [L]","116":"Panties / Underwear [L]",
+ "117":"Brassieres [L]","118":"Handkerchief [L]","119":"Hat [L]",
+ "120":"Dress [L]","121":"Nightgown [L]","122":"Shirt [L]",
+ "135":"Polo / T-Shirt [L]","139":"Tracksuit [L]",
  // Dry Cleaning
- "126":"Shirt [DC]","127":"Trousers [DC]","141":"Pull Over [DC]",
- // Unknown laundry codes (not in current PDF but in Protel system — add as discovered)
- "115":null,"117":null,"118":null,"119":null,"120":null,"121":null,
- "128":null,"129":null,"130":null,"1308":null,"131":null,"132":null,"133":null,
- "148":null,"149":null,"150":null,"151":null,"153":null,"155":null,"164":null,
- // Minibar codes → skip
+ "126":"Shirt [DC]","127":"Trousers [DC]","128":"Tie [DC]","129":"Dress [DC]",
+ "130":"Overcoat [DC]","1308":"Waistcoat [DC]","131":"Skirt [DC]",
+ "132":"Raincoat [DC]","133":"Blouse [DC]","134":"Scarf [DC]","141":"Pull Over [DC]",
+ // Skip — Protel'de var ama listede yok (Suit/Jacket L) + satis/minibar/aksesuar
+ "124":null,"125":null,
+ "162":null,"164":null,"157":null,"146":null,"350":null,"171":null,"180":null,
  "010":null,"11":null,"12":null,"16":null,"17":null,"18":null,"19":null,"21":null,
  "200":null,"201":null,"202":null,"203":null,"204":null,"205":null,"206":null,
  "207":null,"208":null,"209":null,"210":null,"2101":null,"211":null,"212":null,
  "213":null,"214":null,"215":null,"216":null,"217":null,"218":null,
- "27":null,"28":null,"29":null,"30":null,"31":null,
+ "22":null,"27":null,"28":null,"29":null,"30":null,"31":null,"32":null,
+ "37":null,"38":null,"39":null,"41":null,"42":null,
  "43":null,"44":null,"45":null,"47":null,"48":null,"50":null,"53":null,
- "57":null,"67":null,"68":null,"69":null,"75":null,"81":null,"83":null,"84":null,
- "85":null,"86":null,"87":null,"88":null,"89":null,"90":null,
- "146":null,"350":null,
- "22":null,"32":null,"38":null,"73":null,"76":null,"166":null,"172":null
+ "57":null,"67":null,"68":null,"69":null,"73":null,"75":null,"76":null,
+ "80":null,"81":null,"82":null,"83":null,"84":null,"85":null,"86":null,
+ "87":null,"88":null,"89":null,"90":null,"91":null,
+ "166":null,"172":null
 };
 
 var LD_DEFAULT_PRODUCTS=[
- // ─── Pressing ─────────────────────────────────
- {name:"Shirt [P]",cat:"Pressing",sell:873,buy:0,codes:["144"]},
- {name:"Trousers [P]",cat:"Pressing",sell:873,buy:0,codes:["145"]},
- {name:"Suit 2 Pcs [P]",cat:"Pressing",sell:1337,buy:0,codes:["142"]},
- {name:"Jacket / Blazer [P]",cat:"Pressing",sell:977,buy:0,codes:["143"]},
- {name:"Polo Tshirt [P]",cat:"Pressing",sell:653,buy:0,codes:["154"]},
- {name:"Pull Over [P]",cat:"Pressing",sell:853,buy:0,codes:["156"]},
- // ─── Laundry ──────────────────────────────────
- {name:"Shirt [L]",cat:"Laundry",sell:919,buy:0,codes:["122"]},
- {name:"Trousers [L]",cat:"Laundry",sell:1151,buy:0,codes:["111"]},
- {name:"Suit 2 Pcs [L]",cat:"Laundry",sell:2127,buy:0,codes:["124"]},
- {name:"Jacket / Blazer [L]",cat:"Laundry",sell:1607,buy:0,codes:["125"]},
- {name:"Polo Tshirt [L]",cat:"Laundry",sell:724,buy:0,codes:["135"]},
- {name:"Shorts",cat:"Laundry",sell:630,buy:0,codes:["110"]},
- {name:"Pyjama",cat:"Laundry",sell:943,buy:0,codes:["112"]},
- {name:"Undershirt",cat:"Laundry",sell:575,buy:0,codes:["113"]},
- {name:"Socks",cat:"Laundry",sell:418,buy:0,codes:["114"]},
- {name:"Panties / Underwear",cat:"Laundry",sell:574,buy:0,codes:["116"]},
- {name:"Scarf",cat:"Laundry",sell:877,buy:0,codes:["134"]},
- {name:"Tracksuit",cat:"Laundry",sell:825,buy:0,codes:["139"]},
- {name:"Yukata",cat:"Laundry",sell:19997,buy:0,codes:["162"]},
- // ─── Dry Cleaning ─────────────────────────────
- {name:"Shirt [DC]",cat:"Dry Cleaning",sell:1141,buy:0,codes:["126"]},
- {name:"Trousers [DC]",cat:"Dry Cleaning",sell:1242,buy:0,codes:["127"]},
- {name:"Pull Over [DC]",cat:"Dry Cleaning",sell:1132,buy:0,codes:["141"]}
+ // ─── Pressing (14) ───
+ {name:"Suit 2 Pcs [P]",cat:"Pressing",sell:0,buy:0,codes:["142"]},
+ {name:"Jacket / Blazer [P]",cat:"Pressing",sell:0,buy:0,codes:["143"]},
+ {name:"Shirt [P]",cat:"Pressing",sell:0,buy:0,codes:["144"]},
+ {name:"Polo / T-Shirt [P]",cat:"Pressing",sell:0,buy:0,codes:["154"]},
+ {name:"Trousers [P]",cat:"Pressing",sell:0,buy:0,codes:["145"]},
+ {name:"Tie [P]",cat:"Pressing",sell:0,buy:0,codes:[]},
+ {name:"Pull Over [P]",cat:"Pressing",sell:0,buy:0,codes:["156"]},
+ {name:"Dress [P]",cat:"Pressing",sell:0,buy:0,codes:["148"]},
+ {name:"Skirt [P]",cat:"Pressing",sell:0,buy:0,codes:["150"]},
+ {name:"Overcoat [P]",cat:"Pressing",sell:0,buy:0,codes:["149"]},
+ {name:"Raincoat [P]",cat:"Pressing",sell:0,buy:0,codes:["151"]},
+ {name:"Blouse [P]",cat:"Pressing",sell:0,buy:0,codes:["152"]},
+ {name:"Scarf [P]",cat:"Pressing",sell:0,buy:0,codes:["153"]},
+ {name:"Handkerchief [P]",cat:"Pressing",sell:0,buy:0,codes:[]},
+ {name:"Waistcoat [P]",cat:"Pressing",sell:0,buy:0,codes:["155"]},
+ // ─── Laundry (15) ───
+ {name:"Shirt [L]",cat:"Laundry",sell:0,buy:0,codes:["122"]},
+ {name:"Polo / T-Shirt [L]",cat:"Laundry",sell:0,buy:0,codes:["135"]},
+ {name:"Shorts [L]",cat:"Laundry",sell:0,buy:0,codes:["110"]},
+ {name:"Trousers [L]",cat:"Laundry",sell:0,buy:0,codes:["111"]},
+ {name:"Dress [L]",cat:"Laundry",sell:0,buy:0,codes:["120"]},
+ {name:"Blouse [L]",cat:"Laundry",sell:0,buy:0,codes:["115"]},
+ {name:"Pyjamas [L]",cat:"Laundry",sell:0,buy:0,codes:["112"]},
+ {name:"Undershirts [L]",cat:"Laundry",sell:0,buy:0,codes:["113"]},
+ {name:"Socks [L]",cat:"Laundry",sell:0,buy:0,codes:["114"]},
+ {name:"Panties / Underwear [L]",cat:"Laundry",sell:0,buy:0,codes:["116"]},
+ {name:"Brassieres [L]",cat:"Laundry",sell:0,buy:0,codes:["117"]},
+ {name:"Handkerchief [L]",cat:"Laundry",sell:0,buy:0,codes:["118"]},
+ {name:"Hat [L]",cat:"Laundry",sell:0,buy:0,codes:["119"]},
+ {name:"Nightgown [L]",cat:"Laundry",sell:0,buy:0,codes:["121"]},
+ {name:"Tracksuit [L]",cat:"Laundry",sell:0,buy:0,codes:["139"]},
+ // ─── Dry Cleaning (14) ───
+ {name:"Suit 2 Pcs [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:[]},
+ {name:"Jacket / Blazer [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:[]},
+ {name:"Shirt [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["126"]},
+ {name:"Trousers [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["127"]},
+ {name:"Tie [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["128"]},
+ {name:"Pull Over [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["141"]},
+ {name:"Dress [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["129"]},
+ {name:"Skirt [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["131"]},
+ {name:"Overcoat [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["130"]},
+ {name:"Raincoat [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["132"]},
+ {name:"Blouse [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["133"]},
+ {name:"Scarf [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["134"]},
+ {name:"Waistcoat [DC]",cat:"Dry Cleaning",sell:0,buy:0,codes:["1308"]}
 ];
 
 // ---- HELPERS ----
+// Version migration: clear old product cache when product definitions change
+(function(){
+ var LD_PRODUCT_VERSION="LD_V6"; // bump this when LD_DEFAULT_PRODUCTS changes
+ if(localStorage.getItem("ld_product_version")!==LD_PRODUCT_VERSION){
+  localStorage.removeItem("ld_products"); // force reload from LD_DEFAULT_PRODUCTS
+  localStorage.setItem("ld_product_version",LD_PRODUCT_VERSION);
+ }
+})();
 function ldGetProducts(){try{var s=localStorage.getItem("ld_products");return s?JSON.parse(s):LD_DEFAULT_PRODUCTS.map(function(p){return Object.assign({},p)});}catch(e){return LD_DEFAULT_PRODUCTS.map(function(p){return Object.assign({},p);});}}
 function ldGetKey(m,y){m=m||ld_currentMonth;y=y||ld_currentYear;return"ld_"+y+"_"+String(m).padStart(2,"0");}
 function ldGetData(m,y){try{var s=localStorage.getItem(ldGetKey(m,y));return s?JSON.parse(s):{items:{},stats:{}};}catch(e){return{items:{},stats:{}};}}
@@ -3065,7 +3203,7 @@ function ldRenderQuickKpi(data){
   if(el)el.innerHTML="<span style='color:#1a6b5c'>"+ldFmtRev(totalRev)+"</span> ciro &nbsp;·&nbsp; <b>"+totalCh+"</b> parca &nbsp;·&nbsp; "+ldFmtRev(avgPiece)+" /parca";
 }
 
-// ---- TABLE (4 category cards, 2x2 grid) ----
+// ---- TABLE (category cards, 2-col grid) ----
 function ldRenderTable(data){
  var products=ldGetProducts(),items=data.items||{};
  var wrap=document.getElementById("ld_tableWrap");
@@ -3075,46 +3213,42 @@ function ldRenderTable(data){
  var catProds=products.filter(function(p){return p.cat===cat;});
  var col=LD_CAT_COLORS[cat]||"#1a6b5c";
  var catCh=0,catRb=0,catRev=0,catProfit=0;
- // header
  var tbl="<div class='card' style='padding:0;overflow:hidden'>"
- +"<div style='padding:8px 10px;background:"+col+";color:#fff;font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase'>"+cat+"</div>"
- +"<table style='width:100%;border-collapse:collapse;font-size:11px'>"
+ +"<div style='padding:8px 10px;background:"+col+";color:#fff;font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase'>"+cat+" <span style='opacity:.6;font-size:9px;font-weight:400;margin-left:4px'>("+catProds.length+" urun)</span></div>"
+ +"<div style='overflow-x:auto'>"
+ +"<table style='width:100%;border-collapse:collapse;font-size:11px;min-width:410px'>"
  +"<thead><tr style='background:#f9fafb'>"
- +"<th style='padding:5px 7px;text-align:left;border-bottom:1px solid #e5e7eb;color:#374151;white-space:nowrap'>Ürün</th>"
- +"<th style='padding:5px 5px;text-align:right;border-bottom:1px solid #e5e7eb;color:#374151'>Satış ₺</th>"
- +"<th style='padding:5px 5px;text-align:right;border-bottom:1px solid #e5e7eb;color:#374151'>Alış ₺</th>"
- +"<th style='padding:5px 5px;text-align:center;border-bottom:1px solid #e5e7eb;color:"+col+"'>Charged</th>"
- +"<th style='padding:5px 5px;text-align:center;border-bottom:1px solid #e5e7eb;color:#dc2626'>Rebated</th>"
- +"<th style='padding:5px 5px;text-align:right;border-bottom:1px solid #e5e7eb;color:#059669'>Kar ₺</th>"
- +"<th style='padding:5px 5px;text-align:right;border-bottom:1px solid #e5e7eb;color:#374151'>Ciro ₺</th>"
+ +"<th style='padding:4px 6px;text-align:left;border-bottom:1px solid #e5e7eb;color:#374151;white-space:nowrap'>Urun</th>"
+ +"<th style='padding:4px 4px;text-align:right;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:10px'>Satis &#8378;</th>"
+ +"<th style='padding:4px 4px;text-align:right;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:10px'>Alis &#8378;</th>"
+ +"<th style='padding:4px 4px;text-align:center;border-bottom:1px solid #e5e7eb;color:"+col+";font-size:10px'>Charged</th>"
+ +"<th style='padding:4px 4px;text-align:center;border-bottom:1px solid #e5e7eb;color:#dc2626;font-size:10px'>Rebated</th>"
+ +"<th style='padding:4px 4px;text-align:right;border-bottom:1px solid #e5e7eb;color:#374151;font-size:10px'>Ciro &#8378;</th>"
  +"</tr></thead><tbody>";
 
  catProds.forEach(function(p){
  var c=ldCalcItem(p,items);
  catCh+=c.ch;catRb+=c.rb;catRev+=c.rev;catProfit+=c.profit;
  var nm=p.name.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
- var bgRow=c.rev>0?"":"";
  tbl+="<tr style='border-bottom:1px solid #f3f4f6"+(c.rev>0?"":";opacity:.65")+"'>"
- +"<td style='padding:4px 7px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' title='"+p.name+"'>"+p.name+"</td>"
- +"<td style='padding:4px 5px;text-align:right;color:#6b7280'>"+ldFmtN(p.sell)+"</td>"
- +"<td style='padding:4px 5px;text-align:right;color:#6b7280'>"+ldFmtN(p.buy)+"</td>"
- +"<td style='padding:3px 4px;text-align:center'><input type='number' min='0' value='"+(c.ch||"")+"' placeholder='0' style='width:52px;border:1px solid #d1d5db;border-radius:3px;padding:2px 3px;text-align:center;font-size:11px' onchange=\"ldUpdQty('"+nm+"','charged',this.value)\"></td>"
- +"<td style='padding:3px 4px;text-align:center'><input type='number' min='0' value='"+(c.rb||"")+"' placeholder='0' style='width:52px;border:1px solid #fca5a5;border-radius:3px;padding:2px 3px;text-align:center;font-size:11px;color:#dc2626' onchange=\"ldUpdQty('"+nm+"','rebated',this.value)\"></td>"
- +"<td style='padding:4px 5px;text-align:right;color:#059669;font-weight:600'>"+(c.rev?ldFmtRev(c.profit):"-")+"</td>"
- +"<td style='padding:4px 5px;text-align:right;font-weight:600'>"+(c.rev?ldFmtRev(c.rev):"-")+"</td>"
+ +"<td style='padding:3px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px' title='"+p.name+"'>"+p.name+"</td>"
+ +"<td style='padding:3px 4px;text-align:right;color:#6b7280;font-size:10px;white-space:nowrap'>"+ldFmtN(p.sell)+"</td>"
+ +"<td style='padding:3px 4px;text-align:right;color:#6b7280;font-size:10px;white-space:nowrap'>"+ldFmtN(p.buy)+"</td>"
+ +"<td style='padding:2px 3px;text-align:center'><input type='number' min='0' value='"+(c.ch||"")+"' placeholder='0' style='width:44px;border:1px solid #d1d5db;border-radius:3px;padding:2px;text-align:center;font-size:11px' onchange=\"ldUpdQty('"+nm+"','charged',this.value)\"></td>"
+ +"<td style='padding:2px 3px;text-align:center'><input type='number' min='0' value='"+(c.rb||"")+"' placeholder='0' style='width:44px;border:1px solid #fca5a5;border-radius:3px;padding:2px;text-align:center;font-size:11px;color:#dc2626' onchange=\"ldUpdQty('"+nm+"','rebated',this.value)\"></td>"
+ +"<td style='padding:3px 4px;text-align:right;font-weight:600;font-size:10px;white-space:nowrap'>"+(c.rev?ldFmtRev(c.rev):"-")+"</td>"
  +"</tr>";
  });
 
- var catM=catRev>0?(catProfit/catRev*100):0;
+ catCh=catCh;catRb=catRb;
  tbl+="<tr style='background:#f8fafc;font-weight:700;border-top:2px solid "+col+"'>"
- +"<td style='padding:5px 7px;color:"+col+";font-size:10px;text-transform:uppercase;letter-spacing:.3px'>TOPLAM</td>"
+ +"<td style='padding:4px 6px;color:"+col+";font-size:10px;text-transform:uppercase;letter-spacing:.3px'>TOPLAM</td>"
  +"<td></td><td></td>"
- +"<td style='padding:5px 5px;text-align:center;color:"+col+"'>"+catCh+"</td>"
- +"<td style='padding:5px 5px;text-align:center;color:#dc2626'>"+catRb+"</td>"
- +"<td style='padding:5px 5px;text-align:right;color:#059669'>"+ldFmtRev(catProfit)+"</td>"
- +"<td style='padding:5px 5px;text-align:right'>"+ldFmtRev(catRev)+" <span style='font-size:9px;color:#6b7280'>("+catM.toFixed(0)+"%)</span></td>"
+ +"<td style='padding:4px 4px;text-align:center;color:"+col+"'>"+catCh+"</td>"
+ +"<td style='padding:4px 4px;text-align:center;color:#dc2626'>"+catRb+"</td>"
+ +"<td style='padding:4px 4px;text-align:right;white-space:nowrap'>"+ldFmtRev(catRev)+"</td>"
  +"</tr>";
- tbl+="</tbody></table></div>";
+ tbl+="</tbody></table></div></div>";
  html+=tbl;
  });
  wrap.innerHTML=html;
@@ -3129,25 +3263,6 @@ function ldUpdQty(name,field,val){
  ldRenderStatus(data);
  ldRenderQuickKpi(data);
  ldRenderTable(data);
-}
-
-// ---- SAVE (stats) ----
-function ldSaveData(){
- var data=ldGetData();
- var occ=parseFloat(document.getElementById("ld_occ").value)||0;
- if(occ<0)occ=0;if(occ>100)occ=100;
- data.stats={
- occ:occ,
- rooms:Math.max(0,parseInt(document.getElementById("ld_rooms").value)||0),
- pax:Math.max(0,parseInt(document.getElementById("ld_pax").value)||0),
- kids:Math.max(0,parseInt(document.getElementById("ld_kids").value)||0),
- comp:Math.max(0,parseInt(document.getElementById("ld_comp").value)||0)
- };
- ldSaveMonthData(data);
- var el=document.getElementById("ld_pdfStatus");
- if(el){el.textContent="✓ Kaydedildi";el.style.color="#059669";}
- setTimeout(function(){if(el&&el.textContent==="✓ Kaydedildi")el.textContent="";},2000);
- ldRenderStatus(data);
 }
 
 // ---- CLEAR MONTH ----
@@ -3969,11 +4084,11 @@ function ldRenderAnalytics(){
  var col=LD_CAT_COLORS[p.cat]||"#6b7280";
  var w=Math.round(p.ppu/ppuMax*100);
  ppuH+="<div style='display:flex;align-items:center;gap:6px;margin-bottom:4px;cursor:pointer' onclick='showLdProductDetail(\""+p.name.replace(/"/g,"&quot;")+"\")'>"
- +"<span style='min-width:16px;font-size:10px;font-weight:700;color:#9ca3af'>"+(i+1)+"</span>"
- +"<span style='min-width:120px;font-size:11px;font-weight:600;color:#1e293b'>"+p.name+"</span>"
+ +"<span style='width:16px;font-size:10px;font-weight:700;color:#9ca3af;text-align:right;flex-shrink:0'>"+(i+1)+"</span>"
+ +"<span style='width:200px;font-size:11px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0' title='"+p.name+"'>"+p.name+"</span>"
  +"<div style='flex:1;background:#f3f4f6;border-radius:3px;height:14px;position:relative'>"
  +"<div style='height:100%;border-radius:3px;background:"+col+";width:"+w+"%;opacity:.7'></div></div>"
- +"<span style='min-width:55px;text-align:right;font-size:11px;font-weight:700;color:#059669'>₺"+p.ppu.toFixed(0)+"/ad</span></div>";
+ +"<span style='width:80px;text-align:right;font-size:11px;font-weight:700;color:#059669;flex-shrink:0'>₺"+p.ppu.toFixed(0)+"/ad</span></div>";
  });
  if(!ppuH)ppuH="<p style='font-size:11px;color:#9ca3af'>Veri yok</p>";
  ppuEl.innerHTML=ppuH;
@@ -3994,9 +4109,9 @@ function ldRenderAnalytics(){
  rtData.push({month:rti,pct:rtPct,ch:rtCh,rb:rtRb});
  }
  var rtMax=Math.max.apply(null,rtData.map(function(d){return d.pct}))||10;
- var rtH="<div style='display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:6px'>";
+ var rtH="<div style='display:flex;align-items:flex-end;gap:4px;height:110px;margin-bottom:6px'>";
  rtData.forEach(function(d,i){
- var h=rtMax>0?Math.round(d.pct/rtMax*70):0;
+ var h=rtMax>0?Math.round(d.pct/rtMax*90):0;
  var isCur=i+1===ld_currentMonth;
  var isFut=i+1>ld_currentMonth;
  var col=d.pct>15?"#dc2626":d.pct>8?"#f59e0b":"#059669";
@@ -4025,9 +4140,9 @@ function ldRenderAnalytics(){
  rpData.push({month:rpi,revpar:rpVal,rev:rpRev,rooms:rpRooms});
  }
  var rpMax=Math.max.apply(null,rpData.map(function(d){return d.revpar}))||1;
- var rpH="<div style='display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:6px'>";
+ var rpH="<div style='display:flex;align-items:flex-end;gap:4px;height:110px;margin-bottom:6px'>";
  rpData.forEach(function(d,i){
- var h=rpMax>0?Math.round(d.revpar/rpMax*70):0;
+ var h=rpMax>0?Math.round(d.revpar/rpMax*90):0;
  var isCur=i+1===ld_currentMonth;
  var isFut=i+1>ld_currentMonth;
  rpH+="<div style='flex:1;display:flex;flex-direction:column;align-items:center'>"
@@ -4313,7 +4428,7 @@ function ldRenderPrices(){
  if(p.cat!==currentCat){
  currentCat=p.cat;
  var col=catColors[p.cat]||"#1a6b5c";
- html+="<tr><td colspan='6' style='padding:5px 10px;background:"+col+"1a;border-top:2px solid "+col+";font-weight:700;font-size:11px;color:"+col+";letter-spacing:.4px;text-transform:uppercase'>"+p.cat+"</td></tr>";
+ html+="<tr><td colspan='7' style='padding:5px 10px;background:"+col+"1a;border-top:2px solid "+col+";font-weight:700;font-size:11px;color:"+col+";letter-spacing:.4px;text-transform:uppercase'>"+p.cat+"</td></tr>";
  }
  var margin=p.sell>0?((p.sell-(p.buy||0))/p.sell*100):0;
  var mColor=margin<50?"#dc2626":margin<70?"#f59e0b":"#059669";
@@ -4329,10 +4444,46 @@ function ldRenderPrices(){
  +"title='Bu ürün için aylık tutarlılık eşiği — kaç adet satılırsa yeşil nokta?' "
  +"style='width:60px;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;text-align:center;font-size:12px;background:#fafaf8'>"
  +"</td>"
+ +"<td style='padding:3px 4px;text-align:center'><button onclick='ldRemoveProduct("+idx+")' style='border:none;background:none;color:#dc2626;cursor:pointer;font-size:14px' title='Ürünü sil'>✗</button></td>"
  +"</tr>";
  });
  body.innerHTML=html;
  ldRenderTargetTable();
+}
+
+function ldAddProduct(){
+ var name=(document.getElementById("ld_newName").value||"").trim();
+ var cat=document.getElementById("ld_newCat").value;
+ var sell=parseFloat(document.getElementById("ld_newSell").value)||0;
+ var buy=parseFloat(document.getElementById("ld_newBuy").value)||0;
+ var code=(document.getElementById("ld_newCode").value||"").trim();
+ var st=document.getElementById("ld_addStatus");
+ if(!name){if(st){st.textContent="Ürün adı gir";st.style.color="#dc2626";}return;}
+ var products=window._ldPricesDraft||ldGetProducts();
+ if(products.some(function(p){return p.name===name;})){if(st){st.textContent="Bu isimde ürün zaten var";st.style.color="#dc2626";}return;}
+ products.push({name:name,cat:cat,sell:sell,buy:buy,codes:code?[code]:[],minQty:1});
+ var catOrder={};LD_CATS.forEach(function(c,i){catOrder[c]=i;});
+ products.sort(function(a,b){return(catOrder[a.cat]||99)-(catOrder[b.cat]||99)||a.name.localeCompare(b.name);});
+ localStorage.setItem("ld_products",JSON.stringify(products));
+ window._ldPricesDraft=null;
+ document.getElementById("ld_newName").value="";
+ document.getElementById("ld_newSell").value="0";
+ document.getElementById("ld_newBuy").value="0";
+ document.getElementById("ld_newCode").value="";
+ ldRenderPrices();ldRenderAll();
+ if(st){st.textContent="✓ "+name+" eklendi";st.style.color="#059669";}
+ setTimeout(function(){if(st)st.textContent="";},2500);
+}
+
+function ldRemoveProduct(idx){
+ var products=window._ldPricesDraft||ldGetProducts();
+ if(idx<0||idx>=products.length)return;
+ var name=products[idx].name;
+ if(!confirm(name+" ürününü silmek istiyor musun?"))return;
+ products.splice(idx,1);
+ localStorage.setItem("ld_products",JSON.stringify(products));
+ window._ldPricesDraft=null;
+ ldRenderPrices();ldRenderAll();
 }
 
 function ldPriceChanged(input){
@@ -4436,6 +4587,8 @@ function ldParsePdfItems(items,statusEl){
  var revHdr=revHdrs[revHdrs.length-1];
  var revMinX=revHdr?revHdr.x-80:800, revMaxX=revHdr?revHdr.x+80:1050;
 
+ // Avg. Price: revenue/qty'den hesapla (kolon algılamaya gerek yok)
+
  // --- İlgili sütundaki token'ları filtrele ---
  var codeItems=items.filter(function(i){
  return i.x>=codeMinX&&i.x<=codeMaxX&&/^\d{1,4}$/.test(i.text)&&i.text!=="0";
@@ -4449,6 +4602,7 @@ function ldParsePdfItems(items,statusEl){
  });
 
  var result={},unmatched=[],compCount=0;
+ var priceLookup={}; // productName → {price, qty} (en yüksek qty'li pozitif satırdan al)
  var products=ldGetProducts();
  var reverseMap={};products.forEach(function(p){(p.codes||[]).forEach(function(c){reverseMap[c]=p.name;});});
 
@@ -4461,34 +4615,39 @@ function ldParsePdfItems(items,statusEl){
  });
  if(!qtyMatch)return;
  var qty=parseInt(qtyMatch.text);
- if(qty===0)return; // Protel'de qty=0 satırı yok normalde, ama güvenlik için
+ if(qty===0)return;
 
  // Aynı satırdaki amount
  var amtMatch=amtItems.find(function(a){
  return a.page===codeItem.page&&Math.abs(a.y-codeItem.y)<=8;
  });
- // Amount değerini parse et — virgülleri kaldır
  var amount=amtMatch?parseFloat(amtMatch.text.replace(/,/g,"")):null;
 
- // Comp → amount=0 veya 0.00 → atla, ne charged ne rebated
+ // Comp → amount=0 veya 0.00 → atla
  if(amount!==null&&amount===0){compCount++;return;}
 
  // Minibar / non-laundry → atla
  if(LD_CODE_MAP.hasOwnProperty(code)&&LD_CODE_MAP[code]===null)return;
 
- var productName=LD_CODE_MAP[code]||reverseMap[code]||null;
+ var productName=reverseMap[code]||LD_CODE_MAP[code]||null;
  if(!productName){unmatched.push({code:code,qty:qty,amount:amount});return;}
 
  if(!result[productName])result[productName]={charged:0,rebated:0};
 
  if(amount!==null){
- // Amount'a göre karar ver (daha güvenilir)
  if(amount<0)result[productName].rebated+=Math.abs(qty);
- else result[productName].charged+=qty; // amount > 0
+ else result[productName].charged+=qty;
  } else {
- // Amount bulunamazsa qty'ye göre fallback
  if(qty<0)result[productName].rebated+=Math.abs(qty);
  else result[productName].charged+=qty;
+ }
+
+ // Birim fiyat: amount/qty (pozitif satırlardan al, en yüksek qty'li)
+ if(amount>0&&qty>0){
+ var unitPrice=Math.round(amount/qty*100)/100;
+ if(!priceLookup[productName]||qty>priceLookup[productName].qty){
+  priceLookup[productName]={price:unitPrice,qty:qty};
+ }
  }
  });
 
@@ -4502,10 +4661,27 @@ function ldParsePdfItems(items,statusEl){
  }
  Object.keys(result).forEach(function(name){monthData.items[name]=result[name];});
  ldSaveMonthData(monthData);
+
+ // Fiyatı 0 olan ürünlere PDF'deki avg price'ı otomatik doldur
+ var priceUpdated=0;
+ console.log("[LD Parser] priceLookup:",JSON.stringify(priceLookup));
+ if(Object.keys(priceLookup).length>0){
+ products=ldGetProducts(); // reload fresh
+ products.forEach(function(p){
+  if(priceLookup[p.name]){
+  p.sell=priceLookup[p.name].price;
+  priceUpdated++;
+  }
+ });
+ if(priceUpdated>0)localStorage.setItem("ld_products",JSON.stringify(products));
+ }
+
  ldRenderAll();
 
  var realUnm=unmatched.filter(function(u){return!LD_CODE_MAP.hasOwnProperty(u.code)||LD_CODE_MAP[u.code]!==null;});
  var msg="✓ "+matched+" ürün aktarıldı";
+ if(priceUpdated>0)msg+=" · "+priceUpdated+" fiyat güncellendi";
+ else msg+=" · fiyat: "+Object.keys(priceLookup).length+" tespit / "+priceUpdated+" güncellendi";
  if(compCount>0)msg+=" · "+compCount+" comp atlandı";
  if(realUnm.length>0)msg+=" · ! "+realUnm.length+" bilinmeyen: "+realUnm.slice(0,4).map(function(u){return u.code;}).join(", ");
  if(statusEl){statusEl.textContent=msg;statusEl.style.color=realUnm.length>0?"#f59e0b":"#059669";}
@@ -4514,7 +4690,10 @@ function ldParsePdfItems(items,statusEl){
 // ---- XLSX EXPORT ----
 function ldDownloadXLSX(){
  if(typeof XLSX==="undefined"){alert("XLSX kütüphanesi yüklü değil");return;}
- var products=ldGetProducts(),data=ldGetData(),items=data.items||{},stats=data.stats||{};
+ var products=ldGetProducts(),data=ldGetData(),items=data.items||{};
+ // Hotel stats come from Minibar module (shared)
+ var mbMonthData=mbGetData(ld_currentMonth,ld_currentYear);
+ var stats=mbMonthData.stats||{};
  var monthLabel=LD_MONTHS_EN[ld_currentMonth-1].toUpperCase();
  var fileLabel=LD_MONTHS_EN[ld_currentMonth-1]+"_"+ld_currentYear;
  var cats={};LD_CATS.forEach(function(c){cats[c]=products.filter(function(p){return p.cat===c;});});
@@ -5056,6 +5235,7 @@ function unifiedParsePdfItems(items,statusEl){
  var ldReverseMap={};ldProducts.forEach(function(p){(p.codes||[]).forEach(function(c){ldReverseMap[c]=p.name;});});
 
  var mbResult={},ldResult={},unmatched=[],compCount=0;
+ var mbPriceLookup={},ldPriceLookup={};
 
  codeItems.forEach(function(codeItem){
  var code=codeItem.text;
@@ -5085,12 +5265,20 @@ function unifiedParsePdfItems(items,statusEl){
  if(!mbResult[mbName])mbResult[mbName]={charged:0,rebated:0};
  if(isRebated)mbResult[mbName].rebated+=absQty;
  else mbResult[mbName].charged+=absQty;
+ if(amount>0&&qty>0){
+  var up=Math.round(amount/qty*100)/100;
+  if(!mbPriceLookup[mbName]||qty>mbPriceLookup[mbName].qty)mbPriceLookup[mbName]={price:up,qty:qty};
+ }
  }
  // Route to Laundry
  else if(ldName&&typeof ldName==="string"){
  if(!ldResult[ldName])ldResult[ldName]={charged:0,rebated:0};
  if(isRebated)ldResult[ldName].rebated+=absQty;
  else ldResult[ldName].charged+=absQty;
+ if(amount>0&&qty>0){
+  var up2=Math.round(amount/qty*100)/100;
+  if(!ldPriceLookup[ldName]||qty>ldPriceLookup[ldName].qty)ldPriceLookup[ldName]={price:up2,qty:qty};
+ }
  }
  // Unknown code
  else if(!MB_CODE_MAP.hasOwnProperty(code)&&!LD_CODE_MAP.hasOwnProperty(code)){
@@ -5133,9 +5321,27 @@ function unifiedParsePdfItems(items,statusEl){
  if(activeMode==="ld"||activeMode==="ov")ldRenderAll();
  if(activeMode==="ov")ovRender();
 
+ // Update sell prices from PDF averages
+ var mbPriceUpd=0,ldPriceUpd=0;
+ if(Object.keys(mbPriceLookup).length>0){
+ var mbP=mbGetProducts();
+ mbP.forEach(function(p){if(mbPriceLookup[p.name]){p.sell=mbPriceLookup[p.name].price;mbPriceUpd++;}});
+ if(mbPriceUpd>0)localStorage.setItem("mb_products",JSON.stringify(mbP));
+ }
+ if(Object.keys(ldPriceLookup).length>0){
+ var ldP=ldGetProducts();
+ ldP.forEach(function(p){if(ldPriceLookup[p.name]){p.sell=ldPriceLookup[p.name].price;ldPriceUpd++;}});
+ if(ldPriceUpd>0)localStorage.setItem("ld_products",JSON.stringify(ldP));
+ }
+ // Re-render after price update
+ if(mbPriceUpd>0||ldPriceUpd>0){
+ if(activeMode==="mb"||activeMode==="ov")mbRenderAll();
+ if(activeMode==="ld"||activeMode==="ov")ldRenderAll();
+ }
+
  var msg="";
- if(mbMatched>0)msg+="✓ Minibar: "+mbMatched+" ürün";
- if(ldMatched>0)msg+=(msg?" · ":"")+"✓ Laundry: "+ldMatched+" ürün";
+ if(mbMatched>0)msg+="✓ Minibar: "+mbMatched+" ürün"+(mbPriceUpd>0?" ("+mbPriceUpd+" fiyat)":"");
+ if(ldMatched>0)msg+=(msg?" · ":"")+"✓ Laundry: "+ldMatched+" ürün"+(ldPriceUpd>0?" ("+ldPriceUpd+" fiyat)":"");
  if(compCount>0)msg+=" · "+compCount+" comp atlandı";
  if(unmatched.length>0)msg+=" · ! "+unmatched.length+" bilinmeyen: "+unmatched.slice(0,4).map(function(u){return u.code;}).join(", ");
  if(statusEl){statusEl.textContent=msg||"İşlem tamamlandı";statusEl.style.color=(unmatched.length>0)?"#f59e0b":"#059669";}
@@ -5202,7 +5408,7 @@ function ovRender(){
  ovKpi("Toplam Kâr",fmt(totalProfit),"—","#059669"),
  ovKpi("Kâr Marjı",totalMargin.toFixed(1)+"%","Genel marj",totalMargin<70?"#dc2626":"#059669"),
  ovKpi("Minibar Kâr",fmt(mbProfit),"Marj: "+(mbRev>0?(mbProfit/mbRev*100).toFixed(1)+"%":"—"),"#1a6b5c"),
- ovKpi("Laundry Kâr",fmt(ldProfit),"Marj: "+(ldRev>0?(ldProfit/ldRev*100).toFixed(1)+"%":"—"),"#1a6b5c")
+ ovKpi("Laundry Kâr",fmt(ldProfit),"Marj: "+(ldRev>0?(ldProfit/ldRev*100).toFixed(1)+"%":"—"),"#3b82f6")
  ].join("");
  }
 
@@ -5211,11 +5417,11 @@ function ovRender(){
  if(splitEl&&totalRev>0){
  splitEl.innerHTML="<div style='display:flex;height:28px;border-radius:6px;overflow:hidden;margin-bottom:4px'>"
  +"<div style='width:"+mbShare.toFixed(1)+"%;background:#1a6b5c;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700'>"+(mbShare>8?mbShare.toFixed(0)+"%":"")+"</div>"
- +"<div style='width:"+ldShare.toFixed(1)+"%;background:#1a6b5c;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700'>"+(ldShare>8?ldShare.toFixed(0)+"%":"")+"</div>"
+ +"<div style='width:"+ldShare.toFixed(1)+"%;background:#3b82f6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700'>"+(ldShare>8?ldShare.toFixed(0)+"%":"")+"</div>"
  +"</div>"
  +"<div style='display:flex;justify-content:space-between;font-size:10px;color:#6b7280'>"
  +"<span><span style='color:#1a6b5c'>■</span> Minibar "+fmt(mbRev)+"</span>"
- +"<span><span style='color:#1a6b5c'>■</span> Laundry "+fmt(ldRev)+"</span>"
+ +"<span><span style='color:#3b82f6'>■</span> Laundry "+fmt(ldRev)+"</span>"
  +"</div>";
  } else if(splitEl){splitEl.innerHTML="<p style='color:#9ca3af;font-size:11px'>Veri yok</p>";}
 
@@ -5240,7 +5446,7 @@ function ovRender(){
  var mbPx=maxTr>0?Math.round(d.mb/maxTr*110):0;
  var ldPx=maxTr>0?Math.round(d.ld/maxTr*110):0;
  h+="<div style='display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;opacity:"+(isFut?".2":"1")+";border:"+(isCur?"2px solid #1a6b5c":"1px solid transparent")+";border-radius:4px;padding:1px'>"
- +"<div style='width:100%;height:"+Math.max(ldPx,0)+"px;background:#1a6b5c;border-radius:2px 2px 0 0'></div>"
+ +"<div style='width:100%;height:"+Math.max(ldPx,0)+"px;background:#3b82f6;border-radius:2px 2px 0 0'></div>"
  +"<div style='width:100%;height:"+Math.max(mbPx,0)+"px;background:#1a6b5c;border-radius:0'></div>"
  +"</div>";
  });
@@ -5250,7 +5456,7 @@ function ovRender(){
  h+="<div style='text-align:center;font-size:7px;color:#9ca3af'>"+m.substring(0,3)+"</div>";
  });
  h+="</div>";
- h+="<div style='display:flex;gap:12px;font-size:9px;color:#9ca3af;margin-top:6px'><span>■ <span style='color:#1a6b5c'>Minibar</span></span><span>■ <span style='color:#1a6b5c'>Laundry</span></span></div>";
+ h+="<div style='display:flex;gap:12px;font-size:9px;color:#9ca3af;margin-top:6px'><span>■ <span style='color:#1a6b5c'>Minibar</span></span><span>■ <span style='color:#3b82f6'>Laundry</span></span></div>";
  trendEl.innerHTML=h;
  }
 
@@ -5282,7 +5488,7 @@ function ovRender(){
  if(topEl){
  var allProds=[];
  mbProducts.forEach(function(p){var c=mbCalcItem(p,mbData.items||{});if(c.ch>0)allProds.push({name:p.name,mod:"MB",rev:c.rev,qty:c.ch,color:"#1a6b5c"});});
- ldProducts.forEach(function(p){var c=ldCalcItem(p,ldData.items||{});if(c.ch>0)allProds.push({name:p.name,mod:"LD",rev:c.rev,qty:c.ch,color:"#1a6b5c"});});
+ ldProducts.forEach(function(p){var c=ldCalcItem(p,ldData.items||{});if(c.ch>0)allProds.push({name:p.name,mod:"LD",rev:c.rev,qty:c.ch,color:"#3b82f6"});});
  allProds.sort(function(a,b){return b.rev-a.rev;});
  var top10=allProds.slice(0,10);
  var maxRv=top10.length?top10[0].rev:1;
