@@ -85,7 +85,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div class="topbar">
 <div><small>Raffles Istanbul</small><h1>SmartWorker — Komünikasyon Merkezi</h1></div>
 <div style="display:flex;align-items:center;gap:10px">
-<a href="SmartWorker3.html" style="color:#fff;font-size:12px;text-decoration:none;opacity:.8">&#8592; Ana Sayfa</a>
+<a href="SmartWorkerHub.html" style="color:#fff;font-size:12px;text-decoration:none;opacity:.8">&#8592; Ana Sayfa</a>
 </div>
 </div>
 <div class="nav">
@@ -128,7 +128,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div id="pdBar" style="height:100%;background:linear-gradient(90deg,#166534,#1d4ed8);width:0%;transition:width .3s"></div>
 </div>
 <button onclick="bulkDownloadEML('pd')" style="margin-top:8px;padding:6px 16px;background:#1e293b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600">ZIP İndir</button>
-<button onclick="pdBulkMark('sent')" style="margin-top:8px;padding:6px 12px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600">Tümü ✓ Atıldı</button>
+<button onclick="pdSmartMark()" style="margin-top:8px;padding:6px 12px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600" title="Emailsiz, incognito ve elle ayarlananlar hariç kalanları Atıldı yap">Kalanları ✓ Atıldı</button>
 <button onclick="pdBulkMark('')" style="margin-top:8px;padding:6px 12px;background:#6b7280;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600">Sıfırla</button>
 </div>
 <!-- Table -->
@@ -171,7 +171,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div id="paBar" style="height:100%;background:linear-gradient(90deg,#166534,#1d4ed8);width:0%;transition:width .3s"></div>
 </div>
 <button onclick="bulkDownloadEML('pa')" style="margin-top:8px;padding:6px 16px;background:#1e293b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600">ZIP İndir</button>
-<button onclick="paBulkMark('sent')" style="margin-top:8px;padding:6px 12px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600">Tümü ✓ Atıldı</button>
+<button onclick="paSmartMark()" style="margin-top:8px;padding:6px 12px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600" title="Emailsiz, incognito ve elle ayarlananlar hariç kalanları Atıldı yap">Kalanları ✓ Atıldı</button>
 <button onclick="paBulkMark('')" style="margin-top:8px;padding:6px 12px;background:#6b7280;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600">Sıfırla</button>
 </div>
 <!-- Table -->
@@ -227,14 +227,17 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 <option value="pa">Pre-Arrival</option>
 <option value="skip">Atılmayanlar</option>
 </select>
-<select id="kutDateFilter" onchange="renderKutuphane()" style="padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px">
+<select id="kutDateFilter" onchange="kutDateChanged()" style="padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px">
 <option value="">Tüm Tarihler</option>
+<option value="0">Bugün</option>
 <option value="7">Son 7 gün</option>
 <option value="30">Son 30 gün</option>
 <option value="90">Son 90 gün</option>
 <option value="120">Son 120 gün</option>
 <option value="365">Son 1 yıl</option>
+<option value="custom">Tarih Seç...</option>
 </select>
+<input type="date" id="kutCustomDate" onchange="renderKutuphane()" style="display:none;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px">
 <button onclick="kutDownloadSelectedZip()" class="btn-sm" style="font-size:10px;border-color:#1a6b5c;color:#1a6b5c">Secilenleri ZIP Indir</button>
 <button onclick="exportKutuphaneExcel()" class="btn-sm" style="font-size:10px">CSV İndir</button>
 <button onclick="exportMailHistoryJSON()" class="btn-sm" style="font-size:10px;border-color:#2563eb;color:#2563eb" title="Tüm veriyi JSON olarak yedekle">Yedek Al</button>
@@ -244,18 +247,9 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 </div>
 <div id="kutStats" style="font-size:12px;color:#6b7280;margin-bottom:8px"></div>
 
-<!-- Misafir Kartları -->
-<div id="kutGuestCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:20px"></div>
-
-<!-- Genişletilmiş Misafir Detayı -->
-<div id="guestCardWrap" style="display:none;margin-bottom:20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-<h3 id="guestCardName" style="font-size:16px;font-weight:700;color:#1e293b;margin:0"></h3>
-<button onclick="document.getElementById('guestCardWrap').style.display='none'" style="border:none;background:none;font-size:18px;cursor:pointer;color:#94a3b8">&times;</button>
-</div>
-<div id="guestCardInfo" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;color:#475569"></div>
-<div id="guestCardHistory"></div>
-</div>
+<!-- Misafir Kartları 5x5 Grid -->
+<div id="kutGuestCards" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px"></div>
+<div id="kutCardPagination" style="margin-bottom:12px"></div>
 
 <!-- Zaman Çizelgesi -->
 <details open style="margin-top:8px">
@@ -304,42 +298,9 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 <textarea id="tplEditArea" style="width:100%;height:350px;font-family:'Cascadia Code',monospace;font-size:11px;border:none;padding:12px;resize:vertical;outline:none" spellcheck="false"></textarea>
 </div>
 
-<!-- Yeni Şablon Yükleme -->
-<div style="margin-top:16px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
-<div style="font-weight:700;font-size:12px;color:#374151;margin-bottom:8px">Şablon Yükle</div>
-<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-<select id="tplUploadKey" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
-<option value="">-- Hedef Şablon --</option>
-<option value="pd_en">Post-Departure EN</option>
-<option value="pd_tr">Post-Departure TR</option>
-<option value="pa_en_first">Pre-Arrival EN (First)</option>
-<option value="pa_tr_first">Pre-Arrival TR (First)</option>
-<option value="pa_en_repeat">Pre-Arrival EN (Repeat)</option>
-<option value="pa_tr_repeat">Pre-Arrival TR (Repeat)</option>
-<option value="bk_en_first">Booking EN (First)</option>
-<option value="bk_tr_first">Booking TR (First)</option>
-<option value="bk_en_repeat">Booking EN (Repeat)</option>
-<option value="bk_tr_repeat">Booking TR (Repeat)</option>
-<option value="so_en">Special Occasion EN</option>
-<option value="so_tr">Special Occasion TR</option>
-</select>
-<input type="file" id="tplFileInput" accept=".html,.htm" style="display:none" onchange="tplUploadFile()">
-<button onclick="var k=document.getElementById('tplUploadKey').value;if(!k){alert('Önce hedef şablon seçin.');return;}document.getElementById('tplFileInput').click()" class="btn-sm" style="font-size:10px;border-color:#1a6b5c;color:#1a6b5c">HTML Dosyası Yükle</button>
-</div>
-</div>
 
-<!-- Değişken Referansı -->
-<div style="margin-top:16px;padding:12px;background:#f0f7f5;border:1px solid #d1e7dd;border-radius:8px">
-<div style="font-weight:700;font-size:12px;color:#065f46;margin-bottom:8px">Değişken Referansı</div>
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;font-size:11px;color:#374151">
-<div><code style="background:#d1fae5;padding:1px 4px;border-radius:3px">Dear Mr. ,</code> veya <code style="background:#d1fae5;padding:1px 4px;border-radius:3px">Dear…</code> → İngilizce hitap</div>
-<div><code style="background:#d1fae5;padding:1px 4px;border-radius:3px">Sayın ,</code> veya <code style="background:#d1fae5;padding:1px 4px;border-radius:3px">Sayın…</code> → Türkçe hitap</div>
-<div><code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{TITLE}}</code> → Mr./Mrs./Ms. (düz metin şablonlarda)</div>
-<div><code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{SURNAME}}</code> → Misafir soyadı (düz metin şablonlarda)</div>
-<div><code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{DATE}}</code> → Tarih (web note formatında)</div>
-<div><code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{BUTLER}}</code> → Butler adı (web note formatında)</div>
-</div>
-</div>
+
+
 
 <!-- Operasyonel Mailler -->
 <div class="card" style="margin-top:16px">
@@ -382,6 +343,15 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 <label style="font-size:10px;font-weight:600;display:block;margin-bottom:2px">Butler</label>
 <input id="opButler" type="text" placeholder="HD" oninput="opTplGenerate()" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px">
 </div>
+</div>
+<div style="margin-bottom:10px">
+<label style="font-size:10px;font-weight:600;display:block;margin-bottom:2px">Yemek / İçerik</label>
+<div style="display:flex;gap:4px">
+<input id="opFood" type="text" list="opFoodList" placeholder="avokadolu tost ve taze sıkılmış portakal suyu" value="avokadolu tost ve taze sıkılmış portakal suyu" oninput="opTplGenerate()" style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px">
+<button onclick="opFoodSave()" style="padding:4px 8px;border:1px solid #059669;background:#fff;color:#059669;border-radius:4px;font-size:10px;cursor:pointer;white-space:nowrap" title="Bu içeriği kaydet">+ Kaydet</button>
+<button onclick="opFoodManage()" style="padding:4px 8px;border:1px solid #6b7280;background:#fff;color:#6b7280;border-radius:4px;font-size:10px;cursor:pointer;white-space:nowrap" title="Kayıtlı içerikleri yönet">⚙</button>
+</div>
+<datalist id="opFoodList"></datalist>
 </div>
 <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
 <span style="font-size:11px;font-weight:600;color:#374151">Çıktı</span>
@@ -433,26 +403,6 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 </div>
 
 <div style="margin-bottom:10px">
-<label style="font-size:11px;font-weight:700;display:block;margin-bottom:6px">Yuklu Sablonlar (2 adet — MSG'den gomulu)</label>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px">
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Post-Departure EN</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Post-Departure TR</div>
-</div>
-</div>
-
-<div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px">
-<label style="font-size:11px;font-weight:700;display:block;margin-bottom:6px">HTML Sablon Duzenle <span style="font-weight:400;color:#6b7280">(dikkatli duzenleyin — HTML bozulursa mail gorunumu etkilenir)</span></label>
-<div style="display:flex;gap:6px;margin-bottom:8px">
-<select id="pdTplEditKey" onchange="loadTemplateEditor('pd')" style="border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:11px">
-<option value="">-- Sablon Sec --</option>
-<option value="pd_en">Post-Departure EN</option>
-<option value="pd_tr">Post-Departure TR</option>
-</select>
-<button class="btn-sm" onclick="saveTemplateEdit('pd')" style="font-size:10px">Kaydet</button>
-<button class="btn-sm" onclick="resetTemplateEdit('pd')" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Varsayilana Don</button>
-<button class="btn-sm" onclick="previewTemplateEdit('pd')" style="font-size:10px;border-color:#7c3aed;color:#7c3aed">Onizle</button>
-</div>
-<textarea id="pdTplEditArea" style="width:100%;height:200px;font-family:monospace;font-size:11px;border:1px solid #d1d5db;border-radius:6px;padding:8px;display:none" placeholder="Sablon seciniz..."></textarea>
 </div>
 
 <div style="margin-top:10px">
@@ -490,44 +440,7 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 </div>
 </div>
 
-<div style="margin-bottom:10px">
-<label style="font-size:11px;font-weight:700;display:block;margin-bottom:6px">Yuklu Sablonlar (10 adet — MSG'den gomulu)</label>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px">
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Pre-Arrival EN (First Timer)</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Pre-Arrival TR (First Timer)</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Pre-Arrival EN (Repeat)</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Pre-Arrival TR (Repeat)</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Booking.com EN (First Timer)</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Booking.com TR (First Timer)</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Booking.com EN (Repeat)</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Booking.com TR (Repeat)</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Special Occasion EN</div>
-<div style="padding:4px 8px;background:#f0fdf4;border-radius:4px;color:#166534">&#10003; Special Occasion TR</div>
-</div>
-</div>
 
-<div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px">
-<label style="font-size:11px;font-weight:700;display:block;margin-bottom:6px">HTML Sablon Duzenle <span style="font-weight:400;color:#6b7280">(dikkatli duzenleyin)</span></label>
-<div style="display:flex;gap:6px;margin-bottom:8px">
-<select id="paTplEditKey" onchange="loadTemplateEditor('pa')" style="border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:11px">
-<option value="">-- Sablon Sec --</option>
-<option value="pa_en_first">Pre-Arrival EN (First Timer)</option>
-<option value="pa_tr_first">Pre-Arrival TR (First Timer)</option>
-<option value="pa_en_repeat">Pre-Arrival EN (Repeat)</option>
-<option value="pa_tr_repeat">Pre-Arrival TR (Repeat)</option>
-<option value="bk_en_first">Booking.com EN (First)</option>
-<option value="bk_tr_first">Booking.com TR (First)</option>
-<option value="bk_en_repeat">Booking.com EN (Repeat)</option>
-<option value="bk_tr_repeat">Booking.com TR (Repeat)</option>
-<option value="so_en">Special Occasion EN</option>
-<option value="so_tr">Special Occasion TR</option>
-</select>
-<button class="btn-sm" onclick="saveTemplateEdit('pa')" style="font-size:10px">Kaydet</button>
-<button class="btn-sm" onclick="resetTemplateEdit('pa')" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Varsayilana Don</button>
-<button class="btn-sm" onclick="previewTemplateEdit('pa')" style="font-size:10px;border-color:#7c3aed;color:#7c3aed">Onizle</button>
-</div>
-<textarea id="paTplEditArea" style="width:100%;height:200px;font-family:monospace;font-size:11px;border:1px solid #d1d5db;border-radius:6px;padding:8px;display:none" placeholder="Sablon seciniz..."></textarea>
-</div>
 
 <div style="margin-top:10px">
 <button class="btn btn-primary" onclick="savePaTemplates();alert('Kaydedildi!')">Kaydet</button>
@@ -594,9 +507,14 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 <input id="setBannerLink" type="text" value="" onchange="saveBannerLink()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="https://www.raffles.com/istanbul/offers/...">
 </div>
 <div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px">
-<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Gonderen (From) Adresi</label>
-<div class="settings-info" style="margin:4px 0 8px">EML dosyasindaki From adresi. Bos birakilirsa Outlook varsayilan hesabinizi kullanir — draft acildiginda From kutusundan shared mailbox'i elle secersiniz. Send As yetkiniz varsa buraya ortak mail adresini yazin.</div>
-<input id="setFromAddress" type="email" value="" onchange="saveFromAddress()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="Bos = Outlook varsayilani kullanir">
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">PD - Gonderen (From) Adresi</label>
+<div class="settings-info" style="margin:4px 0 8px">Post-Departure EML dosyalarindaki From adresi. Send As yetkiniz oldugu icin shared mailbox adresini girin — Outlook drafti bu adresten gonderilir.</div>
+<input id="setPdFromAddress" type="email" value="" onchange="savePdFromAddress()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="ornek: Butlerservices.Istanbul@raffles.com">
+</div>
+<div style="margin-top:10px">
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">PA - Gonderen (From) Adresi</label>
+<div class="settings-info" style="margin:4px 0 8px">Pre-Arrival EML dosyalarindaki From adresi. Bos birakilirsa Outlook varsayilan hesabinizi kullanir.</div>
+<input id="setPaFromAddress" type="email" value="" onchange="savePaFromAddress()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="Bos = Outlook varsayilani kullanir">
 </div>
 </div>
 </div>
@@ -607,11 +525,19 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 <span>Atilmadi Not Sablonlari</span><span class="settings-arrow">&#9660;</span>
 </div>
 <div class="settings-body" style="display:none">
-<div class="settings-info">Bir misafirin maili atilmadiginda otomatik olusturulan not cumleleri. Her sebep icin farkli not yazabilirsiniz.</div>
+<div class="settings-info">Atılmadı sebepleri ve not şablonları. Yeni sebep ekleyebilir, mevcut sebepleri düzenleyebilir veya kaldırabilirsiniz.<br><b>no_email</b> ve <b>incognito</b> sistem sebepleridir, kaldırılamaz.</div>
 <div style="display:grid;gap:8px;margin-top:10px" id="skipNotesEditor"></div>
+<div style="margin-top:10px;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px">
+<div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:6px">+ Yeni Sebep Ekle</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+<input id="newSkipLabel" placeholder="Sebep adı (orn: VIP Misafir)" style="width:180px;padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+<input id="newSkipNote" placeholder="Not metni (orn: VIP misafir - özel işlem yapıldı)" style="flex:1;min-width:200px;padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+<button class="btn-sm" onclick="addSkipReason()" style="font-size:10px;border-color:#059669;color:#059669">+ Ekle</button>
+</div>
+</div>
 <div style="margin-top:10px;display:flex;gap:6px">
-<button class="btn btn-primary" onclick="saveSkipNotes();alert('Kaydedildi!')">Kaydet</button>
-<button class="btn-sm" onclick="resetSkipNotes();alert('Varsayilana donuldu!')" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Varsayilana Don</button>
+<button class="btn btn-primary" onclick="saveAllSkipSettings();alert('Kaydedildi!')">Kaydet</button>
+<button class="btn-sm" onclick="resetAllSkipSettings();alert('Varsayilana donuldu!')" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Varsayilana Don</button>
 </div>
 </div>
 </div>
@@ -673,6 +599,7 @@ function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1).toLowerCase():""}
   localStorage.setItem("km_migrated","v3");
 })();
 function parseDDMMYY(dateStr){if(!dateStr)return null;var p=dateStr.split("-");if(p.length<3)return null;var yr=parseInt(p[2],10);if(yr<100)yr+=2000;return new Date(yr,parseInt(p[1],10)-1,parseInt(p[0],10))}
+function localISO(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
 var Store={get:function(k){try{var s=localStorage.getItem(k);return s?JSON.parse(s):null}catch(e){return null}},set:function(k,v){localStorage.setItem(k,JSON.stringify(v))}};
 function getKW(cat){try{var s=localStorage.getItem("kw_"+cat);return s?JSON.parse(s):["Ahmet","Mehmet","Elif","Bekir","Selin"]}catch(e){return ["Ahmet","Mehmet","Elif","Bekir","Selin"]}}
 function dlFile(data,filename,mime){var b=new Blob([data],{type:mime||"text/html"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
@@ -685,9 +612,11 @@ var DEF_BANNER_LINK="https://www.raffles.com/istanbul/offers/Explore-Istanbul/";
 function getBannerLink(){return localStorage.getItem("banner_link")||DEF_BANNER_LINK}
 function saveBannerLink(){localStorage.setItem("banner_link",document.getElementById("setBannerLink").value||DEF_BANNER_LINK)}
 function loadBannerLink(){document.getElementById("setBannerLink").value=getBannerLink()}
-function getFromAddress(){var v=(localStorage.getItem("from_address")||"").trim();return v.indexOf("@")>0?v:""}
-function saveFromAddress(){localStorage.setItem("from_address",(document.getElementById("setFromAddress").value||"").trim())}
-function loadFromAddress(){document.getElementById("setFromAddress").value=getFromAddress()}
+function getPdFromAddress(){var v=(localStorage.getItem("pd_from_address")||"").trim();return v.indexOf("@")>0?v:""}
+function getPaFromAddress(){var v=(localStorage.getItem("pa_from_address")||"").trim();return v.indexOf("@")>0?v:""}
+function savePdFromAddress(){localStorage.setItem("pd_from_address",(document.getElementById("setPdFromAddress").value||"").trim())}
+function savePaFromAddress(){localStorage.setItem("pa_from_address",(document.getElementById("setPaFromAddress").value||"").trim())}
+function loadFromAddresses(){document.getElementById("setPdFromAddress").value=getPdFromAddress();document.getElementById("setPaFromAddress").value=getPaFromAddress()}
 // Helper: replace CID refs with data URIs for in-page preview
 function previewCleanHtml(h){
   var imgStore=getInlineImageStore();
@@ -719,7 +648,7 @@ function showEmailPage(p){
   if(p==="prearr")initPreArrival();
   if(p==="rehber")renderRehber();
   if(p==="sablonlar")renderTplCards();
-  if(p==="settings"){populatePdSettingsUI();populatePaSettingsUI();renderPdfStatus();renderImageStatus();loadBannerLink();loadFromAddress();populateSkipNotesEditor()}
+  if(p==="settings"){populatePdSettingsUI();populatePaSettingsUI();renderPdfStatus();renderImageStatus();loadBannerLink();loadFromAddresses();populateSkipNotesEditor()}
 }
 
 // ===== SHARED RES_DETAIL PARSER =====
@@ -882,9 +811,9 @@ async function parseResDetail(buf){
         if(items[j].x>=30&&items[j].x<175&&/^.+?,.+?,(Mr\.|Mrs\.|Ms\.?|Miss|Bay|Bayan|Sn\.?|Dr\.?|Shk\.?|HISEX)$/i.test(items[j].t)){hasName=true;break;}
       }
       if(hasName){
-        if(curGuest)guests.push(curGuest);
+        if(curGuest){if(/^HISEX$/i.test(curGuest.title))curGuest.incognito=true;guests.push(curGuest);}
         curGuest={
-          roomNo:0,name:"",lastName:"",firstName:"",title:"",
+          roomNo:0,name:"",lastName:"",firstName:"",title:"",incognito:false,
           company:"",travelAgent:"",source:"",
           arrDate:"",depDate:"",roomType:"",adl:0,chl:0,rms:1,
           mktCode:"",srcCode:"",resStatus:"",rateCode:"",currency:"",rateAmount:0,payMethod:"",deposit:0,
@@ -926,7 +855,7 @@ async function parseResDetail(buf){
     }
 
     if(roomItem){
-      if(curGuest)guests.push(curGuest);
+      if(curGuest){if(/^HISEX$/i.test(curGuest.title))curGuest.incognito=true;guests.push(curGuest);}
       curGuest={
         roomNo:parseInt(roomItem.t,10),name:"",lastName:"",firstName:"",title:"",
         company:"",travelAgent:"",source:"",
@@ -967,7 +896,9 @@ async function parseResDetail(buf){
     }
 
     if(!curGuest)continue;
-    curGuest._rawLines.push(items.map(function(i){return i.t}).join(" "));
+    var _rl=items.map(function(i){return i.t}).join(" ");
+    curGuest._rawLines.push(_rl);
+    if(/INCOGNITO/i.test(_rl))curGuest.incognito=true;
 
     var hasConf=false;
     for(var j=0;j<items.length;j++){if(items[j].x>=30&&items[j].x<55&&/^\d{5,6}$/.test(items[j].t)){hasConf=true;break;}}
@@ -1043,7 +974,7 @@ async function parseResDetail(buf){
     else if(lineText.match(/^T-\s*/)){curGuest.travelAgent=lineText.replace(/^T-\s*/,"").trim();curGuest.tLine=lineText;}
     else if(lineText.match(/^S-\s*/)){curGuest.source=lineText.replace(/^S-\s*/,"").trim();curGuest.sLine=lineText;}
   }
-  if(curGuest)guests.push(curGuest);
+  if(curGuest){if(/^HISEX$/i.test(curGuest.title))curGuest.incognito=true;guests.push(curGuest);}
 
   for(var i=0;i<guests.length;i++){
     var g=guests[i];
@@ -1129,7 +1060,7 @@ async function bulkDownloadEML(module){
   }
   if(!count){alert("Oluşturulacak EML bulunamadı.");return;}
   var blob=await zip.generateAsync({type:"blob"});
-  var dateStr=new Date().toISOString().split("T")[0];
+  var dateStr=localISO(new Date());
   var filename=module+"_emails_"+dateStr+"_"+count+"adet.zip";
   dlFile(blob,filename,"application/zip");
   alert(count+" EML dosyası ZIP olarak indirildi.\n\nZIP'i açın, her EML'e çift tıklayın, Ctrl+Enter ile gönderin.");
@@ -1157,7 +1088,7 @@ function savePdTemplates(){ pdTpl.save() }
 function resetPdTemplates(){ pdTpl.reset() }
 function populatePdSettingsUI(){ pdTpl.populateUI() }
 
-function getToday(){return new Date().toISOString().split("T")[0]}
+function getToday(){return localISO(new Date())}
 
 function initPostDep(){
   var di=document.getElementById("pdDate");
@@ -1330,7 +1261,7 @@ async function handleDepPDF(file){
     var dateCounts={};
     for(var di=0;di<pdRawGuests.length;di++){
       var dd=pdRawGuests[di].depDate;
-      if(dd){var dp=parseDDMMYY(dd);if(dp){var iso=dp.toISOString().split("T")[0];dateCounts[iso]=(dateCounts[iso]||0)+1;}}
+      if(dd){var dp=parseDDMMYY(dd);if(dp){var iso=localISO(dp);dateCounts[iso]=(dateCounts[iso]||0)+1;}}
     }
     var bestDate="",bestCount=0;
     for(var dk in dateCounts){if(dateCounts[dk]>bestCount){bestCount=dateCounts[dk];bestDate=dk;}}
@@ -1361,17 +1292,10 @@ function pdApplyFilter(){
       title:g.title,lang:g.lang,
       editSurname:g.editSurname,
       email:email,depDate:g.depDate,
-      mailSent:wasMailSentToday(g.surname,g.firstName,"pd"),
-      skipReason:getSkipReason(g.surname,g.firstName,"pd"),
+      mailSent:false,
+      skipReason:g.incognito?"incognito":(!email?"no_email":""),
       incognito:g.incognito
     });
-  }
-  // Clear stale "no_email" skips where email was found
-  for(var ci=0;ci<pdGuests.length;ci++){
-    if(pdGuests[ci].email && pdGuests[ci].skipReason==="no_email"){
-      removeSkip(pdGuests[ci].surname,pdGuests[ci].firstName,"pd");
-      pdGuests[ci].skipReason="";
-    }
   }
   console.log("Post-dep guests after filter:",pdGuests.length);
   renderPdTable();
@@ -1423,14 +1347,7 @@ function renderPdTable(){
     h+='<td><input type="email" value="'+esc(g.email)+'" onchange="pdEmailChanged('+ri+',this.value)" onclick="event.stopPropagation()" style="width:180px;font-size:11px;padding:3px 6px"></td>';
     h+='<td style="text-align:center"><select onchange="pdSetStatus('+ri+',this.value)" onclick="event.stopPropagation()" style="font-size:10px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;'+
       (g.mailSent?'background:#d1fae5;color:#065f46':g.skipReason?'background:#fee2e2;color:#991b1b':'')+'">'+
-      '<option value=""'+((!g.mailSent&&!g.skipReason)?' selected':'')+'>—</option>'+
-      '<option value="sent"'+(g.mailSent?' selected':'')+'>✓ Atıldı</option>'+
-      '<option value="no_email"'+(g.skipReason==="no_email"?' selected':'')+'>✗ Email yok</option>'+
-      '<option value="incognito"'+(g.skipReason==="incognito"?' selected':'')+'>✗ Incognito</option>'+
-      '<option value="group"'+(g.skipReason==="group"?' selected':'')+'>✗ Grup</option>'+
-      '<option value="staff"'+(g.skipReason==="staff"?' selected':'')+'>✗ Personel</option>'+
-      '<option value="duplicate"'+(g.skipReason==="duplicate"?' selected':'')+'>✗ Mükerrer</option>'+
-      '<option value="other"'+(g.skipReason==="other"?' selected':'')+'>✗ Diğer</option>'+
+      getSkipOptionsHTML(g.mailSent?"sent":g.skipReason)+
       '</select></td>';
 
     h+='<td style="text-align:center"><button onclick="event.stopPropagation();pdDownloadEML('+ri+')" style="font-size:10px;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer" title="Outlook\'ta Ac">&#9993;</button></td>';
@@ -1463,10 +1380,7 @@ function pdGetWebNote(){
 
 function pdEmailChanged(idx,val){
   pdGuests[idx].email=val;
-  if(val && pdGuests[idx].skipReason==="no_email"){
-    pdGuests[idx].skipReason="";
-    removeSkip(pdGuests[idx].surname,pdGuests[idx].firstName,"pd");
-  }
+
   renderPdTable();
   pdRefreshPreview();
 }
@@ -1543,17 +1457,31 @@ var DEF_SKIP_NOTES={
   incognito:"Incognito misafir - mail atilamadi",
   group:"Grup rezervasyonu - mail atilamadi",
   staff:"Otel personeli - mail atilamadi",
-  duplicate:"Mukerrer kayit - mail atilamadi",
   other:"Diger sebep - mail atilamadi"
 };
-var SKIP_NOTE_LABELS={
+var DEF_SKIP_LABELS={
   no_email:"Email yok",
   incognito:"Incognito",
   group:"Grup",
   staff:"Personel",
-  duplicate:"Mukerrer",
   other:"Diger"
 };
+function getSkipReasons(){
+  try{var s=localStorage.getItem("skip_reasons");if(s)return JSON.parse(s)}catch(e){}
+  return JSON.parse(JSON.stringify(DEF_SKIP_LABELS));
+}
+function saveSkipReasons(obj){localStorage.setItem("skip_reasons",JSON.stringify(obj))}
+function resetSkipReasons(){localStorage.removeItem("skip_reasons")}
+function getSkipOptionsHTML(currentVal){
+  var reasons=getSkipReasons();
+  var h='<option value=""'+((!currentVal)?' selected':'')+'>\u2014</option>';
+  h+='<option value="sent"'+(currentVal==="sent"?' selected':'')+'>\u2713 At\u0131ld\u0131</option>';
+  for(var k in reasons){
+    h+='<option value="'+k+'"'+(currentVal===k?' selected':'')+'>\u2717 '+esc(reasons[k])+'</option>';
+  }
+  return h;
+}
+var SKIP_NOTE_LABELS=getSkipReasons();
 function getSkipNotes(){
   try{var s=localStorage.getItem("skip_notes");if(s)return JSON.parse(s)}catch(e){}
   return JSON.parse(JSON.stringify(DEF_SKIP_NOTES));
@@ -1570,21 +1498,97 @@ function saveSkipNotes(){
 }
 function resetSkipNotes(){
   localStorage.removeItem("skip_notes");
+  localStorage.removeItem("skip_reasons");
   SKIP_NOTES=getSkipNotes();
+  SKIP_NOTE_LABELS=getSkipReasons();
   populateSkipNotesEditor();
 }
 function populateSkipNotesEditor(){
   var notes=getSkipNotes();
-  var keys=Object.keys(DEF_SKIP_NOTES);
+  var reasons=getSkipReasons();
+  var sysKeys=["no_email","incognito"];
   var h="";
-  for(var i=0;i<keys.length;i++){
-    h+='<div style="display:flex;align-items:center;gap:8px">'+
-      '<label style="font-size:11px;font-weight:600;width:90px;flex-shrink:0">'+(SKIP_NOTE_LABELS[keys[i]]||keys[i])+'</label>'+
-      '<input id="skipNote_'+keys[i]+'" type="text" value="'+esc(notes[keys[i]]||"")+'" style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">'+
+  // System reasons first (can edit note but can't remove)
+  for(var si=0;si<sysKeys.length;si++){
+    var k=sysKeys[si];
+    if(!reasons[k])continue;
+    h+='<div style="display:flex;align-items:center;gap:6px">'+
+      '<span style="font-size:10px;background:#e0e7ff;color:#3730a3;padding:1px 6px;border-radius:4px;min-width:70px;text-align:center">'+esc(reasons[k])+'</span>'+
+      '<input id="skipNote_'+k+'" type="text" value="'+esc(notes[k]||"")+'" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" placeholder="Not metni...">'+
+      '<span style="font-size:9px;color:#9ca3af;white-space:nowrap">sistem</span>'+
+      '</div>';
+  }
+  // Custom reasons (can edit label, note, and remove)
+  for(var k in reasons){
+    if(sysKeys.indexOf(k)>=0)continue;
+    h+='<div style="display:flex;align-items:center;gap:6px" id="skipRow_'+k+'">'+
+      '<input id="skipLabel_'+k+'" type="text" value="'+esc(reasons[k])+'" style="min-width:70px;max-width:120px;padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;font-weight:600" placeholder="Etiket">'+
+      '<input id="skipNote_'+k+'" type="text" value="'+esc(notes[k]||"")+'" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" placeholder="Not metni...">'+
+      '<button onclick="removeSkipReasonUI(\''+k+'\');" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:16px;padding:0 4px" title="Kaldır">&times;</button>'+
       '</div>';
   }
   var el=document.getElementById("skipNotesEditor");
   if(el)el.innerHTML=h;
+}
+
+function addSkipReason(){
+  var label=(document.getElementById("newSkipLabel").value||"").trim();
+  var note=(document.getElementById("newSkipNote").value||"").trim();
+  if(!label){alert("Sebep adı zorunlu!");return;}
+  // Auto-generate key from label
+  var key=normTR(label).replace(/[^a-z0-9]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+  if(!key)key="custom_"+Date.now();
+  var reasons=getSkipReasons();
+  if(reasons[key]){alert("Bu sebep zaten var!");return;}
+  reasons[key]=label;
+  saveSkipReasons(reasons);
+  var notes=getSkipNotes();
+  notes[key]=note||(label+" - mail atilamadi");
+  localStorage.setItem("skip_notes",JSON.stringify(notes));
+  SKIP_NOTE_LABELS=getSkipReasons();
+  populateSkipNotesEditor();
+  document.getElementById("newSkipLabel").value="";
+  document.getElementById("newSkipNote").value="";
+}
+
+function removeSkipReasonUI(key){
+  if(!confirm("'"+key+"' sebebini kaldirmak istediginize emin misiniz?"))return;
+  var reasons=getSkipReasons();
+  delete reasons[key];
+  saveSkipReasons(reasons);
+  var notes=getSkipNotes();
+  delete notes[key];
+  localStorage.setItem("skip_notes",JSON.stringify(notes));
+  SKIP_NOTE_LABELS=getSkipReasons();
+  populateSkipNotesEditor();
+}
+
+function saveAllSkipSettings(){
+  // Save labels for custom reasons
+  var reasons=getSkipReasons();
+  var sysKeys=["no_email","incognito"];
+  for(var k in reasons){
+    if(sysKeys.indexOf(k)>=0)continue;
+    var labelEl=document.getElementById("skipLabel_"+k);
+    if(labelEl) reasons[k]=labelEl.value.trim()||k;
+  }
+  saveSkipReasons(reasons);
+  // Save notes for all reasons
+  var notes={};
+  for(var k in reasons){
+    var el=document.getElementById("skipNote_"+k);
+    if(el) notes[k]=el.value;
+  }
+  localStorage.setItem("skip_notes",JSON.stringify(notes));
+  SKIP_NOTE_LABELS=getSkipReasons();
+}
+
+function resetAllSkipSettings(){
+  localStorage.removeItem("skip_notes");
+  localStorage.removeItem("skip_reasons");
+  SKIP_NOTES=getSkipNotes();
+  SKIP_NOTE_LABELS=getSkipReasons();
+  populateSkipNotesEditor();
 }
 var SKIP_NOTES=getSkipNotes();
 
@@ -1611,6 +1615,21 @@ function pdSetStatus(idx,val){
 
 function pdBulkMark(val){
   for(var i=0;i<pdGuests.length;i++) pdSetStatus(i,val);
+}
+
+function pdSmartMark(){
+  // Mark remaining: skip incognito, no-email, already handled
+  var candidates=[];
+  for(var i=0;i<pdGuests.length;i++){
+    var g=pdGuests[i];
+    if(g.mailSent || g.skipReason) continue; // already handled
+    if(!g.email) continue; // no email
+    if(g.incognito) continue; // incognito
+    candidates.push(i);
+  }
+  if(!candidates.length){alert("İşaretlenecek misafir kalmadı.");return;}
+  if(!confirm(candidates.length+" misafir 'Atıldı' olarak işaretlenecek.\n(Emailsiz: "+pdGuests.filter(function(g){return!g.email&&!g.mailSent&&!g.skipReason}).length+", Incognito: "+pdGuests.filter(function(g){return g.incognito&&!g.mailSent&&!g.skipReason}).length+" kişi hariç)\n\nDevam edilsin mi?"))return;
+  for(var ci=0;ci<candidates.length;ci++) pdSetStatus(candidates[ci],"sent");
 }
 
 function pdRemoveGuest(idx){
@@ -1640,7 +1659,7 @@ function savePaTemplates(){ paTpl.save() }
 function resetPaTemplates(){ paTpl.reset() }
 function populatePaSettingsUI(){ paTpl.populateUI() }
 
-function getFutureDate(days){var d=new Date();d.setDate(d.getDate()+days);return d.toISOString().split("T")[0];}
+function getFutureDate(days){var d=new Date();d.setDate(d.getDate()+days);return localISO(d);}
 
 function initPreArrival(){
   var di=document.getElementById("paDate");
@@ -1684,16 +1703,31 @@ async function handlePreArrivalPDF(file){
         editSurname:g.lastName||"",
         title:g.title||"",
         lang:lang,
+        incognito:!!g.incognito,
         nights:g.nights||0,
         arrDate:g.arrDate||"",
-        depDate:g.depDate||""
+        depDate:g.depDate||"",
+        // Extra fields for template selection
+        prevStays:g.prevStays||0,
+        prevNights:g.prevNights||0,
+        chl:g.chl||0,
+        travelAgent:g.travelAgent||"",
+        company:g.companyRaw||"",
+        resComments:g.resComments||"",
+        webNotes:g.webNotes||"",
+        specials:g.specials||"",
+        srcCode:g.srcCode||"",
+        mktCode:g.mktCode||"",
+        vipCode:g.vipCode||"",
+        membershipType:g.membershipType||"",
+        confNo:g.confNo||""
       });
     }
     // Auto-detect most common arrival date and set date input
     var dateCounts={};
     for(var di=0;di<paRawParsed.length;di++){
       var ad=paRawParsed[di].arrDate;
-      if(ad){var dp=parseDDMMYY(ad);if(dp){var iso=dp.toISOString().split("T")[0];dateCounts[iso]=(dateCounts[iso]||0)+1;}}
+      if(ad){var dp=parseDDMMYY(ad);if(dp){var iso=localISO(dp);dateCounts[iso]=(dateCounts[iso]||0)+1;}}
     }
     var bestDate="",bestCount=0;
     for(var dk in dateCounts){if(dateCounts[dk]>bestCount){bestCount=dateCounts[dk];bestDate=dk;}}
@@ -1715,25 +1749,26 @@ function paApplyFilter(){
       if(!g.arrDate) continue;
       var ad=parseDDMMYY(g.arrDate);
       if(ad){
-        var gDate=ad.toISOString().split("T")[0];
+        var gDate=localISO(ad);
         if(gDate!==targetDate) continue;
       } else continue;
     }
+    var _paEmail=lookupRehberEmail(g.surname,g.firstName);
+    var _paInco=!!g.incognito;
     paGuests.push({
       room:g.room,firstName:g.firstName,surname:g.surname,
       editSurname:g.editSurname,title:g.title,lang:g.lang,
-      email:lookupRehberEmail(g.surname,g.firstName),
-      mailSent:wasMailSentToday(g.surname,g.firstName,"pa"),
-      skipReason:getSkipReason(g.surname,g.firstName,"pa"),
-      nights:g.nights,arrDate:g.arrDate,depDate:g.depDate
+      email:_paEmail,
+      mailSent:false,
+      skipReason:_paInco?"incognito":(!_paEmail?"no_email":""),
+      incognito:_paInco,
+      nights:g.nights,arrDate:g.arrDate,depDate:g.depDate,
+      prevStays:g.prevStays||0,chl:g.chl||0,
+      travelAgent:g.travelAgent||"",company:g.company||"",
+      resComments:g.resComments||"",webNotes:g.webNotes||"",
+      specials:g.specials||"",srcCode:g.srcCode||"",
+      confNo:g.confNo||""
     });
-  }
-  // Clear stale "no_email" skips where email was found
-  for(var ci=0;ci<paGuests.length;ci++){
-    if(paGuests[ci].email && paGuests[ci].skipReason==="no_email"){
-      removeSkip(paGuests[ci].surname||"",paGuests[ci].firstName||"","pa");
-      paGuests[ci].skipReason="";
-    }
   }
   renderPaTable();
   var st=document.getElementById("paStatus");
@@ -1768,8 +1803,16 @@ function renderPaTable(){
     var flag=g.lang==="TR"?"&#127481;&#127479;":"&#127468;&#127463;";
     var rowBg=g.mailSent?"background:#f0fdf4":(g.skipReason?"background:#fef2f2":"");
     h+='<tr style="'+rowBg+'">';
-    h+='<td style="text-align:center;font-weight:600">'+esc(g.room)+'</td>';
+    h+='<td style="text-align:center;font-weight:600">'+esc(g.room)+(g.incognito?' <span title="INCOGNITO" style="color:#dc2626;cursor:help">⚠️</span>':'')+'</td>';
     h+='<td>';
+    if(g.incognito) h+='<span style="background:#fee2e2;color:#dc2626;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">INCOGNITO</span>';
+    if((g.prevStays||0)>0) h+='<span style="background:#d1fae5;color:#065f46;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px" title="'+g.prevStays+' önceki konaklama">REPEAT</span>';
+    var _bkTa=((g.travelAgent||"")+(g.company||"")).toLowerCase();
+    if(_bkTa.indexOf("booking")>=0) h+='<span style="background:#dbeafe;color:#1e40af;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">BKG</span>';
+    else if(_bkTa.indexOf("expedia")>=0) h+='<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">EXP</span>';
+    var _soNotes=((g.resComments||"")+" "+(g.webNotes||"")+" "+(g.specials||"")).toLowerCase();
+    if(/birthday|honeymoon|anniversary|wedding|celebration/.test(_soNotes)) h+='<span style="background:#fce7f3;color:#9d174d;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px" title="Special Occasion">🎉 SO</span>';
+    if((g.chl||0)>0) h+='<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px" title="'+g.chl+' çocuk">👶 '+g.chl+'</span>';
     var paRecent=getRecentMail(g.surname,g.firstName,"pa");
     if(paRecent&&!wasMailSentToday(g.surname,g.firstName,"pa")){
       var daysAgo=Math.round((new Date()-new Date(paRecent.date))/(86400000));
@@ -1782,14 +1825,7 @@ function renderPaTable(){
     h+='<td style="text-align:center">'+g.nights+'</td>';
     h+='<td style="text-align:center"><select onchange="paSetStatus('+i+',this.value)" style="font-size:10px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;'+
       (g.mailSent?'background:#d1fae5;color:#065f46':g.skipReason?'background:#fee2e2;color:#991b1b':'')+'">'+
-      '<option value=""'+((!g.mailSent&&!g.skipReason)?' selected':'')+'>—</option>'+
-      '<option value="sent"'+(g.mailSent?' selected':'')+'>✓ Atıldı</option>'+
-      '<option value="no_email"'+(g.skipReason==="no_email"?' selected':'')+'>✗ Email yok</option>'+
-      '<option value="incognito"'+(g.skipReason==="incognito"?' selected':'')+'>✗ Incognito</option>'+
-      '<option value="group"'+(g.skipReason==="group"?' selected':'')+'>✗ Grup</option>'+
-      '<option value="staff"'+(g.skipReason==="staff"?' selected':'')+'>✗ Personel</option>'+
-      '<option value="duplicate"'+(g.skipReason==="duplicate"?' selected':'')+'>✗ Mükerrer</option>'+
-      '<option value="other"'+(g.skipReason==="other"?' selected':'')+'>✗ Diğer</option>'+
+      getSkipOptionsHTML(g.mailSent?"sent":g.skipReason)+
       '</select></td>';
 
     h+='<td><button onclick="paSelectGuest('+i+')" style="padding:3px 10px;background:#1a6b5c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">Sec</button></td>';
@@ -1821,10 +1857,7 @@ function paGetWebNote(){
 
 function paEmailChanged(idx,val){
   paGuests[idx].email=val;
-  if(val && paGuests[idx].skipReason==="no_email"){
-    paGuests[idx].skipReason="";
-    removeSkip(paGuests[idx].surname||paGuests[idx].lastName||"",paGuests[idx].firstName||"","pa");
-  }
+
   renderPaTable();
   paRefreshPreview();
 }
@@ -1954,6 +1987,20 @@ function paBulkMark(val){
   for(var i=0;i<paGuests.length;i++) paSetStatus(i,val);
 }
 
+function paSmartMark(){
+  var candidates=[];
+  for(var i=0;i<paGuests.length;i++){
+    var g=paGuests[i];
+    if(g.mailSent || g.skipReason) continue;
+    if(!g.email) continue;
+    if(g.incognito) continue;
+    candidates.push(i);
+  }
+  if(!candidates.length){alert("İşaretlenecek misafir kalmadı.");return;}
+  if(!confirm(candidates.length+" misafir 'Atıldı' olarak işaretlenecek.\nDevam edilsin mi?"))return;
+  for(var ci=0;ci<candidates.length;ci++) paSetStatus(candidates[ci],"sent");
+}
+
 function paRemoveGuest(idx){
   paGuests.splice(idx,1);
   paSelectedIdx=-1;
@@ -2027,9 +2074,17 @@ async function handleOSRPdf(file){
       }
       curLine.items.push(it);
     }
+    // Helper: assemble email from fragments, validate
+    function assembleEmail(parts){
+      if(!parts||!parts.length)return "";
+      var raw=parts.join("").replace(/\s+/g,"").toLowerCase();
+      var m=raw.match(/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i);
+      return m?m[0]:"";
+    }
     // OSR format: Name | Arrival | Departure | Country | Nationality | Email | Phone | Status
     // Detect columns from header row
     var colMap={};var headerFound=false;var newContacts={};var curRow=null;
+    var colBounds={}; // {colName: {left, right}} — strict boundaries
     for(var li=0;li<lines.length;li++){
       var txt=lines[li].items.map(function(it){return it.t}).join(" ");
       if(txt.indexOf("Full Name")>=0 || txt.indexOf("Guest Name")>=0 || (txt.indexOf("Name")>=0 && txt.indexOf("Email")>=0)){
@@ -2044,23 +2099,43 @@ async function handleOSRPdf(file){
           if(tl.indexOf("arrival")>=0 || tl==="arr") colMap.arr=it.x;
           if(tl.indexOf("departure")>=0 || tl==="dep") colMap.dep=it.x;
         }
+        // Build strict column boundaries from sorted X positions
+        var colArr=[];
+        for(var ck in colMap) colArr.push({name:ck,x:colMap[ck]});
+        colArr.sort(function(a,b){return a.x-b.x});
+        for(var ci=0;ci<colArr.length;ci++){
+          var leftB=(ci>0)? (colArr[ci-1].x+colArr[ci].x)/2 : 0;
+          var rightB=(ci<colArr.length-1)? (colArr[ci].x+colArr[ci+1].x)/2 : 9999;
+          colBounds[colArr[ci].name]={left:leftB,right:rightB};
+        }
+        console.log("[OSR DEBUG] colMap:",JSON.stringify(colMap));
+        console.log("[OSR DEBUG] colBounds:",JSON.stringify(colBounds));
         headerFound=true;
         continue;
       }
       if(!headerFound)continue;
-      // Skip non-data lines
+      // Skip non-data lines (headers, footers, Opera metadata/status lines)
       if(txt.indexOf("Page ")>=0 || txt.indexOf("Total:")>=0 || txt.indexOf("Filter:")>=0) continue;
+      // Opera prints metadata lines like "To Arrival Date=11-04-26 Resv Status=CHECKED OUT" below guest rows
+      if(/Resv\s*Status\s*=/i.test(txt)) continue;
+      if(/Arrival\s*Date\s*=|Departure\s*Date\s*=/i.test(txt)) continue;
       if(lines[li].items.length<1)continue;
 
       // Determine if this line starts a new data row or is a continuation
+      // Signal 1: name column has comma (Surname, FirstName format)
+      // Signal 2: arrival column has a date (every booking has one — covers company names without comma)
       var hasNameWithComma=false;
+      var hasArrivalDate=false;
       for(var j=0;j<lines[li].items.length;j++){
         var it=lines[li].items[j];
-        if(colMap.name!==undefined && Math.abs(it.x-colMap.name)<80 && it.t.indexOf(",")>=0){
-          hasNameWithComma=true; break;
+        if(colBounds.name && it.x>=colBounds.name.left && it.x<colBounds.name.right && it.t.indexOf(",")>=0){
+          hasNameWithComma=true;
+        }
+        if(colBounds.arr && it.x>=colBounds.arr.left && it.x<colBounds.arr.right && /\d{2}[.\-\/]\d{2}[.\-\/]\d{2,4}/.test(it.t)){
+          hasArrivalDate=true;
         }
       }
-      var isNewRow=hasNameWithComma || lines[li].items.length>=3;
+      var isNewRow=hasNameWithComma||hasArrivalDate;
 
       if(isNewRow){
         // Flush previous curRow
@@ -2073,44 +2148,56 @@ async function handleOSRPdf(file){
             else{
             var key=rehberKey(sn,fn);
             if(!newContacts[key]) newContacts[key]={};
-            if(curRow.email && curRow.email.indexOf("@")>=0) newContacts[key].email=curRow.email;
+            var _em=assembleEmail(curRow._emailParts);
+            console.log("[OSR DEBUG] FLUSH:",sn+","+fn,"| parts:",JSON.stringify(curRow._emailParts),"| result:",_em);
+            if(_em) newContacts[key].email=_em;
             if(curRow.phone) newContacts[key].phone=curRow.phone;
             if(curRow.nat) newContacts[key].nationality=curRow.nat;
             if(curRow.arr) newContacts[key].arrDate=curRow.arr;
             if(curRow.dep) newContacts[key].depDate=curRow.dep;
             newContacts[key].surname=sn;
             newContacts[key].firstName=fn;
-            newContacts[key].updatedAt=new Date().toISOString().split("T")[0];
+            newContacts[key].updatedAt=localISO(new Date());
           }}
         }
-        curRow={name:"",email:"",phone:"",nat:"",arr:"",dep:""};
+        curRow={name:"",_emailParts:[],phone:"",nat:"",arr:"",dep:""};
       }
 
       if(!curRow)continue;
 
-      // Assign items to closest column (works for both new rows and continuations)
+      // Assign items using strict column boundaries (midpoints between adjacent headers)
       for(var j=0;j<lines[li].items.length;j++){
         var it=lines[li].items[j];
-        var bestCol="",bestDist=9999;
-        for(var ck in colMap){
-          var d=Math.abs(it.x-colMap[ck]);
-          if(d<bestDist){bestDist=d;bestCol=ck;}
+        var assignedCol="";
+        for(var ck in colBounds){
+          if(it.x>=colBounds[ck].left && it.x<colBounds[ck].right){
+            assignedCol=ck; break;
+          }
         }
-        if(bestDist<80){
-          if(bestCol==="name") curRow.name=(curRow.name||"")+it.t;
-          else if(bestCol==="email"){
-            if(it.t.indexOf("@")>=0){
-              curRow.email=(curRow.email||"")+it.t;
-            } else if(curRow.email && curRow.email.indexOf("@")>=0){
-              curRow.email+=it.t;
-            } else {
-              curRow.email=(curRow.email||"")+it.t;
+        // Debug: log items that look email-related or fall outside bounds
+        if(it.t.indexOf("@")>=0 || /\.(com|net|org|co|io|tr|uk|de|fr)/.test(it.t)){
+          console.log("[OSR DEBUG] EMAIL-ITEM x="+it.x.toFixed(1)+" text='"+it.t+"' -> col="+assignedCol);
+        }
+        if(!assignedCol && it.t.length>1){
+          console.log("[OSR DEBUG] UNASSIGNED x="+it.x.toFixed(1)+" text='"+it.t+"'");
+        }
+        if(assignedCol){
+          if(assignedCol==="name"){
+            if(/^(To|Arrival|Departure|Date|Resv|Status|CHECKED|CHECK|OUT|IN|DUE|RESERVED|NO.?SHOW|CANCEL|Confirmation|Conf|Block|Source|Market|Rate|Pay|Folio|Balance|Credit|Deposit|Package|Routing|VIP|Membership|Member|Level|Type|Segment|Origin|Channel|Agent|Company)/i.test(it.t)){}
+            else if(/[=]/.test(it.t)){}
+            else{
+              if(curRow.name && curRow.name.indexOf(",")>=0 && /[0-9=]/.test(it.t)){}
+              else curRow.name=(curRow.name||"")+it.t;
             }
           }
-          else if(bestCol==="phone" && /[0-9+]/.test(it.t)) curRow.phone=(curRow.phone?curRow.phone+" ":"")+it.t;
-          else if(bestCol==="nat") curRow.nat=it.t;
-          else if(bestCol==="arr" && /\d/.test(it.t)) curRow.arr=it.t;
-          else if(bestCol==="dep" && /\d/.test(it.t)) curRow.dep=it.t;
+          else if(assignedCol==="email"){
+            curRow._emailParts=(curRow._emailParts||[]);
+            curRow._emailParts.push(it.t);
+          }
+          else if(assignedCol==="phone" && /[0-9+]/.test(it.t)) curRow.phone=(curRow.phone?curRow.phone+" ":"")+it.t;
+          else if(assignedCol==="nat") curRow.nat=it.t;
+          else if(assignedCol==="arr" && /\d/.test(it.t)) curRow.arr=it.t;
+          else if(assignedCol==="dep" && /\d/.test(it.t)) curRow.dep=it.t;
         }
       }
     }
@@ -2123,14 +2210,16 @@ async function handleOSRPdf(file){
         if(!(snl==="spare"||snl==="hold"||snl==="valued"||snl==="valued guest"||snl==="tba"||fl.indexOf("hold hold")>=0||fl.indexOf("valued guest")>=0)){
         var key=rehberKey(sn,fn);
         if(!newContacts[key]) newContacts[key]={};
-        if(curRow.email && curRow.email.indexOf("@")>=0) newContacts[key].email=curRow.email;
+        var _em2=assembleEmail(curRow._emailParts);
+        console.log("[OSR DEBUG] FLUSH-FINAL:",sn+","+fn,"| parts:",JSON.stringify(curRow._emailParts),"| result:",_em2);
+        if(_em2) newContacts[key].email=_em2;
         if(curRow.phone) newContacts[key].phone=curRow.phone;
         if(curRow.nat) newContacts[key].nationality=curRow.nat;
         if(curRow.arr) newContacts[key].arrDate=curRow.arr;
         if(curRow.dep) newContacts[key].depDate=curRow.dep;
         newContacts[key].surname=sn;
         newContacts[key].firstName=fn;
-        newContacts[key].updatedAt=new Date().toISOString().split("T")[0];
+        newContacts[key].updatedAt=localISO(new Date());
         }
       }
     }
@@ -2145,7 +2234,7 @@ async function handleOSRPdf(file){
       if(nc.depDate) ec.depDate=nc.depDate;
       if(nc.surname) ec.surname=nc.surname;
       if(nc.firstName) ec.firstName=nc.firstName;
-      ec.updatedAt=nc.updatedAt||new Date().toISOString().split("T")[0];
+      ec.updatedAt=nc.updatedAt||localISO(new Date());
     }
     saveRehberContacts(existingContacts);
     var cnt=Object.keys(existingContacts).length;
@@ -2188,20 +2277,9 @@ async function handleOSRAndRefresh(file,module){
       if(pdGuests.length>0){
         for(var i=0;i<pdGuests.length;i++){
           if(!pdGuests[i].email) pdGuests[i].email=lookupRehberEmail(pdGuests[i].surname,pdGuests[i].firstName);
-          // Clear auto no_email skip if email was found
-          if(pdGuests[i].email && pdGuests[i].skipReason==="no_email"){
-            removeSkip(pdGuests[i].surname,pdGuests[i].firstName,"pd");
-            pdGuests[i].skipReason="";
-          }
+
         }
-        // Auto-skip guests still without email
-        for(var ai=0;ai<pdGuests.length;ai++){
-          var ag=pdGuests[ai];
-          if(!ag.email && !ag.mailSent && !ag.skipReason){
-            recordSkip(ag.surname,ag.firstName,"pd","no_email","AUTO");
-            ag.skipReason="no_email";
-          }
-        }
+        // Auto-skip removed — user marks manually
         renderPdTable();
         var matched=pdGuests.filter(function(g){return g.email}).length;
         if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi ('+cnt+' kisi) — '+matched+'/'+pdGuests.length+' e-posta eslesti</span>';
@@ -2213,20 +2291,9 @@ async function handleOSRAndRefresh(file,module){
       if(typeof paGuests!=='undefined' && paGuests.length>0){
         for(var i=0;i<paGuests.length;i++){
           if(!paGuests[i].email) paGuests[i].email=lookupRehberEmail(paGuests[i].surname,paGuests[i].firstName);
-          // Clear auto no_email skip if email was found
-          if(paGuests[i].email && paGuests[i].skipReason==="no_email"){
-            removeSkip(paGuests[i].surname||paGuests[i].lastName||"",paGuests[i].firstName||"","pa");
-            paGuests[i].skipReason="";
-          }
+
         }
-        // Auto-skip guests still without email
-        for(var ai=0;ai<paGuests.length;ai++){
-          var ag=paGuests[ai];
-          if(!ag.email && !ag.mailSent && !ag.skipReason){
-            recordSkip(ag.surname||ag.lastName||"",ag.firstName||"","pa","no_email","AUTO");
-            ag.skipReason="no_email";
-          }
-        }
+        // Auto-skip removed — user marks manually
         renderPaTable();
         var matched=paGuests.filter(function(g){return g.email}).length;
         if(stEl) stEl.innerHTML='<span style="color:#059669">OSR yuklendi ('+cnt+' kisi) — '+matched+'/'+paGuests.length+' e-posta eslesti</span>';
@@ -2291,66 +2358,76 @@ function renderRehber(){
   wrap.innerHTML=h;
 }
 
-function showGuestCard(histKey){
-  // histKey is the mail_history key (normalized "surname,firstname")
-  var h=getMailHistory();
-  var records=h[histKey]||[];
-  // Try to find contact info from rehber
-  var contacts=getRehberContacts();
-  var c=contacts[histKey]||null;
-  // Build display name from key or contact
-  var parts=histKey.split(",");
-  var displaySurname=c?c.surname:(parts[0]||"").charAt(0).toUpperCase()+(parts[0]||"").slice(1);
-  var displayFirst=c?c.firstName:(parts[1]||"").charAt(0).toUpperCase()+(parts[1]||"").slice(1);
-  var wrap=document.getElementById("guestCardWrap");
-  wrap.style.display="block";
-  document.getElementById("guestCardName").textContent=displaySurname+" "+displayFirst;
-  var info="";
-  var email=c?c.email:"";
-  var phone=c?c.phone:"";
-  // Also check mail records for email/phone if not in rehber
-  if(!email||!phone){
-    var recs=records||[];
-    for(var ri=0;ri<recs.length;ri++){
-      if(!email&&recs[ri].email)email=recs[ri].email;
-      if(!phone&&recs[ri].phone)phone=recs[ri].phone;
-      if(email&&phone)break;
-    }
+var kutCardPage=0;
+var _kutOpenDetail=-1;
+
+function kutToggleDetail(globalIdx){
+  var g=kutGuestCards[globalIdx];
+  if(!g)return;
+  // Close previously open detail
+  if(_kutOpenDetail>=0 && _kutOpenDetail!==globalIdx){
+    var oldEl=document.getElementById("kutDetail_"+_kutOpenDetail);
+    if(oldEl){oldEl.style.display="none";oldEl.innerHTML="";}
+    var oldCard=document.getElementById("kutCard_"+_kutOpenDetail);
+    if(oldCard)oldCard.style.borderColor="#e2e8f0";
   }
-  if(email) info+='<div><b>E-posta:</b> '+esc(email)+'</div>';
-  if(phone) info+='<div><b>Telefon:</b> '+esc(phone)+'</div>';
-  if(c&&c.nationality) info+='<div><b>Milliyet:</b> '+esc(c.nationality)+'</div>';
-  if(!email&&!phone&&!c) info+='<span style="color:#94a3b8">İletişim bilgisi yok</span>';
-  document.getElementById("guestCardInfo").innerHTML=info;
-  // Mail history
-  var hd=document.getElementById("guestCardHistory");
-  if(!records.length){
-    hd.innerHTML='<p style="color:#94a3b8;font-size:12px;margin:0">Henüz mail kaydı yok.</p>';
-    wrap.scrollIntoView({behavior:"smooth",block:"nearest"});
+  var detEl=document.getElementById("kutDetail_"+globalIdx);
+  var cardEl=document.getElementById("kutCard_"+globalIdx);
+  if(!detEl)return;
+  // Toggle
+  if(detEl.style.display!=="none"&&detEl.innerHTML){
+    detEl.style.display="none";detEl.innerHTML="";
+    if(cardEl)cardEl.style.borderColor="#e2e8f0";
+    _kutOpenDetail=-1;
     return;
   }
-  records.sort(function(a,b){return b.date.localeCompare(a.date)});
-  var ht='<div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">Mail Geçmişi ('+records.length+' kayıt)</div>';
-  ht+='<table style="width:100%;font-size:11px"><thead><tr><th style="text-align:left;padding:4px 8px;color:#6b7280">Tarih</th><th style="text-align:left;padding:4px 8px;color:#6b7280">Tür</th><th style="text-align:left;padding:4px 8px;color:#6b7280">Butler</th><th style="text-align:left;padding:4px 8px;color:#6b7280">Durum</th></tr></thead><tbody>';
-  for(var i=0;i<records.length;i++){
-    var r=records[i];
-    var typeLabel=r.type==="pd"?"Post-Departure":"Pre-Arrival";
-    var statusHtml;
-    if(r.skip){
-      statusHtml='<span style="color:#dc2626">&#10007; '+(r.note||r.reason||"Atlanmış")+'</span>';
-    } else {
-      statusHtml='<span style="color:#059669">&#10003; Gönderildi</span>';
+  _kutOpenDetail=globalIdx;
+  if(cardEl)cardEl.style.borderColor="#1a6b5c";
+  // Build detail content
+  var histKey=g.key;
+  var h=getMailHistory();
+  var records=h[histKey]||[];
+  var contacts=getRehberContacts();
+  var c=contacts[histKey]||null;
+  var email=c?c.email:"";var phone=c?c.phone:"";
+  if(!email||!phone){for(var ri=0;ri<records.length;ri++){if(!email&&records[ri].email)email=records[ri].email;if(!phone&&records[ri].phone)phone=records[ri].phone;if(email&&phone)break;}}
+  var ht='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px;margin-top:4px;font-size:11px">';
+  ht+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:12px;color:#1e293b">'+esc(g.name)+'</b><span onclick="event.stopPropagation();kutToggleDetail('+globalIdx+')" style="cursor:pointer;color:#94a3b8;font-size:16px">&times;</span></div>';
+  var info=[];
+  if(email) info.push('<b>Email:</b> '+esc(email));
+  if(phone) info.push('<b>Tel:</b> '+esc(phone));
+  if(c&&c.nationality) info.push('<b>Nat:</b> '+esc(c.nationality));
+  if(info.length) ht+='<div style="color:#475569;margin-bottom:6px">'+info.join(" &middot; ")+'</div>';
+  if(!records.length){
+    ht+='<div style="color:#94a3b8">Henüz mail kaydı yok.</div>';
+  } else {
+    records.sort(function(a,b){return b.date.localeCompare(a.date)});
+    ht+='<table style="width:100%;font-size:10px"><thead><tr style="color:#6b7280"><th style="text-align:left;padding:2px 6px">Tarih</th><th style="text-align:left;padding:2px 6px">Tür</th><th style="text-align:left;padding:2px 6px">Butler</th><th style="text-align:left;padding:2px 6px">Durum</th></tr></thead><tbody>';
+    for(var i=0;i<records.length;i++){
+      var r=records[i];
+      var tl=r.type==="pd"?"PD":"PA";
+      var st=r.skip?'<span style="color:#dc2626">\u2717 '+(r.note||r.reason||"Atlanmış")+'</span>':'<span style="color:#059669">\u2713 Gönderildi</span>';
+      ht+='<tr style="border-top:1px solid #e2e8f0"><td style="padding:2px 6px">'+fmtHistDate(r.date)+'</td><td style="padding:2px 6px"><span style="padding:0 4px;border-radius:3px;font-size:9px;font-weight:600;'+(r.type==="pd"?"background:#dbeafe;color:#1e40af":"background:#fef3c7;color:#92400e")+'">'+tl+'</span></td><td style="padding:2px 6px">'+esc(r.butler||"?")+'</td><td style="padding:2px 6px">'+st+'</td></tr>';
     }
-    ht+='<tr style="border-top:1px solid #e2e8f0">';
-    ht+='<td style="padding:4px 8px">'+fmtHistDate(r.date)+'</td>';
-    ht+='<td style="padding:4px 8px"><span style="padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;'+(r.type==="pd"?"background:#dbeafe;color:#1e40af":"background:#fef3c7;color:#92400e")+'">'+typeLabel+'</span></td>';
-    ht+='<td style="padding:4px 8px">'+esc(r.butler||"?")+'</td>';
-    ht+='<td style="padding:4px 8px">'+statusHtml+'</td>';
-    ht+='</tr>';
+    ht+='</tbody></table>';
   }
-  ht+='</tbody></table>';
-  hd.innerHTML=ht;
-  wrap.scrollIntoView({behavior:"smooth",block:"nearest"});
+  ht+='</div>';
+  detEl.innerHTML=ht;
+  detEl.style.display="block";
+}
+
+// Legacy compat — timeline table links still call showGuestCard
+function showGuestCard(histKey){
+  // Find the guest in kutGuestCards
+  for(var i=0;i<kutGuestCards.length;i++){
+    if(kutGuestCards[i].key===histKey){
+      // Navigate to correct card page
+      kutCardPage=Math.floor(i/25);
+      kutRenderUI();
+      setTimeout(function(){kutToggleDetail(i);},50);
+      return;
+    }
+  }
 }
 
 function updateRehberField(key,field,val){
@@ -2398,7 +2475,7 @@ function exportRehberExcel(){
   var ws=XLSX.utils.aoa_to_sheet(data);
   ws["!cols"]=[{wch:18},{wch:15},{wch:30},{wch:18},{wch:8},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws,"Rehber");
-  XLSX.writeFile(wb,"Rehber_"+new Date().toISOString().split("T")[0]+".xlsx");
+  XLSX.writeFile(wb,"Rehber_"+localISO(new Date())+".xlsx");
 }
 
 function exportRehberJSON(){
@@ -2406,7 +2483,7 @@ function exportRehberJSON(){
   if(!Object.keys(contacts).length){alert("Rehber boş!");return;}
   var json=JSON.stringify(contacts,null,2);
   var blob=new Blob([json],{type:"application/json;charset=utf-8"});
-  dlFile(blob,"rehber_yedek_"+new Date().toISOString().split("T")[0]+".json","application/json");
+  dlFile(blob,"rehber_yedek_"+localISO(new Date())+".json","application/json");
 }
 
 function importRehberJSON(){
@@ -2434,7 +2511,7 @@ function importRehberJSON(){
           if(entry.firstName) existing[key].firstName=entry.firstName;
           if(entry.arrDate) existing[key].arrDate=entry.arrDate;
           if(entry.depDate) existing[key].depDate=entry.depDate;
-          existing[key].updatedAt=entry.updatedAt||new Date().toISOString().split("T")[0];
+          existing[key].updatedAt=entry.updatedAt||localISO(new Date());
         }
         saveRehberContacts(existing);
         renderRehber();
@@ -2469,9 +2546,16 @@ function renderKutuphane(){
   var notes=getSkipNotes();
   var search=(document.getElementById("kutSearch").value||"").toLowerCase().replace(/\s+/g,"");
   var typeF=document.getElementById("kutTypeFilter").value;
-  var dateF=parseInt(document.getElementById("kutDateFilter").value)||0;
-  var cutoff="";
-  if(dateF>0){var d=new Date();d.setDate(d.getDate()-dateF);cutoff=d.toISOString().split("T")[0]}
+  var dateF=document.getElementById("kutDateFilter").value;
+  var cutoff="";var cutoffEnd="";
+  if(dateF==="custom"){
+    var cv=document.getElementById("kutCustomDate").value;
+    if(cv){cutoff=cv;cutoffEnd=cv;}
+  } else if(dateF==="0"){
+    cutoff=localISO(new Date());cutoffEnd=cutoff;
+  } else if(parseInt(dateF)>0){
+    var d=new Date();d.setDate(d.getDate()-parseInt(dateF));cutoff=localISO(d);
+  }
   kutRows=[];
   // Build guest summary map for cards
   var guestMap={};
@@ -2480,7 +2564,19 @@ function renderKutuphane(){
     var gKey=keys[k];
     var entries=h[gKey];
     var parts=gKey.split(",");
-    var displayName=(parts[0]||"").charAt(0).toUpperCase()+(parts[0]||"").slice(1)+" "+(parts[1]||"").charAt(0).toUpperCase()+(parts[1]||"").slice(1);
+    // Try to get original names from records or rehber
+    var _origSn="",_origFn="";
+    for(var ei=0;ei<entries.length;ei++){
+      if(entries[ei]._sn){_origSn=entries[ei]._sn;_origFn=entries[ei]._fn||"";break;}
+    }
+    if(!_origSn && c){_origSn=c.surname||"";_origFn=c.firstName||"";}
+    var displayName;
+    if(_origSn){
+      displayName=_origSn.split(" ").map(function(w){return cap(w)}).join(" ")+" "+(_origFn||"").split(" ").map(function(w){return cap(w)}).join(" ");
+    } else {
+      displayName=(parts[0]||"").charAt(0).toUpperCase()+(parts[0]||"").slice(1)+" "+(parts[1]||"").charAt(0).toUpperCase()+(parts[1]||"").slice(1);
+    }
+    displayName=displayName.trim();
     if(search && gKey.indexOf(search)<0) continue;
     var c=contacts[gKey]||null;
     if(!guestMap[gKey]) guestMap[gKey]={name:displayName,key:gKey,email:c?c.email:"",phone:c?c.phone:"",pdCount:0,paCount:0,skipCount:0,lastDate:"",records:[]};
@@ -2488,6 +2584,7 @@ function renderKutuphane(){
     for(var e=0;e<entries.length;e++){
       var r=entries[e];
       if(cutoff && r.date<cutoff) continue;
+      if(cutoffEnd && r.date>cutoffEnd) continue;
       if(typeF==="pd" && (r.type!=="pd" || r.skip)) continue;
       if(typeF==="pa" && (r.type!=="pa" || r.skip)) continue;
       if(typeF==="skip" && !r.skip) continue;
@@ -2498,7 +2595,10 @@ function renderKutuphane(){
       else if(r.type==="pa") gm.paCount++;
       if(r.date>gm.lastDate) gm.lastDate=r.date;
       var noteText=r.skip?(notes[r.reason]||r.note||r.reason||""):"";
-      kutRows.push({name:displayName,key:gKey,date:r.date,type:r.type,butler:r.butler||"?",skip:r.skip,reason:r.reason,note:noteText,email:r.email||c&&c.email||"",phone:r.phone||c&&c.phone||"",checked:false});
+      // Try original name from this specific record
+      var _rSn=r._sn,_rFn=r._fn;
+      var rowName=(_rSn&&_rFn)?(_rSn.split(" ").map(function(w){return cap(w)}).join(" ")+" "+_rFn.split(" ").map(function(w){return cap(w)}).join(" ")).trim():displayName;
+      kutRows.push({name:rowName,key:gKey,date:r.date,type:r.type,butler:r.butler||"?",skip:r.skip,reason:r.reason,note:noteText,email:r.email||c&&c.email||"",phone:r.phone||c&&c.phone||"",checked:false});
     }
   }
   // Sort guest cards by last contact date desc
@@ -2535,27 +2635,52 @@ function kutRenderUI(){
     '<span style="color:#dc2626">'+totalSkip+' atılmadı</span>'+
     (selCount?' | <b style="color:#1a6b5c">'+selCount+' seçili</b>':'');
 
-  // Render guest cards grid
+  // Card pagination (5x5 = 25 per page)
+  var KUT_CARD_PAGE=typeof kutCardPage!=="undefined"?kutCardPage:0;
+  var CARD_PER_PAGE=25;
+  var totalCardPages=Math.max(1,Math.ceil(kutGuestCards.length/CARD_PER_PAGE));
+  if(KUT_CARD_PAGE>=totalCardPages)KUT_CARD_PAGE=totalCardPages-1;
+  if(KUT_CARD_PAGE<0)KUT_CARD_PAGE=0;
+  kutCardPage=KUT_CARD_PAGE;
+  var cStart=KUT_CARD_PAGE*CARD_PER_PAGE;
+  var cEnd=Math.min(cStart+CARD_PER_PAGE,kutGuestCards.length);
+  var pageCards=kutGuestCards.slice(cStart,cEnd);
+
   var gc="";
-  for(var gi=0;gi<kutGuestCards.length;gi++){
-    var g=kutGuestCards[gi];
-    var total=g.pdCount+g.paCount+g.skipCount;
-    gc+='<div onclick="showGuestCard(\''+esc(g.key)+'\')" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;cursor:pointer;transition:box-shadow .15s" onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,.1)\'" onmouseleave="this.style.boxShadow=\'none\'">';
-    gc+='<div style="font-weight:700;font-size:13px;color:#1e293b;margin-bottom:4px">'+esc(g.name)+'</div>';
-    var contactLine=[];
-    if(g.email) contactLine.push(esc(g.email));
-    if(g.phone) contactLine.push(esc(g.phone));
-    if(contactLine.length) gc+='<div style="font-size:10px;color:#6b7280;margin-bottom:6px">'+contactLine.join(' · ')+'</div>';
-    gc+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
-    if(g.pdCount) gc+='<span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600">PD '+g.pdCount+'</span>';
-    if(g.paCount) gc+='<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600">PA '+g.paCount+'</span>';
-    if(g.skipCount) gc+='<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600">'+g.skipCount+' atlanmış</span>';
+  for(var gi=0;gi<pageCards.length;gi++){
+    var g=pageCards[gi];
+    var globalIdx=cStart+gi;
+    gc+='<div id="kutCard_'+globalIdx+'" onclick="kutToggleDetail('+globalIdx+')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;cursor:pointer;transition:box-shadow .15s;font-size:11px" onmouseenter="this.style.boxShadow=\'0 2px 6px rgba(0,0,0,.08)\'" onmouseleave="this.style.boxShadow=\'none\'">';
+    gc+='<div style="font-weight:700;font-size:12px;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(g.name)+'">'+esc(g.name)+'</div>';
+    gc+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">';
+    if(g.pdCount) gc+='<span style="background:#dbeafe;color:#1e40af;padding:0 5px;border-radius:8px;font-size:9px;font-weight:600">PD '+g.pdCount+'</span>';
+    if(g.paCount) gc+='<span style="background:#fef3c7;color:#92400e;padding:0 5px;border-radius:8px;font-size:9px;font-weight:600">PA '+g.paCount+'</span>';
+    if(g.skipCount) gc+='<span style="background:#fee2e2;color:#991b1b;padding:0 5px;border-radius:8px;font-size:9px;font-weight:600">'+g.skipCount+'×</span>';
     gc+='</div>';
-    if(g.lastDate) gc+='<div style="font-size:10px;color:#94a3b8;margin-top:6px">Son: '+fmtHistDate(g.lastDate)+'</div>';
+    if(g.lastDate) gc+='<div style="font-size:9px;color:#94a3b8;margin-top:2px">'+fmtHistDate(g.lastDate)+'</div>';
     gc+='</div>';
+    // Inline detail placeholder (hidden by default)
+    gc+='<div id="kutDetail_'+globalIdx+'" style="display:none;grid-column:1/-1"></div>';
   }
   if(!kutGuestCards.length) gc='<p style="text-align:center;color:#9ca3af;padding:20px;grid-column:1/-1">Kayıt bulunamadı</p>';
   document.getElementById("kutGuestCards").innerHTML=gc;
+
+  // Card pagination controls
+  var cpEl=document.getElementById("kutCardPagination");
+  if(cpEl){
+    if(totalCardPages<=1){cpEl.innerHTML="";}
+    else{
+      cpEl.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:#6b7280">'+
+        '<button onclick="kutCardPage=0;kutRenderUI()" style="padding:2px 6px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:10px"'+(KUT_CARD_PAGE===0?' disabled':'')+'>&laquo;</button>'+
+        '<button onclick="kutCardPage--;kutRenderUI()" style="padding:2px 6px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:10px"'+(KUT_CARD_PAGE===0?' disabled':'')+'>&lsaquo;</button>'+
+        '<span style="font-weight:600;color:#374151">'+(KUT_CARD_PAGE+1)+'/'+totalCardPages+'</span>'+
+        '<button onclick="kutCardPage++;kutRenderUI()" style="padding:2px 6px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:10px"'+(KUT_CARD_PAGE>=totalCardPages-1?' disabled':'')+'>&rsaquo;</button>'+
+        '<button onclick="kutCardPage='+(totalCardPages-1)+';kutRenderUI()" style="padding:2px 6px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:10px"'+(KUT_CARD_PAGE>=totalCardPages-1?' disabled':'')+'>&raquo;</button>'+
+        '<span>('+kutGuestCards.length+' misafir)</span>'+
+        '</div>';
+    }
+  }
 
   // Render timeline table
   var tb="";
@@ -2599,6 +2724,14 @@ function kutRenderUI(){
   }
 }
 
+function kutDateChanged(){
+  var v=document.getElementById("kutDateFilter").value;
+  var dp=document.getElementById("kutCustomDate");
+  if(v==="custom"){dp.style.display="inline-block";if(!dp.value)dp.value=localISO(new Date());}
+  else{dp.style.display="none";}
+  renderKutuphane();
+}
+
 function clearMailHistory(){
   var cnt=Object.keys(getMailHistory()).length;
   if(!cnt){renderKutuphane();return;}
@@ -2614,7 +2747,7 @@ function exportMailHistoryJSON(){
   if(!keys.length){alert("Kütüphane boş!");return;}
   var json=JSON.stringify(h,null,2);
   var blob=new Blob([json],{type:"application/json;charset=utf-8"});
-  dlFile(blob,"mail_history_yedek_"+new Date().toISOString().split("T")[0]+".json","application/json");
+  dlFile(blob,"mail_history_yedek_"+localISO(new Date())+".json","application/json");
 }
 
 function importMailHistoryJSON(){
@@ -2675,7 +2808,7 @@ async function kutDownloadSelectedZip(){
     zip.file(fname,txt);
   }
   var blob=await zip.generateAsync({type:"blob"});
-  var dateStr=new Date().toISOString().split("T")[0];
+  var dateStr=localISO(new Date());
   dlFile(blob,"kutuphane_secim_"+dateStr+"_"+sel.length+"adet.zip","application/zip");
 }
 
@@ -2700,13 +2833,13 @@ function exportKutuphaneExcel(){
   for(var i=0;i<rows.length;i++){
     csv+=rows[i].map(function(c){return '"'+String(c).replace(/"/g,'""')+'"'}).join(";")+String.fromCharCode(13,10);
   }
-  dlFile(csv,"mail_kutuphanesi_"+new Date().toISOString().split("T")[0]+".csv","text/csv;charset=utf-8");
+  dlFile(csv,"mail_kutuphanesi_"+localISO(new Date())+".csv","text/csv;charset=utf-8");
 }
 
 // ===== OPERASYONEL MAIL ŞABLONLARI =====
 var opSelectedKey="";
 var DEF_OP_TEMPLATES={
-  "early_box":{title:"Early Breakfast Box",body:"Merhabalar,\n\nYarın sabah ({{TARIH}}) {{SAAT}}'te {{ODA}}'te konaklayan {{ISIM}} isimli misafirimiz için {{KISI}} kişilik avokadolu tost ve taze sıkılmış portakal suyu içeren breakfast box resepsiyona teslim edilecek şekilde hazırlanması rica olunur.\n\nSaygılarımla,"},
+  "early_box":{title:"Early Breakfast Box",body:"Merhabalar,\n\nYarın sabah ({{TARIH}}) {{SAAT}}'te {{ODA}}'te konaklayan {{ISIM}} isimli misafirimiz için {{KISI}} kişilik {{YEMEK}} içeren breakfast box resepsiyona teslim edilecek şekilde hazırlanması rica olunur.\n\nSaygılarımla,"},
   "early_breakfast":{title:"Early Breakfast",body:"Merhaba,\n\n{{TARIH}} tarihinde early arrival {{ODA}} numaralı odaya giriş yapacak olan {{ISIM}} adına {{KISI}} kişilik sabah {{SAAT}}'te odada olacak şekilde early breakfast talebimiz olacaktır. Yardımlarınızı rica ederiz.\n\nSaygılarımla,"},
   "dnd_rooms":{title:"DND Rooms",body:"Merhaba,\n\nDND olduğu için refresh verilemeyen odaları aşağıda bulabilirsiniz;\n\n[Yapıştırınız]\n\nSaygılarımla,"},
   "cicek_folyosu":{title:"Çiçek Folyosu",body:"Merhaba,\n\n{{ODA}}'e ait çiçek folyosunu ekte bulabilirsiniz.\n\nİyi çalışmalar,"},
@@ -2737,9 +2870,62 @@ function opTplSelect(key){
   document.getElementById("opTplForm").style.display="block";
   document.getElementById("opTplEmpty").style.display="none";
   // Set today's date as default
-  if(!document.getElementById("opDate").value) document.getElementById("opDate").value=new Date().toISOString().split("T")[0];
+  if(!document.getElementById("opDate").value) document.getElementById("opDate").value=localISO(new Date());
   opTplGenerate();
   renderOpTplList();
+}
+
+// === Saved food items ===
+function getOpFoods(){
+  try{var s=localStorage.getItem("op_foods");if(s)return JSON.parse(s)}catch(e){}
+  return ["avokadolu tost ve taze sıkılmış portakal suyu","continental breakfast","American breakfast"];
+}
+function saveOpFoods(arr){localStorage.setItem("op_foods",JSON.stringify(arr))}
+function renderOpFoodList(){
+  var foods=getOpFoods();
+  var dl=document.getElementById("opFoodList");
+  if(!dl)return;
+  dl.innerHTML="";
+  for(var i=0;i<foods.length;i++){
+    var opt=document.createElement("option");
+    opt.value=foods[i];
+    dl.appendChild(opt);
+  }
+}
+function opFoodSave(){
+  var val=(document.getElementById("opFood").value||"").trim();
+  if(!val){alert("Önce bir içerik yazın.");return;}
+  var foods=getOpFoods();
+  if(foods.indexOf(val)>=0){alert("Bu içerik zaten kayıtlı.");return;}
+  foods.unshift(val);
+  saveOpFoods(foods);
+  renderOpFoodList();
+  alert("Kaydedildi: "+val);
+}
+function opFoodDelete(val){
+  var foods=getOpFoods();
+  foods=foods.filter(function(f){return f!==val});
+  saveOpFoods(foods);
+  renderOpFoodList();
+}
+renderOpFoodList();
+
+function opFoodManage(){
+  var foods=getOpFoods();
+  if(!foods.length){alert("Kayitli icerik yok.");return;}
+  var msg="Kayitli icerikler:\n\n";
+  for(var i=0;i<foods.length;i++) msg+=(i+1)+". "+foods[i]+"\n";
+  msg+="\nSilmek istediginiz numarayi girin (bos = iptal):";
+  var inp=prompt(msg);
+  if(!inp)return;
+  var idx=parseInt(inp,10)-1;
+  if(idx>=0 && idx<foods.length){
+    var removed=foods[idx];
+    foods.splice(idx,1);
+    saveOpFoods(foods);
+    renderOpFoodList();
+    alert("Silindi: "+removed);
+  }
 }
 
 function opTplGenerate(){
@@ -2760,7 +2946,9 @@ function opTplGenerate(){
   out=out.replace(/\{\{TARIH\}\}/g,date||"___");
   out=out.replace(/\{\{SAAT\}\}/g,time||"___");
   out=out.replace(/\{\{KISI\}\}/g,pax||"___");
+  var food=(document.getElementById("opFood")||{}).value||"avokadolu tost ve taze sıkılmış portakal suyu";
   out=out.replace(/\{\{BUTLER\}\}/g,butler||"___");
+  out=out.replace(/\{\{YEMEK\}\}/g,food);
   document.getElementById("opOutput").value=out;
 }
 
@@ -2960,11 +3148,10 @@ function recordMail(surname,firstName,type,butler,extra){
   var h=getMailHistory();
   var key=mailHistoryKey(surname,firstName);
   if(!h[key])h[key]=[];
-  var today=new Date().toISOString().split("T")[0];
-  // Aynı gün + aynı tip varsa tekrar ekleme
+  var today=localISO(new Date());
   var dup=h[key].some(function(r){return r.date===today&&r.type===type&&!r.skip});
   if(!dup){
-    var rec={date:today,type:type,butler:butler||"?"};
+    var rec={date:today,type:type,butler:butler||"?",_sn:surname,_fn:firstName};
     if(extra){
       if(extra.email)rec.email=extra.email;
       if(extra.phone)rec.phone=extra.phone;
@@ -2978,7 +3165,7 @@ function removeMail(surname,firstName,type){
   var h=getMailHistory();
   var key=mailHistoryKey(surname,firstName);
   if(!h[key])return;
-  var today=new Date().toISOString().split("T")[0];
+  var today=localISO(new Date());
   h[key]=h[key].filter(function(r){return!(r.date===today&&r.type===type)});
   if(!h[key].length)delete h[key];
   saveMailHistory(h);
@@ -2990,7 +3177,7 @@ function getRecentMail(surname,firstName,type){
   var key=mailHistoryKey(surname,firstName);
   if(!h[key]||!h[key].length)return null;
   var cutoff=new Date();cutoff.setDate(cutoff.getDate()-MAIL_WARN_DAYS);
-  var cutoffStr=cutoff.toISOString().split("T")[0];
+  var cutoffStr=localISO(cutoff);
   var matching=h[key].filter(function(r){return r.date>=cutoffStr&&(!type||r.type===type)});
   if(!matching.length)return null;
   // En son kaydı döndür
@@ -3002,7 +3189,7 @@ function wasMailSentToday(surname,firstName,type){
   var h=getMailHistory();
   var key=mailHistoryKey(surname,firstName);
   if(!h[key])return false;
-  var today=new Date().toISOString().split("T")[0];
+  var today=localISO(new Date());
   return h[key].some(function(r){return r.date===today&&r.type===type});
 }
 
@@ -3015,7 +3202,7 @@ function recordSkip(surname,firstName,type,reason,butler,extra){
   var h=getMailHistory();
   var key=mailHistoryKey(surname,firstName);
   if(!h[key])h[key]=[];
-  var today=new Date().toISOString().split("T")[0];
+  var today=localISO(new Date());
   // Remove any existing skip for today+type, then add
   h[key]=h[key].filter(function(r){return!(r.date===today&&r.type===type&&r.skip)});
   var sn=getSkipNotes();var note=(sn&&sn[reason])||reason;
@@ -3032,7 +3219,7 @@ function removeSkip(surname,firstName,type){
   var h=getMailHistory();
   var key=mailHistoryKey(surname,firstName);
   if(!h[key])return;
-  var today=new Date().toISOString().split("T")[0];
+  var today=localISO(new Date());
   h[key]=h[key].filter(function(r){return!(r.date===today&&r.type===type&&r.skip)});
   if(!h[key].length)delete h[key];
   saveMailHistory(h);
@@ -3042,7 +3229,7 @@ function getSkipReason(surname,firstName,type){
   var h=getMailHistory();
   var key=mailHistoryKey(surname,firstName);
   if(!h[key])return"";
-  var today=new Date().toISOString().split("T")[0];
+  var today=localISO(new Date());
   var match=h[key].find(function(r){return r.date===today&&r.type===type&&r.skip});
   return match?match.reason:"";
 }
@@ -3288,19 +3475,20 @@ function selectTemplate(guest){
   return lang==="TR"?(isRepeat?"pa_tr_repeat":"pa_tr_first"):(isRepeat?"pa_en_repeat":"pa_en_first");
 }
 
-function generateEML(to,bcc,subject,htmlBody,attachments,inlineImages){
+function generateEML(to,bcc,subject,htmlBody,attachments,inlineImages,fromAddr,module){
   var boundaryMixed="----=_SW_mixed_"+Date.now();
   var boundaryRelated="----=_SW_related_"+Date.now();
   var hasInline=inlineImages&&inlineImages.length>0;
   var hasAttach=attachments&&attachments.length>0;
   var eml="";
   eml+="MIME-Version: 1.0\r\n";
-  var fromAddr=getFromAddress();
+  fromAddr=fromAddr||"";
   if(fromAddr) eml+="From: "+fromAddr+"\r\n";
   eml+="To: "+to+"\r\n";
   if(bcc)eml+="Bcc: "+bcc+"\r\n";
   eml+="Subject: =?UTF-8?B?"+btoa(unescape(encodeURIComponent(subject)))+"?=\r\n";
   eml+="X-Mailer: SmartWorker\r\n";
+  if(module) eml+="X-SW-Module: "+module+"\r\n";
   eml+="X-Unsent: 1\r\n";
 
   // Helper: write HTML body as base64
@@ -3407,7 +3595,10 @@ function buildMailEML(guest,templateKey,subject,bcc,module){
     if(store[pfKey])attachments.push({name:store[pfKey].name,data:store[pfKey].data});
     if(store.monthly)attachments.push({name:store.monthly.name,data:store.monthly.data});
   }
-  var eml=generateEML(guest.email||"",bcc,subject,html,attachments,inlineImages);
+  // --- SmartWorker module marker (macro detection) ---
+  if(module==="pd") html=html.replace(/<\/body>/i,'<!--SW-PD--></body>');
+  var fromAddr=module==="pd"?getPdFromAddress():getPaFromAddress();
+  var eml=generateEML(guest.email||"",bcc,subject,html,attachments,inlineImages,fromAddr,module);
   var fn=module+"_"+safeFn(guest.editSurname||guest.surname||guest.lastName||"guest")+"_"+(guest.room||"")+".eml";
   downloadEML(fn,eml);
 }
