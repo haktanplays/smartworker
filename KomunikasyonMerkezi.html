@@ -195,8 +195,6 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <input type="file" id="osrPdfInput" accept=".pdf" style="display:none" onchange="handleOSRPdf(this.files[0])">
 <button onclick="document.getElementById('osrPdfInput').value='';document.getElementById('osrPdfInput').click()" style="padding:6px 14px;cursor:pointer;border:2px dashed #1a6b5c;border-radius:6px;font-size:11px;font-weight:600;color:#1a6b5c;background:#f0f7f5">&#128196; OSR PDF Yükle</button>
 <button onclick="exportRehberExcel()" class="btn-sm" style="font-size:10px">Excel İndir</button>
-<button onclick="exportRehberJSON()" class="btn-sm" style="font-size:10px;border-color:#2563eb;color:#2563eb" title="Rehberi JSON olarak yedekle">Yedek Al</button>
-<button onclick="importRehberJSON()" class="btn-sm" style="font-size:10px;border-color:#059669;color:#059669" title="JSON yedek dosyasını içe aktar">Yedek Yükle</button>
 <button onclick="var r=purgeOldRehberEntries();if(r){alert(r+' eski kayıt silindi');renderRehber();}else{alert('1 yıldan eski kayıt yok.')}" class="btn-sm" style="font-size:10px;border-color:#fbbf24;color:#b45309">Eskileri Temizle</button>
 <button onclick="clearRehber()" class="btn-sm" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Tümünü Sil</button>
 </div>
@@ -207,7 +205,7 @@ Post-Departure ve Pre-Arrival sayfalarında PDF yüklediğinizde email adresleri
 Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, aynı isimler güncellenir.
 </div>
 <div style="margin:10px 0">
-<input id="rehberSearch" type="text" placeholder="İsim veya email ara..." oninput="renderRehber()" style="width:300px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+<input id="rehberSearch" type="text" placeholder="İsim veya email ara..." oninput="rehberPage=0;renderRehber()" style="width:300px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
 </div>
 <div id="rehberTableWrap" style="overflow-x:auto"></div>
 </div>
@@ -238,10 +236,9 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 <option value="custom">Tarih Seç...</option>
 </select>
 <input type="date" id="kutCustomDate" onchange="renderKutuphane()" style="display:none;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px">
+<button onclick="kutOpenManualEntry()" class="btn-sm" style="font-size:10px;border-color:#1a6b5c;color:#1a6b5c;background:#f0f7f5;font-weight:600">+ Elle Ekle</button>
 <button onclick="kutDownloadSelectedZip()" class="btn-sm" style="font-size:10px;border-color:#1a6b5c;color:#1a6b5c">Secilenleri ZIP Indir</button>
 <button onclick="exportKutuphaneExcel()" class="btn-sm" style="font-size:10px">CSV İndir</button>
-<button onclick="exportMailHistoryJSON()" class="btn-sm" style="font-size:10px;border-color:#2563eb;color:#2563eb" title="Tüm veriyi JSON olarak yedekle">Yedek Al</button>
-<button onclick="importMailHistoryJSON()" class="btn-sm" style="font-size:10px;border-color:#059669;color:#059669" title="JSON yedek dosyasını içe aktar">Yedek Yükle</button>
 <button onclick="clearMailHistory()" class="btn-sm" style="font-size:10px;border-color:#fca5a5;color:#dc2626">Tüm Geçmişi Sil</button>
 </div>
 </div>
@@ -371,6 +368,17 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 </div>
 
 <div class="page" id="page-settings">
+<div class="card" style="border:2px solid #1a6b5c;background:#f0f7f5">
+<h2 style="margin-top:0;color:#1a6b5c">Tam Yedek (Vardiya Senkronu)</h2>
+<div class="settings-info" style="margin:0 0 10px 0">
+Paylaşımlı klasöre koyulacak tek dosyalık yedek — mail geçmişi, rehber, butler listesi ve skip sebeplerini içerir. Diğer PC'ler bu dosyayı yükleyerek kendi verileriyle birleştirir (duplicate yazmaz).
+</div>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+<button onclick="exportFullBackup()" style="padding:8px 18px;background:#1a6b5c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">&#128229; Tam Yedek Al</button>
+<button onclick="importFullBackup()" style="padding:8px 18px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">&#128228; Tam Yedek Yükle</button>
+<span id="lastBackupInfo" style="font-size:11px;color:#6b7280;margin-left:auto"></span>
+</div>
+</div>
 <div class="card">
 <h2>Email Ayarlari</h2>
 <div class="settings-segment">
@@ -516,6 +524,11 @@ Birden fazla OSR yükleyebilirsiniz — yeni veriler mevcut verilere eklenir, ay
 <div class="settings-info" style="margin:4px 0 8px">Pre-Arrival EML dosyalarindaki From adresi. Bos birakilirsa Outlook varsayilan hesabinizi kullanir.</div>
 <input id="setPaFromAddress" type="email" value="" onchange="savePaFromAddress()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="Bos = Outlook varsayilani kullanir">
 </div>
+<div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px">
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Sender (Kisisel Adresiniz) — On Behalf Of icin</label>
+<div class="settings-info" style="margin:4px 0 8px">Send As yetkiniz yoksa Send On Behalf Of kullanilir. Kendi kurumsal adresinizi yazin — EML'e "Sender" header'i olarak eklenir ve Outlook shared mailbox'tan sizin adiniza gonderir. Ornek: haktan.durgun@raffles.com</div>
+<input id="setSenderAddress" type="email" value="" onchange="saveSenderAddress()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="ornek: adiniz.soyadiniz@raffles.com">
+</div>
 </div>
 </div>
 
@@ -599,6 +612,57 @@ function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1).toLowerCase():""}
   localStorage.setItem("km_migrated","v3");
 })();
 function parseDDMMYY(dateStr){if(!dateStr)return null;var p=dateStr.split("-");if(p.length<3)return null;var yr=parseInt(p[2],10);if(yr<100)yr+=2000;return new Date(yr,parseInt(p[1],10)-1,parseInt(p[0],10))}
+
+// Opera isim kolonu çok parçalı gelir, bazen "INCOGNITO" gibi yabancı kelimeler karışır.
+// Tüm parçaları birleştirip "soyad, isim(ler), title" paterni aranır.
+// Örnek input: "Gureken, Mehmet Can, Sn, INCOGNITO, INCOGNITO"
+// Döner: {lastName, firstName, title, incognito}
+function parseGuestNameParts(nameBuffer){
+  if(!nameBuffer) return null;
+  // INCOGNITO kelimesini arala (flag olarak ayrı tutulur)
+  var hasIncognito=/\bINCOGNITO\b/i.test(nameBuffer);
+  // INCOGNITO'yu kaldır — sonra çift virgül/trailing comma temizliği yap
+  var cleaned=nameBuffer
+    .replace(/\bINCOGNITO\b/gi,"")             // INCOGNITO sil (virgülleri koru)
+    .replace(/\s+/g," ")                        // çoklu boşluk → tek boşluk
+    .replace(/\s*,\s*/g,",")                    // virgül etrafındaki boşlukları temizle
+    .replace(/,+/g,",")                         // çift virgül → tek
+    .replace(/^,+|,+$/g,"")                     // baş/sondaki virgül
+    .trim();
+  // Pattern: soyad, isim, title — title opsiyonel
+  var nm=cleaned.match(/^(.+?),(.+?)(?:,(Mr\.?|Mrs\.?|Ms\.?|Miss|Bay|Bayan|Sn\.?|Dr\.?|Shk\.?|HISEX))?$/i);
+  if(!nm) return null;
+  return {
+    lastName:nm[1].trim(),
+    firstName:nm[2].trim(),
+    title:(nm[3]||"").trim(),
+    incognito:hasIncognito
+  };
+}
+
+// Çoklu sinyal ile dil tespiti — title tek başına yetmiyor (Türk misafir genelde Mr. title'ı ile geliyor)
+// Öncelik sırası:
+//   1. Açık Türk title'ı (Sn, Bay, Bayan)
+//   2. İsim/soyad Türkçe karaktere sahip (ç,ş,ğ,ü,ö,ı)
+//   3. Rehberdeki milliyet TR
+// Hiçbiri değilse → EN (varsayılan)
+function detectLang(surname, firstName, title){
+  // 1. Başlık Türkçe
+  var tl=(title||"").replace(/\.$/,"").toLowerCase();
+  if(["sn","bay","bayan"].indexOf(tl)>=0) return "TR";
+  // 2. Türk karakterleri var
+  var full=(surname||"")+" "+(firstName||"");
+  if(/[çğıöşüÇĞİÖŞÜ]/.test(full)) return "TR";
+  // 3. Rehberde milliyet TR ise
+  try {
+    if(typeof getRehberContacts==="function" && typeof rehberKey==="function"){
+      var contacts=getRehberContacts();
+      var key=rehberKey(surname,firstName);
+      if(contacts[key] && (contacts[key].nationality||"").toUpperCase()==="TR") return "TR";
+    }
+  } catch(e){}
+  return "EN";
+}
 function localISO(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
 var Store={get:function(k){try{var s=localStorage.getItem(k);return s?JSON.parse(s):null}catch(e){return null}},set:function(k,v){localStorage.setItem(k,JSON.stringify(v))}};
 function getKW(cat){try{var s=localStorage.getItem("kw_"+cat);return s?JSON.parse(s):["Ahmet","Mehmet","Elif","Bekir","Selin"]}catch(e){return ["Ahmet","Mehmet","Elif","Bekir","Selin"]}}
@@ -614,9 +678,38 @@ function saveBannerLink(){localStorage.setItem("banner_link",document.getElement
 function loadBannerLink(){document.getElementById("setBannerLink").value=getBannerLink()}
 function getPdFromAddress(){var v=(localStorage.getItem("pd_from_address")||"").trim();return v.indexOf("@")>0?v:""}
 function getPaFromAddress(){var v=(localStorage.getItem("pa_from_address")||"").trim();return v.indexOf("@")>0?v:""}
+function getSenderAddress(){var v=(localStorage.getItem("sender_address")||"").trim();return v.indexOf("@")>0?v:""}
 function savePdFromAddress(){localStorage.setItem("pd_from_address",(document.getElementById("setPdFromAddress").value||"").trim())}
 function savePaFromAddress(){localStorage.setItem("pa_from_address",(document.getElementById("setPaFromAddress").value||"").trim())}
-function loadFromAddresses(){document.getElementById("setPdFromAddress").value=getPdFromAddress();document.getElementById("setPaFromAddress").value=getPaFromAddress()}
+function saveSenderAddress(){localStorage.setItem("sender_address",(document.getElementById("setSenderAddress").value||"").trim())}
+function loadFromAddresses(){
+  document.getElementById("setPdFromAddress").value=getPdFromAddress();
+  document.getElementById("setPaFromAddress").value=getPaFromAddress();
+  var se=document.getElementById("setSenderAddress");
+  if(se) se.value=getSenderAddress();
+}
+
+// Session bayraklı Sender kontrolü — uyarıyı oturum başına bir kez gösterir
+// Butler "Devam" derse bir daha sormaz; "Iptal" derse tekrar sorar (her tıklamada)
+var _senderWarnAcknowledged={pd:false,pa:false};
+function checkSenderWarning(module){
+  var fromAddr=module==="pd"?getPdFromAddress():getPaFromAddress();
+  var senderAddr=getSenderAddress();
+  if(!fromAddr || senderAddr) return true; // ya From yok ya Sender var → sorun yok
+  if(_senderWarnAcknowledged[module]) return true; // oturumda onaylandı
+  var fromEmailOnly=fromAddr.toLowerCase().replace(/^.*<|>$/g,"").trim();
+  // Sadece shared mailbox gibi görünen adreslerde uyar
+  var looksLikeShared=/butler|services|info|front|reservat|concierge/i.test(fromEmailOnly);
+  if(!looksLikeShared) return true; // kişisel hesap From → zaten Send As gerekmez
+  var ok=confirm(
+    "UYARI: From adresi ayarli ("+fromEmailOnly+") ama Sender (kisisel adresiniz) bos.\n\n"+
+    "Send As yetkiniz yoksa Outlook \"system admin\" hatasi verecektir.\n\n"+
+    "Cozum: Settings → \"Sender (Kisisel Adresiniz)\" alanina kendi kurumsal adresinizi yazin.\n\n"+
+    "Yine de devam etmek istiyor musunuz?"
+  );
+  if(ok) _senderWarnAcknowledged[module]=true;
+  return ok;
+}
 // Helper: replace CID refs with data URIs for in-page preview
 function previewCleanHtml(h){
   var imgStore=getInlineImageStore();
@@ -648,7 +741,7 @@ function showEmailPage(p){
   if(p==="prearr")initPreArrival();
   if(p==="rehber")renderRehber();
   if(p==="sablonlar")renderTplCards();
-  if(p==="settings"){populatePdSettingsUI();populatePaSettingsUI();renderPdfStatus();renderImageStatus();loadBannerLink();loadFromAddresses();populateSkipNotesEditor()}
+  if(p==="settings"){populatePdSettingsUI();populatePaSettingsUI();renderPdfStatus();renderImageStatus();loadBannerLink();loadFromAddresses();populateSkipNotesEditor();updateLastBackupInfo()}
 }
 
 // ===== SHARED RES_DETAIL PARSER =====
@@ -811,7 +904,7 @@ async function parseResDetail(buf){
         if(items[j].x>=30&&items[j].x<175&&/^.+?,.+?,(Mr\.|Mrs\.|Ms\.?|Miss|Bay|Bayan|Sn\.?|Dr\.?|Shk\.?|HISEX)$/i.test(items[j].t)){hasName=true;break;}
       }
       if(hasName){
-        if(curGuest){if(/^HISEX$/i.test(curGuest.title))curGuest.incognito=true;guests.push(curGuest);}
+        if(curGuest){guests.push(curGuest);}
         curGuest={
           roomNo:0,name:"",lastName:"",firstName:"",title:"",incognito:false,
           company:"",travelAgent:"",source:"",
@@ -821,7 +914,7 @@ async function parseResDetail(buf){
           resComments:"",webNotes:"",specials:"",preferences:"",membershipType:"",membershipLevel:"",
           traces:[],routingInstr:"",blockCode:"",packages:"",vipCode:"",
           companyRaw:"",tLine:"",sLine:"",nights:0,
-          _rawLines:[]
+          _rawLines:[],_nameBuf:""
         };
         detailRowDone=false;
         // Parse this line's items into curGuest (same logic as roomItem block)
@@ -829,9 +922,8 @@ async function parseResDetail(buf){
           var it=items[j],x=it.x,t=it.t;
           if(x<20)continue;
           if(x>=30&&x<175){
-            var nm=t.match(/^(.+?),(.+?),(Mr\.|Mrs\.|Ms\.?|Miss|Bay|Bayan|Sn\.?|Dr\.?|Shk\.?|HISEX)$/i);
-            if(nm){curGuest.lastName=nm[1].trim();curGuest.firstName=nm[2].trim();curGuest.title=nm[3].trim();curGuest.name=curGuest.lastName+", "+curGuest.firstName;}
-            else if(!curGuest.name){curGuest.name=t;}
+            // Name kolonundaki tüm item'lar buffer'a toplanır, sonra regex ile ayrıştırılır
+            curGuest._nameBuf+=(curGuest._nameBuf?" ":"")+t;
           }
           else if(x>=175&&x<285){curGuest.companyRaw+=(curGuest.companyRaw?" ":"")+t;}
           else if(x>=285&&x<325){if(/^\d{2}-\d{2}-\d{2}$/.test(t))curGuest.arrDate=t;}
@@ -850,12 +942,21 @@ async function parseResDetail(buf){
           else if(x>=740){curGuest.deposit=parseFloat(t)||0;}
           // Debug: log items in adl/chl zone for first 3 guests
         }
+        // Buffer'ı parse et (ilk satırdan gelen name verisi)
+        var np=parseGuestNameParts(curGuest._nameBuf);
+        if(np){
+          curGuest.lastName=np.lastName;
+          curGuest.firstName=np.firstName;
+          curGuest.title=np.title;
+          curGuest.name=np.lastName+", "+np.firstName;
+          if(np.incognito) curGuest.incognito=true;
+        }
         continue;
       }
     }
 
     if(roomItem){
-      if(curGuest){if(/^HISEX$/i.test(curGuest.title))curGuest.incognito=true;guests.push(curGuest);}
+      if(curGuest){guests.push(curGuest);}
       curGuest={
         roomNo:parseInt(roomItem.t,10),name:"",lastName:"",firstName:"",title:"",
         company:"",travelAgent:"",source:"",
@@ -865,16 +966,15 @@ async function parseResDetail(buf){
         resComments:"",webNotes:"",specials:"",preferences:"",membershipType:"",membershipLevel:"",
         traces:[],routingInstr:"",blockCode:"",packages:"",vipCode:"",
         companyRaw:"",tLine:"",sLine:"",nights:0,
-        _rawLines:[]
+        _rawLines:[],_nameBuf:""
       };
       detailRowDone=false;
       for(var j=0;j<items.length;j++){
         var it=items[j],x=it.x,t=it.t;
         if(x<20)continue;
         if(x>=30&&x<175){
-          var nm=t.match(/^(.+?),(.+?),(Mr\.|Mrs\.|Ms\.?|Miss|Bay|Bayan|Sn\.?|Dr\.?|Shk\.?|HISEX)$/i);
-          if(nm){curGuest.lastName=nm[1].trim();curGuest.firstName=nm[2].trim();curGuest.title=nm[3].trim();curGuest.name=curGuest.lastName+", "+curGuest.firstName;}
-          else if(!curGuest.name){curGuest.name=t;}
+          // Name kolonundaki tüm item'lar buffer'a toplanır
+          curGuest._nameBuf+=(curGuest._nameBuf?" ":"")+t;
         }
         else if(x>=175&&x<285){curGuest.companyRaw+=(curGuest.companyRaw?" ":"")+t;}
         else if(x>=285&&x<325){if(/^\d{2}-\d{2}-\d{2}$/.test(t))curGuest.arrDate=t;}
@@ -892,6 +992,15 @@ async function parseResDetail(buf){
         else if(x>=693&&x<740){curGuest.payMethod=t;}
         else if(x>=740){curGuest.deposit=parseFloat(t)||0;}
       }
+      // Buffer'ı parse et (roomItem başlatılan satırdan gelen name verisi)
+      var np2=parseGuestNameParts(curGuest._nameBuf);
+      if(np2){
+        curGuest.lastName=np2.lastName;
+        curGuest.firstName=np2.firstName;
+        curGuest.title=np2.title;
+        curGuest.name=np2.lastName+", "+np2.firstName;
+        if(np2.incognito) curGuest.incognito=true;
+      }
       continue;
     }
 
@@ -899,6 +1008,26 @@ async function parseResDetail(buf){
     var _rl=items.map(function(i){return i.t}).join(" ");
     curGuest._rawLines.push(_rl);
     if(/INCOGNITO/i.test(_rl))curGuest.incognito=true;
+
+    // Name kolonunda devam eden item'ları buffer'a ekle ve yeniden parse et
+    // (Opera bazen "Gureken, Mehmet" ilk satır, "Can, Sn" ikinci satır şeklinde gönderir)
+    for(var ni=0;ni<items.length;ni++){
+      var nit=items[ni];
+      if(nit.x>=30 && nit.x<175 && nit.t && !/^INCOGNITO$/i.test(nit.t.replace(/,$/,""))){
+        curGuest._nameBuf=(curGuest._nameBuf||"")+" "+nit.t;
+      }
+    }
+    // Eğer name henüz tamamlanmadıysa yeniden parse dene
+    if(!curGuest.lastName || !curGuest.firstName || !curGuest.title){
+      var npc=parseGuestNameParts(curGuest._nameBuf);
+      if(npc && npc.title){
+        curGuest.lastName=npc.lastName;
+        curGuest.firstName=npc.firstName;
+        curGuest.title=npc.title;
+        curGuest.name=npc.lastName+", "+npc.firstName;
+        if(npc.incognito) curGuest.incognito=true;
+      }
+    }
 
     var hasConf=false;
     for(var j=0;j<items.length;j++){if(items[j].x>=30&&items[j].x<55&&/^\d{5,6}$/.test(items[j].t)){hasConf=true;break;}}
@@ -974,7 +1103,7 @@ async function parseResDetail(buf){
     else if(lineText.match(/^T-\s*/)){curGuest.travelAgent=lineText.replace(/^T-\s*/,"").trim();curGuest.tLine=lineText;}
     else if(lineText.match(/^S-\s*/)){curGuest.source=lineText.replace(/^S-\s*/,"").trim();curGuest.sLine=lineText;}
   }
-  if(curGuest){if(/^HISEX$/i.test(curGuest.title))curGuest.incognito=true;guests.push(curGuest);}
+  if(curGuest){guests.push(curGuest);}
 
   for(var i=0;i<guests.length;i++){
     var g=guests[i];
@@ -1039,13 +1168,15 @@ function buildSingleEML(guest,module){
     if(store[pfKey])attachments.push({name:store[pfKey].name,data:store[pfKey].data});
     if(store.monthly)attachments.push({name:store.monthly.name,data:store.monthly.data});
   }
-  return generateEML(guest.email||"",bcc,subj,html,attachments,inlineImages);
+  return generateEML(guest.email||"",bcc,subj,html,attachments,inlineImages,(module==="pd"?getPdFromAddress():getPaFromAddress()),module);
 }
 
 async function bulkDownloadEML(module){
   var guests=module==="pd"?pdGuests:paGuests;
   var withEmail=guests.filter(function(g){return g.email&&!g.mailSent&&!g.skipReason});
   if(!withEmail.length){alert("Gönderilecek mail kalmadı!");return;}
+  // Pre-flight: Shared mailbox From var ama Sender yok → Send On Behalf Of çalışmaz
+  if(!checkSenderWarning(module)) return;
   var zip=new JSZip();
   var count=0;
   for(var i=0;i<withEmail.length;i++){
@@ -1073,6 +1204,8 @@ let pdGuests=[];
 let pdRawGuests=[];
 
 let pdSelectedIdx=-1;
+var pdSortField=""; // "room" | "surname" | "title" | ""
+var pdSortDir="asc"; // "asc" | "desc"
 
 const DEF_PD_EN_SUBJ="Warm greetings from Raffles Istanbul!";
 const DEF_PD_TR_SUBJ="Raffles \u0130stanbul'dan Merhaba!";
@@ -1175,7 +1308,11 @@ async function handleDepPDF(file){
 
       if(roomMatch){
         if(curG)raw.push(curG);
-        curG={room:parseInt(roomMatch,10),nameParts:[],arrDate:"",depDate:"",status:"",incognito:false};
+        curG={room:parseInt(roomMatch,10),nameParts:[],arrDate:"",depDate:"",status:"",incognito:false,titleExplicit:""};
+        // Önce: tüm satırda INCOGNITO ara (kolon bağımsız)
+        for(var j=0;j<items.length;j++){
+          if(/\bINCOGNITO\b/i.test(items[j].t)){curG.incognito=true;break;}
+        }
         // Extract name items (X between 30-120)
         for(var j=0;j<items.length;j++){
           var it=items[j];
@@ -1184,12 +1321,21 @@ async function handleDepPDF(file){
             else if(/^(Membership|Type:|Specials:|VIP|Comment|Profile|Nationality|Language|Email|Phone|Address|Preferences|Company|Travel|Agent|Source|Segment|Block|Package|Routing|Payment|CC|Card|Folio)/i.test(it.t)){}
             else curG.nameParts.push(it.t);
           }
+          // Title ayrı kolonda olabilir — X=120..175 aralığında Mr./Mrs./Sn./Bay/Bayan ara
+          if(it.x>=120&&it.x<175 && /^(Mr\.?|Mrs\.?|Ms\.?|Miss|Bay|Bayan|Sn\.?|Dr\.?|Shk\.?|HISEX)$/i.test(it.t)){
+            curG.titleExplicit=it.t;
+          }
           if(it.x>=300&&it.x<345&&/^\d{2}-\d{2}-\d{2}$/.test(it.t))curG.arrDate=it.t;
           if(it.x>=345&&it.x<400&&/^\d{2}-\d{2}-\d{2}$/.test(it.t))curG.depDate=it.t;
           if(it.t==="CKOT")curG.status="CKOT";
         }
       } else if(curG){
         // Continuation line - collect name parts and dates
+        // Önce: X koordinatına bakmaksızın tüm satırı INCOGNITO için tara
+        // (Opera bazen alternatif isim kolonuna INCOGNITO koyar — name kolonunun dışında)
+        for(var j=0;j<items.length;j++){
+          if(/\bINCOGNITO\b/i.test(items[j].t)){curG.incognito=true;break;}
+        }
         for(var j=0;j<items.length;j++){
           var it=items[j];
           // Name continuation (X between 30-120, not a date, not CKOT, not company, not metadata labels)
@@ -1198,6 +1344,10 @@ async function handleDepPDF(file){
             if(/^INCOGNITO$/i.test(it.t)){curG.incognito=true;continue;}
             if(/^(Membership|Type:|Specials:|VIP|Comment|Profile|Nationality|Language|Email|Phone|Address|Preferences|Company|Travel|Agent|Source|Segment|Block|Package|Routing|Payment|CC|Card|Folio)/i.test(it.t))continue;
             curG.nameParts.push(it.t);
+          }
+          // Devam satırında da title olabilir
+          if(it.x>=120&&it.x<175 && /^(Mr\.?|Mrs\.?|Ms\.?|Miss|Bay|Bayan|Sn\.?|Dr\.?|Shk\.?|HISEX)$/i.test(it.t)){
+            if(!curG.titleExplicit) curG.titleExplicit=it.t;
           }
           if(!curG.arrDate&&it.x>=300&&it.x<345&&/^\d{2}-\d{2}-\d{2}$/.test(it.t))curG.arrDate=it.t;
           if(!curG.depDate&&it.x>=345&&it.x<400&&/^\d{2}-\d{2}-\d{2}$/.test(it.t))curG.depDate=it.t;
@@ -1217,7 +1367,7 @@ async function handleDepPDF(file){
       nameStr=nameStr.replace(/\s*Membership\s*/gi,"").replace(/\s*Type:\s*/gi,"").replace(/\s*Specials:\s*/gi,"").replace(/\s*INCOGNITO\s*/gi,"").trim();
       nameStr=nameStr.replace(/,M\s+r\./g,",Mr.").replace(/,M\s+s$/g,",Ms").replace(/,M\s+rs\./g,",Mrs.");
 
-      var parts=nameStr.split(",").map(function(s){return s.trim()});
+      var parts=nameStr.split(",").map(function(s){return s.trim()}).filter(function(s){return s.length>0});
       if(parts.length<2)continue;
 
       var surname=parts[0]||"";
@@ -1236,6 +1386,10 @@ async function handleDepPDF(file){
         var m=firstName.match(/\s*(Mr\.|Mrs\.|Ms\.?|Sn|Bay|Bayan)$/i);
         if(m){title=m[1];firstName=firstName.replace(m[0],"").trim();}
       }
+      // Son fallback: title hâlâ boşsa, parser sırasında X=120..175'te yakaladığımız titleExplicit'i kullan
+      if(!title && g.titleExplicit){
+        title=g.titleExplicit;
+      }
 
       var sl=surname.toLowerCase();if(!surname||sl==="spare"||sl==="hold"||sl==="valued"||sl==="valued guest")continue;
       var fl=(surname+" "+firstName).toLowerCase();if(fl.indexOf("hold hold")>=0||fl.indexOf("valued guest")>=0)continue;
@@ -1245,7 +1399,7 @@ async function handleDepPDF(file){
       if(rn<300||rn>9999)continue;
 
       var tl=(title||"").replace(/\.$/,"").toLowerCase();
-      var lang=(["sn","bay","bayan"].indexOf(tl)>=0)?"TR":"EN";
+      var lang=detectLang(surname, firstName, title);
 
       pdRawGuests.push({
         room:rn,surname:surname,firstName:firstName,
@@ -1282,8 +1436,8 @@ function pdApplyFilter(){
       if(!g.depDate) continue; // no depDate parsed → exclude when filter active
       var dp=parseDDMMYY(g.depDate);
       if(dp){
-        var fd=new Date(filterDate+"T00:00:00");
-        if(dp.getTime()!==fd.getTime()) continue;
+        var gDate=localISO(dp);
+        if(gDate!==filterDate) continue;
       } else continue; // unparseable date → exclude
     }
     var email=lookupRehberEmail(g.surname,g.firstName);
@@ -1307,13 +1461,73 @@ function pdApplyFilter(){
 }
 
 
+// ===== TABLO SIRALAMA — PD ve PA için ortak =====
+// Orijinal diziyi değiştirmeden kopyasını sıralar (indexOf selection mantığı bozulmasın)
+function sortGuests(arr, field, dir){
+  if(!field) return arr;
+  var copy=arr.slice();
+  copy.sort(function(a,b){
+    var va=(a[field]!==undefined&&a[field]!==null)?String(a[field]):"";
+    var vb=(b[field]!==undefined&&b[field]!==null)?String(b[field]):"";
+    // Boşlar sona
+    if(!va && !vb) return 0;
+    if(!va) return 1;
+    if(!vb) return -1;
+    // Oda için sayısal karşılaştırma
+    if(field==="room"){
+      var na=parseInt(va,10), nb=parseInt(vb,10);
+      if(!isNaN(na)&&!isNaN(nb)){
+        return dir==="desc"?nb-na:na-nb;
+      }
+    }
+    // Türkçe locale ile karşılaştırma
+    var cmp=va.localeCompare(vb,"tr",{sensitivity:"base"});
+    return dir==="desc"?-cmp:cmp;
+  });
+  return copy;
+}
+
+// Sıralanabilir başlık HTML üretici — ▲▼ ikonu dahil
+function sortableTh(label, field, activeField, activeDir){
+  var arrow="";
+  if(field===activeField){
+    arrow=activeDir==="desc"?" &#9660;":" &#9650;"; // ▼ ya da ▲
+  } else {
+    arrow=' <span style="color:#d1d5db">&#8645;</span>'; // gri iki yönlü ok
+  }
+  return '<th style="cursor:pointer;user-select:none" title="Sıralamak için tıkla">'+label+arrow+'</th>';
+}
+
+// PD tıklama handler
+function pdSortBy(field){
+  if(pdSortField===field){
+    // Aynı alana ikinci tık: yön değiştir; üçüncü tık: sıralamayı kaldır
+    if(pdSortDir==="asc") pdSortDir="desc";
+    else { pdSortField=""; pdSortDir="asc"; }
+  } else {
+    pdSortField=field; pdSortDir="asc";
+  }
+  renderPdTable();
+}
+
+// PA tıklama handler
+function paSortBy(field){
+  if(paSortField===field){
+    if(paSortDir==="asc") paSortDir="desc";
+    else { paSortField=""; paSortDir="asc"; }
+  } else {
+    paSortField=field; paSortDir="asc";
+  }
+  renderPaTable();
+}
+
 function renderPdTable(){
   if(!pdGuests.length){
     document.getElementById("pdTableWrap").innerHTML='<p style="color:#6b7280;text-align:center;padding:20px">Misafir bulunamadi. Departure PDF yukleyin.</p>';
     document.getElementById("pdProgress").style.display="none";
     return;
   }
-  var visible=pdGuests;
+  var visible=sortGuests(pdGuests, pdSortField, pdSortDir);
   var mailDone=visible.filter(function(g){return g.mailSent}).length;
   var skipDone=visible.filter(function(g){return g.skipReason}).length;
   var total=visible.length;
@@ -1325,7 +1539,13 @@ function renderPdTable(){
   var pct=total>0?Math.round((mailDone+skipDone)/total*100):0;
   document.getElementById("pdBar").style.width=pct+"%";
 
-  var h='<table><thead><tr><th>#</th><th>Oda</th><th>Misafir</th><th>Soyad (mail icin)</th><th>Title</th><th>Dil</th><th>E-posta</th><th>Durum</th><th></th><th></th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>#</th>';
+  h+='<th style="cursor:pointer;user-select:none" onclick="pdSortBy(\'room\')" title="Odaya göre sırala">Oda'+(pdSortField==="room"?(pdSortDir==="desc"?" &#9660;":" &#9650;"):' <span style="color:#d1d5db">&#8645;</span>')+'</th>';
+  h+='<th>Misafir</th>';
+  h+='<th style="cursor:pointer;user-select:none" onclick="pdSortBy(\'surname\')" title="Soyada göre sırala">Soyad (mail icin)'+(pdSortField==="surname"?(pdSortDir==="desc"?" &#9660;":" &#9650;"):' <span style="color:#d1d5db">&#8645;</span>')+'</th>';
+  h+='<th>Title</th>';
+  h+='<th style="cursor:pointer;user-select:none" onclick="pdSortBy(\'lang\')" title="Dile göre sırala (EN/TR gruplar)">Dil'+(pdSortField==="lang"?(pdSortDir==="desc"?" &#9660;":" &#9650;"):' <span style="color:#d1d5db">&#8645;</span>')+'</th>';
+  h+='<th>E-posta</th><th>Durum</th><th></th><th></th></tr></thead><tbody>';
   for(var vi=0;vi<visible.length;vi++){
     var g=visible[vi];
     var ri=pdGuests.indexOf(g);
@@ -1366,7 +1586,7 @@ function pdSelectGuest(idx){
 
 function pdGetMailBody(g){
   var body=g.lang==="TR"?getPdTpl("tr_body"):getPdTpl("en_body");
-  body=body.replace(/\{\{TITLE\}\}/g,g.title||"").replace(/\{\{SURNAME\}\}/g,g.editSurname||"");
+  body=body.replace(/\{\{TITLE\}\}/g,normalizeTitle(g.title||"")).replace(/\{\{SURNAME\}\}/g,g.editSurname||"");
   return body.replace(/\s{2,}/g," ");
 }
 
@@ -1398,6 +1618,14 @@ function pdRefreshPreview(){
   var flag=g.lang==="TR"?"&#127481;&#127479;":"&#127468;&#127463;";
   var html='<div style="font-size:12px;color:#374151">';
   html+='<div style="margin-bottom:8px;font-weight:700;font-size:14px">'+flag+' '+esc(g.firstName)+' '+esc(g.surname)+' ('+g.room+')</div>';
+
+  // Dil toggle — butler EN/TR arası hızlıca değiştirebilir
+  html+='<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px">';
+  html+='<label style="font-size:11px;color:#6b7280;font-weight:600">Şablon Dili:</label>';
+  html+='<button onclick="pdChangeLang('+pdSelectedIdx+',\'EN\')" style="padding:3px 12px;border:1px solid #d1d5db;border-radius:4px 0 0 4px;font-size:11px;font-weight:600;cursor:pointer;background:'+(g.lang==="EN"?"#1a6b5c":"#fff")+';color:'+(g.lang==="EN"?"#fff":"#374151")+'">EN</button>';
+  html+='<button onclick="pdChangeLang('+pdSelectedIdx+',\'TR\')" style="padding:3px 12px;border:1px solid #d1d5db;border-left:none;border-radius:0 4px 4px 0;font-size:11px;font-weight:600;cursor:pointer;background:'+(g.lang==="TR"?"#1a6b5c":"#fff")+';color:'+(g.lang==="TR"?"#fff":"#374151")+'">TR</button>';
+  html+='</div>';
+
   html+='<div style="margin-bottom:4px"><b>To:</b> '+(g.email?esc(g.email):'<span style="color:#dc2626">E-posta girilmedi</span>')+'</div>';
   html+='<div style="margin-bottom:4px"><b>BCC:</b> '+esc(getPdTpl("bcc"))+'</div>';
   html+='<div style="margin-bottom:8px"><b>Subject:</b> '+esc(subj)+'</div>';
@@ -1429,6 +1657,7 @@ function pdDownloadEML(idx){
   var g=pdGuests[idx];
   if(!g.email)return alert("E-posta adresi girilmedi!");
   if(g.incognito&&!confirm("\u26a0\ufe0f Bu misafir INCOGNITO!\nYine de mail göndermek istiyor musunuz?"))return;
+  if(!checkSenderWarning("pd")) return;
   var tplKey=g.lang==="TR"?"pd_tr":"pd_en";
   var subj=g.lang==="TR"?getPdTpl("tr_subj"):getPdTpl("en_subj");
   buildMailEML(g,tplKey,subj,getPdTpl("bcc"),"pd");
@@ -1450,6 +1679,15 @@ function pdCopyBody(idx){
 function pdCopyNote(){
   var note=pdGetWebNote();
   navigator.clipboard.writeText(note).then(function(){alert("Web note kopyalandi!")});
+}
+
+// PD dil toggle — butler EN/TR arası değiştirir, tablo ve preview güncellenir
+function pdChangeLang(idx,lang){
+  var g=pdGuests[idx];
+  if(!g) return;
+  g.lang=lang;
+  renderPdTable();
+  pdRefreshPreview();
 }
 
 var DEF_SKIP_NOTES={
@@ -1644,6 +1882,8 @@ let paGuests=[];
 let paRawParsed=[];
 
 let paSelectedIdx=-1;
+var paSortField="";
+var paSortDir="asc";
 
 const DEF_PA_EN_SUBJ="Welcome to Raffles Istanbul!";
 const DEF_PA_TR_SUBJ="Raffles \u0130stanbul'a Ho\u015f Geldiniz!";
@@ -1696,6 +1936,11 @@ async function handlePreArrivalPDF(file){
       var natKW=getRadarKW("nationality");
       if(g.nationality){for(var n=0;n<natKW.length;n++){if(g.nationality.toUpperCase().indexOf(natKW[n].toUpperCase())>=0){lang="TR";break;}}}
       if(g.title&&/^(sn|bay|bayan)$/i.test(g.title.replace(/\./g,"")))lang="TR";
+      // Ek sinyal: Türk karakter veya rehberde TR milliyet
+      if(lang==="EN"){
+        var detected=detectLang(g.lastName||"", g.firstName||"", g.title||"");
+        if(detected==="TR") lang="TR";
+      }
       paRawParsed.push({
         room:String(g.roomNo),
         firstName:g.firstName||"",
@@ -1784,52 +2029,60 @@ function paApplyFilter(){
 function renderPaTable(){
   var wrap=document.getElementById("paTableWrap");
   if(!paGuests.length){wrap.innerHTML="";document.getElementById("paProgress").style.display="none";return;}
-  var visible=paGuests;
+  var visible=sortGuests(paGuests, paSortField, paSortDir);
 
   // Progress
   var mailDone=visible.filter(function(g){return g.mailSent}).length;
   var skipDone=visible.filter(function(g){return g.skipReason}).length;
   var total=visible.length;
+  var withEmail=visible.filter(function(g){return g.email}).length;
   var pct=total>0?Math.round((mailDone+skipDone)/total*100):0;
   document.getElementById("paProgress").style.display="block";
-  document.getElementById("paTotal").textContent="Toplam: "+total;
-  document.getElementById("paMailCount").innerHTML="\u2709 "+mailDone+"/"+total+" atıldı | \u2717 "+skipDone+" atılmadı";
+  document.getElementById("paTotal").textContent=total+" misafir | "+withEmail+" e-postali";
+  document.getElementById("paMailCount").innerHTML='<span style="color:#166534">&#9993; '+mailDone+"/"+total+' atıldı</span> | <span style="color:#dc2626">&#10007; '+skipDone+' atılmadı</span>';
   document.getElementById("paNoteCount").textContent="";
   document.getElementById("paBar").style.width=pct+"%";
 
-  var h='<table><thead><tr><th>Oda</th><th>Isim</th><th>Soyad</th><th>Dil</th><th>E-posta</th><th>Gece</th><th>Durum</th><th></th><th></th></tr></thead><tbody>';
-  for(var i=0;i<paGuests.length;i++){
-    var g=paGuests[i];
-    var flag=g.lang==="TR"?"&#127481;&#127479;":"&#127468;&#127463;";
-    var rowBg=g.mailSent?"background:#f0fdf4":(g.skipReason?"background:#fef2f2":"");
-    h+='<tr style="'+rowBg+'">';
-    h+='<td style="text-align:center;font-weight:600">'+esc(g.room)+(g.incognito?' <span title="INCOGNITO" style="color:#dc2626;cursor:help">⚠️</span>':'')+'</td>';
-    h+='<td>';
+  var h='<table><thead><tr><th>#</th>';
+  h+='<th style="cursor:pointer;user-select:none" onclick="paSortBy(\'room\')" title="Odaya göre sırala">Oda'+(paSortField==="room"?(paSortDir==="desc"?" &#9660;":" &#9650;"):' <span style="color:#d1d5db">&#8645;</span>')+'</th>';
+  h+='<th>Misafir</th>';
+  h+='<th style="cursor:pointer;user-select:none" onclick="paSortBy(\'surname\')" title="Soyada göre sırala">Soyad (mail icin)'+(paSortField==="surname"?(paSortDir==="desc"?" &#9660;":" &#9650;"):' <span style="color:#d1d5db">&#8645;</span>')+'</th>';
+  h+='<th style="cursor:pointer;user-select:none" onclick="paSortBy(\'lang\')" title="Dile göre sırala (EN/TR gruplar)">Dil'+(paSortField==="lang"?(paSortDir==="desc"?" &#9660;":" &#9650;"):' <span style="color:#d1d5db">&#8645;</span>')+'</th>';
+  h+='<th>E-posta</th><th>Gece</th><th>Durum</th><th></th><th></th></tr></thead><tbody>';
+  for(var vi=0;vi<visible.length;vi++){
+    var g=visible[vi];
+    var ri=paGuests.indexOf(g);
+    var bg=g.mailSent?"background:#f0fdf4":(g.skipReason?"background:#fef2f2":"");
+    var sel=paSelectedIdx===ri?"outline:2px solid #1a6b5c":"";
+    h+='<tr style="'+bg+';'+sel+';cursor:pointer" onclick="paSelectGuest('+ri+')">';
+    h+='<td style="text-align:center;font-size:11px;color:#9ca3af">'+(vi+1)+'</td>';
+    h+='<td style="font-weight:700;text-align:center">'+esc(g.room)+(g.incognito?' <span title="INCOGNITO — dikkat!" style="color:#dc2626;cursor:help">⚠️</span>':'')+'</td>';
+    h+='<td style="white-space:nowrap;font-size:12px">';
     if(g.incognito) h+='<span style="background:#fee2e2;color:#dc2626;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">INCOGNITO</span>';
     if((g.prevStays||0)>0) h+='<span style="background:#d1fae5;color:#065f46;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px" title="'+g.prevStays+' önceki konaklama">REPEAT</span>';
     var _bkTa=((g.travelAgent||"")+(g.company||"")).toLowerCase();
     if(_bkTa.indexOf("booking")>=0) h+='<span style="background:#dbeafe;color:#1e40af;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">BKG</span>';
-    else if(_bkTa.indexOf("expedia")>=0) h+='<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">EXP</span>';
     var _soNotes=((g.resComments||"")+" "+(g.webNotes||"")+" "+(g.specials||"")).toLowerCase();
-    if(/birthday|honeymoon|anniversary|wedding|celebration/.test(_soNotes)) h+='<span style="background:#fce7f3;color:#9d174d;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px" title="Special Occasion">🎉 SO</span>';
-    if((g.chl||0)>0) h+='<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px" title="'+g.chl+' çocuk">👶 '+g.chl+'</span>';
+    if(/birthday|honeymoon|anniversary|wedding|celebration/.test(_soNotes)) h+='<span style="background:#fce7f3;color:#9d174d;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px" title="Special Occasion">SO</span>';
+    if((g.chl||0)>0) h+='<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px" title="'+g.chl+' çocuk">CHL '+g.chl+'</span>';
     var paRecent=getRecentMail(g.surname,g.firstName,"pa");
     if(paRecent&&!wasMailSentToday(g.surname,g.firstName,"pa")){
       var daysAgo=Math.round((new Date()-new Date(paRecent.date))/(86400000));
       h+='<span title="Son PA: '+fmtHistDate(paRecent.date)+' ('+paRecent.butler+')" style="background:#fbbf24;color:#78350f;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;margin-right:4px;cursor:help">&#9888; '+daysAgo+' gün önce</span>';
     }
-    h+=esc((g.title?g.title+" ":"")+g.firstName)+'</td>';
-    h+='<td><input value="'+esc(g.editSurname)+'" style="width:100px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px" onchange="paGuests['+i+'].editSurname=this.value;paRefreshPreview()"></td>';
-    h+='<td style="text-align:center">'+flag+'</td>';
-    h+='<td><input value="'+esc(g.email)+'" style="width:160px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px" onchange="paEmailChanged('+i+',this.value)"></td>';
-    h+='<td style="text-align:center">'+g.nights+'</td>';
-    h+='<td style="text-align:center"><select onchange="paSetStatus('+i+',this.value)" style="font-size:10px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;'+
+    h+=esc((g.title?g.title+" ":"")+g.firstName)+' <b>'+esc(g.surname)+'</b></td>';
+    h+='<td><input value="'+esc(g.editSurname)+'" onchange="paGuests['+ri+'].editSurname=this.value;paRefreshPreview()" onclick="event.stopPropagation()" style="width:120px;font-size:11px;padding:3px 6px"></td>';
+    var flag=g.lang==="TR"?"&#127481;&#127479;":"&#127468;&#127463;";
+    h+='<td style="text-align:center"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;'+(g.lang==="TR"?"background:#fef3c7;color:#92400e":"background:#dbeafe;color:#1e40af")+'">'+g.lang+'</span></td>';
+    h+='<td><input type="email" value="'+esc(g.email)+'" onchange="paEmailChanged('+ri+',this.value)" onclick="event.stopPropagation()" style="width:180px;font-size:11px;padding:3px 6px"></td>';
+    h+='<td style="text-align:center;font-size:11px">'+g.nights+'</td>';
+    h+='<td style="text-align:center"><select onchange="paSetStatus('+ri+',this.value)" onclick="event.stopPropagation()" style="font-size:10px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;'+
       (g.mailSent?'background:#d1fae5;color:#065f46':g.skipReason?'background:#fee2e2;color:#991b1b':'')+'">'+
       getSkipOptionsHTML(g.mailSent?"sent":g.skipReason)+
       '</select></td>';
 
-    h+='<td><button onclick="paSelectGuest('+i+')" style="padding:3px 10px;background:#1a6b5c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">Sec</button></td>';
-    h+='<td style="text-align:center"><button onclick="paRemoveGuest('+i+')" style="font-size:11px;padding:1px 6px;border:none;background:none;color:#d1d5db;cursor:pointer" title="Listeden cikar">&#10005;</button></td>';
+    h+='<td style="text-align:center"><button onclick="event.stopPropagation();paDownloadEML('+ri+')" style="font-size:10px;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer" title="Outlook\'ta Ac">&#9993;</button></td>';
+    h+='<td style="text-align:center"><button onclick="event.stopPropagation();paRemoveGuest('+ri+')" style="font-size:11px;padding:1px 6px;border:none;background:none;color:#d1d5db;cursor:pointer" title="Listeden cikar">&#10005;</button></td>';
     h+='</tr>';
   }
   h+='</tbody></table>';
@@ -1838,12 +2091,13 @@ function renderPaTable(){
 
 function paSelectGuest(idx){
   paSelectedIdx=idx;
+  renderPaTable();
   paRefreshPreview();
 }
 
 function paGetMailBody(g){
   var body=g.lang==="TR"?getPaTpl("tr_body"):getPaTpl("en_body");
-  body=body.replace(/\{\{TITLE\}\}/g,g.title||"").replace(/\{\{SURNAME\}\}/g,g.editSurname||"");
+  body=body.replace(/\{\{TITLE\}\}/g,normalizeTitle(g.title||"")).replace(/\{\{SURNAME\}\}/g,g.editSurname||"");
   return body.replace(/\s{2,}/g," ");
 }
 
@@ -1890,8 +2144,21 @@ function paRefreshPreview(){
   var html='<div style="font-size:12px;color:#374151">';
   html+='<div style="margin-bottom:8px;font-weight:700;font-size:14px">'+flag+' '+esc(g.firstName)+' '+esc(g.surname)+' ('+g.room+')</div>';
 
-  // Template badge
-  html+='<div style="margin-bottom:8px"><span style="background:#dbeafe;color:#1e40af;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700">'+esc(tplLabels[tplKey]||tplKey)+'</span></div>';
+  // Template dropdown — butler manuel override edebilir
+  var isOverride=!!g.tplOverride;
+  var autoLabel=selectTemplate(Object.assign({},g,{tplOverride:null})); // override olmadan ne olurdu?
+  html+='<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px">';
+  html+='<label style="font-size:11px;color:#6b7280;font-weight:600">Şablon:</label>';
+  html+='<select onchange="paChangeTemplate('+paSelectedIdx+',this.value)" style="padding:3px 6px;border:1px solid '+(isOverride?"#f59e0b":"#d1d5db")+';border-radius:4px;font-size:11px;font-weight:600;background:'+(isOverride?"#fef3c7":"#dbeafe")+';color:'+(isOverride?"#92400e":"#1e40af")+';cursor:pointer">';
+  html+='<option value="auto"'+(!isOverride?" selected":"")+'>&#9889; Otomatik ('+esc(tplLabels[autoLabel]||autoLabel)+')</option>';
+  for(var tk in tplLabels){
+    html+='<option value="'+tk+'"'+(g.tplOverride===tk?" selected":"")+'>'+esc(tplLabels[tk])+'</option>';
+  }
+  html+='</select>';
+  if(isOverride){
+    html+='<span style="font-size:10px;color:#92400e;font-weight:600">(manuel)</span>';
+  }
+  html+='</div>';
 
   // Month warning
   if(monthWarning){
@@ -1938,6 +2205,8 @@ function paRefreshPreview(){
 function paDownloadEML(idx){
   var g=paGuests[idx];
   if(!g.email)return alert("E-posta adresi girilmedi!");
+  if(g.incognito&&!confirm("\u26a0\ufe0f Bu misafir INCOGNITO!\nYine de mail göndermek istiyor musunuz?"))return;
+  if(!checkSenderWarning("pa")) return;
   var tplKey=selectTemplate(g);
   var subj=g.lang==="TR"?getPaTpl("tr_subj"):getPaTpl("en_subj");
   buildMailEML(g,tplKey,subj,getPaTpl("bcc"),"pa");
@@ -1955,6 +2224,18 @@ function paCopyBody(idx){
   // Strip HTML tags for plain text copy
   var text=html.replace(/<br\s*\/?>/gi,"\n").replace(/<\/p>/gi,"\n").replace(/<[^>]+>/g,"").replace(/&nbsp;/g," ").replace(/\n{3,}/g,"\n\n").trim();
   navigator.clipboard.writeText(text).then(function(){alert("Mail metni kopyalandi!")});
+}
+
+// Template override handler — "Auto" seçilirse override kaldırılır, diğerlerinde sabitlenir
+function paChangeTemplate(idx,val){
+  var g=paGuests[idx];
+  if(!g) return;
+  if(val==="auto"){
+    delete g.tplOverride;
+  } else {
+    g.tplOverride=val;
+  }
+  paRefreshPreview();
 }
 
 function paCopyNote(){
@@ -1997,7 +2278,7 @@ function paSmartMark(){
     candidates.push(i);
   }
   if(!candidates.length){alert("İşaretlenecek misafir kalmadı.");return;}
-  if(!confirm(candidates.length+" misafir 'Atıldı' olarak işaretlenecek.\nDevam edilsin mi?"))return;
+  if(!confirm(candidates.length+" misafir 'Atıldı' olarak işaretlenecek.\n(Emailsiz: "+paGuests.filter(function(g){return!g.email&&!g.mailSent&&!g.skipReason}).length+", Incognito: "+paGuests.filter(function(g){return g.incognito&&!g.mailSent&&!g.skipReason}).length+" kişi hariç)\n\nDevam edilsin mi?"))return;
   for(var ci=0;ci<candidates.length;ci++) paSetStatus(candidates[ci],"sent");
 }
 
@@ -2026,10 +2307,14 @@ function lookupRehberEmail(surname,firstName){
   var contacts=getRehberContacts();
   var key=rehberKey(surname,firstName);
   if(contacts[key]&&contacts[key].email) return contacts[key].email;
-  // Try surname-only partial match
+  // Soyad bazlı fallback — SADECE tam soyad eşleşmesi
+  // Eski kod "indexOf(sn)===0" kullanıyordu → "Martin" aranırken "Martiniere" ile eşleşiyordu (BUG)
   var sn=normTR(surname).replace(/\s+/g,"");
+  if(!sn) return "";
   for(var k in contacts){
-    if(k.indexOf(sn)===0 && contacts[k].email) return contacts[k].email;
+    // Key formatı: "soyad,isim" → virgülden önceki kısım tam olarak soyad olmalı
+    var keySurname=k.split(",")[0];
+    if(keySurname===sn && contacts[k].email) return contacts[k].email;
   }
   return "";
 }
@@ -2039,6 +2324,103 @@ function lookupRehberPhone(surname,firstName){
   var key=rehberKey(surname,firstName);
   if(contacts[key]&&contacts[key].phone) return contacts[key].phone;
   return "";
+}
+
+// ===== TELEFON AYIRMA (Ülke Kodu + Numara) =====
+// Tanıdık ülke kodları — en uzundan en kısaya sıralı (öncelik)
+// Referans: ITU-T E.164 — yaygın destinasyonlar öncelikli
+var PHONE_COUNTRY_CODES=[
+  // 4 haneli
+  "1876","1787","1868","1809","1849","1829","1784","1758","1767","1473","1441","1345","1284","1264","1246","1242","1671","1670","1684","1649","1939","1721","1664",
+  // 3 haneli
+  "971","968","967","966","965","964","963","962","961","960","380","381","382","383","385","386","387","389","420","421","423","350","351","352","353","354","355","356","357","358","359","370","371","372","373","374","375","376","377","378","800","808","870","878","881","882","883","888","979","992","993","994","995","996","998","670","672","673","674","675","676","677","678","679","680","681","682","683","685","686","687","688","689","690","691","692","850","852","853","855","856","886","960","962","961","232","233","234","235","236","237","238","239","240","241","242","243","244","245","246","247","248","249","250","251","252","253","254","255","256","257","258","260","261","262","263","264","265","266","267","268","269","290","291","297","298","299","500","501","502","503","504","505","506","507","508","509","590","591","592","593","594","595","596","597","598","599","212","213","216","218","220","221","222","223","224","225","226","227","228","229","230","231",
+  // 2 haneli
+  "20","27","30","31","32","33","34","36","39","40","41","43","44","45","46","47","48","49","51","52","53","54","55","56","57","58","60","61","62","63","64","65","66","81","82","84","86","90","91","92","93","94","95","98",
+  // 1 haneli
+  "1","7"
+];
+
+// Ham telefon → {cc, num} ikilisi
+// cc: "+90" formatında (başta + ile), yoksa ""
+// num: sadece rakamlar, ülke kodu hariç
+function splitPhone(raw){
+  if(!raw) return {cc:"",num:""};
+  // 1. Temizle: sadece + ve rakamlar kalsın
+  var cleaned=String(raw).replace(/[^\d+]/g,"");
+  if(!cleaned) return {cc:"",num:""};
+  // 2. 00 prefix → + olarak davran
+  if(cleaned.indexOf("00")===0) cleaned="+"+cleaned.substring(2);
+  // 3. + ile başlıyorsa → ülke kodunu eşleştir
+  if(cleaned.charAt(0)==="+"){
+    var digits=cleaned.substring(1);
+    for(var i=0;i<PHONE_COUNTRY_CODES.length;i++){
+      var code=PHONE_COUNTRY_CODES[i];
+      if(digits.indexOf(code)===0){
+        return {cc:"+"+code, num:digits.substring(code.length)};
+      }
+    }
+    // Eşleşmeyen + var — ilk 1-3 rakamı cc olarak al
+    return {cc:"+"+digits.substring(0,Math.min(3,digits.length)), num:digits.substring(Math.min(3,digits.length))};
+  }
+  // 4. + yok — Türkiye tanıma
+  // 11 haneli 0 ile başlıyorsa: 0532... → +90 5321234567
+  if(cleaned.length===11 && cleaned.charAt(0)==="0"){
+    return {cc:"+90", num:cleaned.substring(1)};
+  }
+  // 10 haneli 5 ile başlıyorsa (Türk cep): 532... → +90
+  if(cleaned.length===10 && cleaned.charAt(0)==="5"){
+    return {cc:"+90", num:cleaned};
+  }
+  // Diğer → cc bilinmiyor
+  return {cc:"", num:cleaned};
+}
+
+// Telefon görüntüleme formatı (sıkışık — boşluksuz)
+function formatPhoneNum(num){
+  if(!num) return "";
+  return num;
+}
+
+// Eski kayıtlardaki "phone" alanını parse edip phoneCC + phoneNum'a ayırır
+// Yan etkisi: contacts içinde değişiklik yapar, saveRehberContacts çağırır
+// Döner: parse edilen kayıt sayısı
+function migrateOldPhones(){
+  var contacts=getRehberContacts();
+  var changed=0;
+  for(var key in contacts){
+    var c=contacts[key];
+    if(!c||typeof c!=="object") continue;
+    // Zaten parse edilmiş mi?
+    if(c.phoneCC!==undefined || c.phoneNum!==undefined) continue;
+    // Ham telefon var mı?
+    if(!c.phone) continue;
+    var p=splitPhone(c.phone);
+    c.phoneCC=p.cc;
+    c.phoneNum=p.num;
+    changed++;
+  }
+  if(changed){ saveRehberContacts(contacts); }
+  return changed;
+}
+
+// Booking.com / Expedia / kanal kaynaklı geçici email mi?
+// Bu email'ler rezervasyon sonrası ölür, rehberde saklamak anlamsız
+function isChannelEmail(email){
+  if(!email) return false;
+  var e=email.toLowerCase();
+  // Booking.com varyantları
+  if(e.indexOf("@booking.com")>=0) return true;
+  if(e.indexOf("@guest.booking.com")>=0) return true;
+  if(e.indexOf("@msg.booking.com")>=0) return true;
+  // Expedia varyantları
+  if(e.indexOf("@expedia.com")>=0) return true;
+  if(e.indexOf("@expediapartnercentral.com")>=0) return true;
+  if(e.indexOf("@stay.expediapartnercentral.com")>=0) return true;
+  if(e.indexOf("@hotels.com")>=0) return true;
+  // Diğer OTA kanalları (opsiyonel ama yaygın)
+  if(e.indexOf("@agoda.com")>=0) return true;
+  if(e.indexOf("@reservationphonesupport.com")>=0) return true;
+  return false;
 }
 
 async function handleOSRPdf(file){
@@ -2114,28 +2496,19 @@ async function handleOSRPdf(file){
         continue;
       }
       if(!headerFound)continue;
-      // Skip non-data lines (headers, footers, Opera metadata/status lines)
+      // Skip non-data lines
       if(txt.indexOf("Page ")>=0 || txt.indexOf("Total:")>=0 || txt.indexOf("Filter:")>=0) continue;
-      // Opera prints metadata lines like "To Arrival Date=11-04-26 Resv Status=CHECKED OUT" below guest rows
-      if(/Resv\s*Status\s*=/i.test(txt)) continue;
-      if(/Arrival\s*Date\s*=|Departure\s*Date\s*=/i.test(txt)) continue;
       if(lines[li].items.length<1)continue;
 
       // Determine if this line starts a new data row or is a continuation
-      // Signal 1: name column has comma (Surname, FirstName format)
-      // Signal 2: arrival column has a date (every booking has one — covers company names without comma)
       var hasNameWithComma=false;
-      var hasArrivalDate=false;
       for(var j=0;j<lines[li].items.length;j++){
         var it=lines[li].items[j];
         if(colBounds.name && it.x>=colBounds.name.left && it.x<colBounds.name.right && it.t.indexOf(",")>=0){
-          hasNameWithComma=true;
-        }
-        if(colBounds.arr && it.x>=colBounds.arr.left && it.x<colBounds.arr.right && /\d{2}[.\-\/]\d{2}[.\-\/]\d{2,4}/.test(it.t)){
-          hasArrivalDate=true;
+          hasNameWithComma=true; break;
         }
       }
-      var isNewRow=hasNameWithComma||hasArrivalDate;
+      var isNewRow=hasNameWithComma;
 
       if(isNewRow){
         // Flush previous curRow
@@ -2144,14 +2517,28 @@ async function handleOSRPdf(file){
           if(parts.length>=2){
             var sn=parts[0], fn=parts[1];
             var snl=sn.toLowerCase(),fl=(sn+" "+fn).toLowerCase();
-            if(snl==="spare"||snl==="hold"||snl==="valued"||snl==="valued guest"||snl==="tba"||fl.indexOf("hold hold")>=0||fl.indexOf("valued guest")>=0){/* skip */}
+            // PM ID kontrolü: 9xxx ile başlayan 4 haneli numaralar PM folyolarıdır, misafir değil
+            var isPm=/^9\d{3}(\s|$)/.test(sn)||/^9\d{3}(\s|$)/.test(fn);
+            if(isPm){console.log("[OSR SKIP PM]",sn+", "+fn);}
+            else if(snl==="spare"||snl==="hold"||snl==="valued"||snl==="valued guest"||snl==="tba"||fl.indexOf("hold hold")>=0||fl.indexOf("valued guest")>=0){/* skip */}
             else{
             var key=rehberKey(sn,fn);
             if(!newContacts[key]) newContacts[key]={};
             var _em=assembleEmail(curRow._emailParts);
             console.log("[OSR DEBUG] FLUSH:",sn+","+fn,"| parts:",JSON.stringify(curRow._emailParts),"| result:",_em);
-            if(_em) newContacts[key].email=_em;
-            if(curRow.phone) newContacts[key].phone=curRow.phone;
+            if(_em){
+              if(isChannelEmail(_em)){
+                console.log("[OSR SKIP EMAIL] Kanal maili (Booking/Expedia/OTA) rehbere eklenmedi:",_em,"for",sn+","+fn);
+              } else {
+                newContacts[key].email=_em;
+              }
+            }
+            if(curRow.phone){
+              newContacts[key].phone=curRow.phone;
+              var _pp=splitPhone(curRow.phone);
+              newContacts[key].phoneCC=_pp.cc;
+              newContacts[key].phoneNum=_pp.num;
+            }
             if(curRow.nat) newContacts[key].nationality=curRow.nat;
             if(curRow.arr) newContacts[key].arrDate=curRow.arr;
             if(curRow.dep) newContacts[key].depDate=curRow.dep;
@@ -2207,13 +2594,27 @@ async function handleOSRPdf(file){
       if(parts.length>=2){
         var sn=parts[0], fn=parts[1];
         var snl=sn.toLowerCase(),fl=(sn+" "+fn).toLowerCase();
-        if(!(snl==="spare"||snl==="hold"||snl==="valued"||snl==="valued guest"||snl==="tba"||fl.indexOf("hold hold")>=0||fl.indexOf("valued guest")>=0)){
+        // PM ID kontrolü: 9xxx ile başlayan 4 haneli numaralar PM folyolarıdır
+        var isPmFinal=/^9\d{3}(\s|$)/.test(sn)||/^9\d{3}(\s|$)/.test(fn);
+        if(isPmFinal){console.log("[OSR SKIP PM]",sn+", "+fn);}
+        else if(!(snl==="spare"||snl==="hold"||snl==="valued"||snl==="valued guest"||snl==="tba"||fl.indexOf("hold hold")>=0||fl.indexOf("valued guest")>=0)){
         var key=rehberKey(sn,fn);
         if(!newContacts[key]) newContacts[key]={};
         var _em2=assembleEmail(curRow._emailParts);
         console.log("[OSR DEBUG] FLUSH-FINAL:",sn+","+fn,"| parts:",JSON.stringify(curRow._emailParts),"| result:",_em2);
-        if(_em2) newContacts[key].email=_em2;
-        if(curRow.phone) newContacts[key].phone=curRow.phone;
+        if(_em2){
+          if(isChannelEmail(_em2)){
+            console.log("[OSR SKIP EMAIL] Kanal maili (Booking/Expedia/OTA) rehbere eklenmedi:",_em2,"for",sn+","+fn);
+          } else {
+            newContacts[key].email=_em2;
+          }
+        }
+        if(curRow.phone){
+          newContacts[key].phone=curRow.phone;
+          var _pp2=splitPhone(curRow.phone);
+          newContacts[key].phoneCC=_pp2.cc;
+          newContacts[key].phoneNum=_pp2.num;
+        }
         if(curRow.nat) newContacts[key].nationality=curRow.nat;
         if(curRow.arr) newContacts[key].arrDate=curRow.arr;
         if(curRow.dep) newContacts[key].depDate=curRow.dep;
@@ -2228,7 +2629,11 @@ async function handleOSRPdf(file){
       if(!existingContacts[mk]) existingContacts[mk]={};
       var nc=newContacts[mk], ec=existingContacts[mk];
       if(nc.email) ec.email=nc.email;
-      if(nc.phone) ec.phone=nc.phone;
+      if(nc.phone){
+        ec.phone=nc.phone;
+        ec.phoneCC=nc.phoneCC||"";
+        ec.phoneNum=nc.phoneNum||"";
+      }
       if(nc.nationality) ec.nationality=nc.nationality;
       if(nc.arrDate) ec.arrDate=nc.arrDate;
       if(nc.depDate) ec.depDate=nc.depDate;
@@ -2310,6 +2715,12 @@ async function handleOSRAndRefresh(file,module){
 }
 
 function renderRehber(){
+  // Eski phone kayıtlarını tek seferlik otomatik ayır (session başına bir kere)
+  if(!window._phoneMigrated){
+    var mc=migrateOldPhones();
+    window._phoneMigrated=true;
+    if(mc){console.log("[PHONE MIGRATE] "+mc+" eski kayıt parse edildi");}
+  }
   var contacts=getRehberContacts();
   var keys=Object.keys(contacts);
   var stEl=document.getElementById("rehberStats");
@@ -2326,9 +2737,20 @@ function renderRehber(){
   var sl=search.toLowerCase();
   
   if(sl){
+    // Arama: key, email, ham phone, parse edilmiş cc+num birleşimi, sadece num
+    var slDigits=sl.replace(/[^\d+]/g,""); // kullanıcı "+90 532" yazdıysa "90532" de aranacak
     keys=keys.filter(function(k){
       var c=contacts[k];
-      return k.indexOf(sl)>=0 || (c.email||"").toLowerCase().indexOf(sl)>=0 || (c.phone||"").indexOf(sl)>=0;
+      if(k.indexOf(sl)>=0) return true;
+      if((c.email||"").toLowerCase().indexOf(sl)>=0) return true;
+      if((c.phone||"").indexOf(sl)>=0) return true;
+      // Parse edilmiş alanlarda da ara
+      if(slDigits){
+        var combined=((c.phoneCC||"")+(c.phoneNum||"")).replace(/[^\d+]/g,"");
+        if(combined.indexOf(slDigits.replace(/\+/g,""))>=0) return true;
+        if((c.phoneNum||"").indexOf(slDigits)>=0) return true;
+      }
+      return false;
     });
   }
   
@@ -2338,28 +2760,59 @@ function renderRehber(){
     wrap.innerHTML='<p style="text-align:center;color:#6b7280;padding:20px">'+(search?'Aramayla eşleşen kişi yok.':'Rehber boş. OSR PDF yükleyin.')+'</p>';
     return;
   }
-  var h='<table><thead><tr><th>#</th><th>Soyad</th><th>Ad</th><th>E-posta</th><th>Telefon</th><th>Milliyet</th><th>Güncelleme</th><th></th></tr></thead><tbody>';
-  for(var i=0;i<keys.length;i++){
-    var c=contacts[keys[i]];
+  // Pagination: mevcut sayfa geçerli aralıkta mı kontrol et
+  var totalPages=Math.ceil(keys.length/REHBER_PAGE_SIZE);
+  if(rehberPage>=totalPages) rehberPage=totalPages-1;
+  if(rehberPage<0) rehberPage=0;
+  var startIdx=rehberPage*REHBER_PAGE_SIZE;
+  var endIdx=Math.min(startIdx+REHBER_PAGE_SIZE,keys.length);
+  var pageKeys=keys.slice(startIdx,endIdx);
+  var h='<table><thead><tr><th>#</th><th>Soyad</th><th>Ad</th><th>E-posta</th><th style="white-space:nowrap">Kod</th><th>Numara</th><th style="white-space:nowrap">Ülke</th><th>Güncelleme</th><th></th></tr></thead><tbody>';
+  for(var i=0;i<pageKeys.length;i++){
+    var c=contacts[pageKeys[i]];
     var emailVal=c.email||"";
     var phoneVal=c.phone||"";
-    h+='<tr style="cursor:pointer" onclick="showEmailPage(\'kutuphane\');showGuestCard(\''+esc(keys[i])+'\')">';
-    h+='<td style="text-align:center;color:#9ca3af">'+(i+1)+'</td>';
-    h+='<td style="font-weight:600">'+esc(c.surname||keys[i].split(",")[0]||"")+'</td>';
-    h+='<td>'+esc(c.firstName||keys[i].split(",")[1]||"")+'</td>';
-    h+='<td><input value="'+esc(emailVal)+'" onchange="updateRehberField(\''+esc(keys[i])+'\',\'email\',this.value)" onclick="event.stopPropagation()" style="width:200px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>';
-    h+='<td>'+(phoneVal?'<a href="tel:'+esc(phoneVal)+'" style="color:#1a6b5c;text-decoration:none">'+esc(phoneVal)+'</a>':'<span style="color:#d1d5db">—</span>')+'</td>';
-    h+='<td style="text-align:center;font-size:11px">'+esc(c.nationality||"")+'</td>';
+    var phoneCC=c.phoneCC!==undefined?c.phoneCC:"";
+    var phoneNum=c.phoneNum!==undefined?c.phoneNum:"";
+    // Eğer parse edilmemişse anlık parse et (görüntü için, kayda dokunma)
+    if(phoneCC===""&&phoneNum===""&&phoneVal){
+      var _pp3=splitPhone(phoneVal);
+      phoneCC=_pp3.cc; phoneNum=_pp3.num;
+    }
+    var phoneNumFmt=formatPhoneNum(phoneNum);
+    // Tam numarayı tel: linki için hazırla
+    var telHref=(phoneCC+phoneNum).replace(/[^\d+]/g,"");
+    h+='<tr style="cursor:pointer" onclick="showEmailPage(\'kutuphane\');showGuestCard(\''+esc(pageKeys[i])+'\')">';
+    h+='<td style="text-align:center;color:#9ca3af">'+(startIdx+i+1)+'</td>';
+    h+='<td style="font-weight:600;padding-left:4px;padding-right:4px;max-width:140px;word-break:break-word;line-height:1.3">'+esc(c.surname||pageKeys[i].split(",")[0]||"")+'</td>';
+    h+='<td style="padding-left:4px;padding-right:4px;max-width:140px;word-break:break-word;line-height:1.3">'+esc(c.firstName||pageKeys[i].split(",")[1]||"")+'</td>';
+    h+='<td style="padding-left:4px;padding-right:4px"><input value="'+esc(emailVal)+'" onchange="updateRehberField(\''+esc(pageKeys[i])+'\',\'email\',this.value)" onclick="event.stopPropagation()" style="width:170px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"></td>';
+    h+='<td style="text-align:center;font-family:var(--font-mono,monospace);font-size:11px;color:#1a6b5c;font-weight:600;white-space:nowrap;min-width:38px;padding-left:4px;padding-right:4px">'+(phoneCC?esc(phoneCC):'<span style="color:#d1d5db">—</span>')+'</td>';
+    h+='<td style="font-family:var(--font-mono,monospace);font-size:11px;white-space:nowrap;min-width:85px;padding-left:4px;padding-right:4px">'+(phoneNum?'<a href="tel:'+esc(telHref)+'" onclick="event.stopPropagation()" style="color:#1a6b5c;text-decoration:none">'+esc(phoneNumFmt)+'</a>':'<span style="color:#d1d5db">—</span>')+'</td>';
+    h+='<td style="text-align:center;font-size:11px;padding-left:4px;padding-right:4px;width:45px">'+esc(c.nationality||"")+'</td>';
     h+='<td style="text-align:center;font-size:10px;color:#6b7280">'+esc(c.updatedAt||"")+'</td>';
-    h+='<td><button onclick="event.stopPropagation();deleteRehberEntry(\''+esc(keys[i])+'\');renderRehber()" class="rm-btn" title="Sil">&#10005;</button></td>';
+    h+='<td><button onclick="event.stopPropagation();deleteRehberEntry(\''+esc(pageKeys[i])+'\');renderRehber()" class="rm-btn" title="Sil">&#10005;</button></td>';
     h+='</tr>';
   }
   h+='</tbody></table>';
+  // Pagination kontrolleri
+  if(totalPages>1){
+    h+='<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:12px">'+
+      '<button onclick="rehberPage=0;renderRehber()" style="padding:3px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:11px"'+(rehberPage===0?' disabled':'')+'>&#171;</button>'+
+      '<button onclick="rehberPage--;renderRehber()" style="padding:3px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:11px"'+(rehberPage===0?' disabled':'')+'>&#8249;</button>'+
+      '<span style="color:#374151;font-weight:600">'+(rehberPage+1)+' / '+totalPages+'</span>'+
+      '<button onclick="rehberPage++;renderRehber()" style="padding:3px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:11px"'+(rehberPage>=totalPages-1?' disabled':'')+'>&#8250;</button>'+
+      '<button onclick="rehberPage='+(totalPages-1)+';renderRehber()" style="padding:3px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:11px"'+(rehberPage>=totalPages-1?' disabled':'')+'>&#187;</button>'+
+      '<span style="color:#6b7280">('+(startIdx+1)+'-'+endIdx+' / '+keys.length+')</span>'+
+      '</div>';
+  }
   wrap.innerHTML=h;
 }
 
 var kutCardPage=0;
 var _kutOpenDetail=-1;
+var rehberPage=0;
+var REHBER_PAGE_SIZE=50;
 
 function kutToggleDetail(globalIdx){
   var g=kutGuestCards[globalIdx];
@@ -2431,6 +2884,18 @@ function showGuestCard(histKey){
 }
 
 function updateRehberField(key,field,val){
+  // Email alanında kanal maili kontrolü
+  if(field==="email" && val && isChannelEmail(val)){
+    if(!confirm("Bu bir kanal email'i (Booking/Expedia/OTA) gibi görünüyor:\n\n"+val+"\n\nBu email'ler rezervasyon sonrası geçersiz olur. Yine de kaydetmek istiyor musunuz?")){
+      // Vazgeç — input'u eski değerine döndür
+      var old=getRehberContacts()[key];
+      if(old && old[field]!==undefined){
+        var inp=document.querySelector('input[value="'+val.replace(/"/g,'&quot;')+'"]');
+        if(inp) inp.value=old[field]||"";
+      }
+      return;
+    }
+  }
   var contacts=getRehberContacts();
   if(contacts[key]){contacts[key][field]=val;saveRehberContacts(contacts);}
 }
@@ -2467,26 +2932,52 @@ function exportRehberExcel(){
   var keys=Object.keys(contacts).sort();
   if(!keys.length){alert("Rehber boş!");return;}
   var wb=XLSX.utils.book_new();
-  var data=[["Soyad","Ad","E-posta","Telefon","Milliyet","Güncelleme"]];
+  var data=[["Soyad","Ad","E-posta","Ülke Kodu","Numara","Milliyet","Güncelleme"]];
   for(var i=0;i<keys.length;i++){
     var c=contacts[keys[i]];
-    data.push([c.surname||"",c.firstName||"",c.email||"",c.phone||"",c.nationality||"",c.updatedAt||""]);
+    // Parse edilmişse kullan, yoksa anlık parse et
+    var cc=c.phoneCC!==undefined?c.phoneCC:"";
+    var num=c.phoneNum!==undefined?c.phoneNum:"";
+    if(cc===""&&num===""&&c.phone){
+      var pp=splitPhone(c.phone);
+      cc=pp.cc; num=pp.num;
+    }
+    data.push([c.surname||"",c.firstName||"",c.email||"",cc,num,c.nationality||"",c.updatedAt||""]);
   }
   var ws=XLSX.utils.aoa_to_sheet(data);
-  ws["!cols"]=[{wch:18},{wch:15},{wch:30},{wch:18},{wch:8},{wch:12}];
+  ws["!cols"]=[{wch:18},{wch:15},{wch:30},{wch:8},{wch:16},{wch:8},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws,"Rehber");
   XLSX.writeFile(wb,"Rehber_"+localISO(new Date())+".xlsx");
 }
 
-function exportRehberJSON(){
-  var contacts=getRehberContacts();
-  if(!Object.keys(contacts).length){alert("Rehber boş!");return;}
-  var json=JSON.stringify(contacts,null,2);
+function exportFullBackup(){
+  var payload={
+    version:1,
+    exportedAt:new Date().toISOString(),
+    exportedBy:(document.getElementById("pdButler")&&document.getElementById("pdButler").value)||(document.getElementById("paButler")&&document.getElementById("paButler").value)||"",
+    data:{
+      mail_history:getMailHistory(),
+      cc_contacts:getRehberContacts(),
+      kw_butler:getKW("butler"),
+      skip_notes:getSkipNotes()
+    }
+  };
+  var mhSize=Object.keys(payload.data.mail_history).length;
+  var rbSize=Object.keys(payload.data.cc_contacts).length;
+  if(!mhSize&&!rbSize){
+    if(!confirm("Yedek boş görünüyor (mail geçmişi ve rehber kayıt yok).\nYine de indirmek istiyor musunuz?"))return;
+  }
+  var json=JSON.stringify(payload,null,2);
   var blob=new Blob([json],{type:"application/json;charset=utf-8"});
-  dlFile(blob,"rehber_yedek_"+localISO(new Date())+".json","application/json");
+  var ts=new Date();
+  var tsStr=localISO(ts)+"_"+("0"+ts.getHours()).slice(-2)+"-"+("0"+ts.getMinutes()).slice(-2);
+  dlFile(blob,"smartworker_km_yedek_"+tsStr+".json","application/json");
+  // Son yedek zamanı hatırla
+  try{localStorage.setItem("km_last_export",new Date().toISOString())}catch(e){}
+  updateLastBackupInfo();
 }
 
-function importRehberJSON(){
+function importFullBackup(){
   var inp=document.createElement("input");
   inp.type="file";inp.accept=".json";
   inp.onchange=function(e){
@@ -2495,32 +2986,151 @@ function importRehberJSON(){
     reader.onload=function(ev){
       try{
         var imported=JSON.parse(ev.target.result);
-        if(typeof imported!=="object"||Array.isArray(imported)){alert("Geçersiz dosya formatı!");return;}
-        var existing=getRehberContacts();
-        var addedCount=0,updatedCount=0;
-        for(var key in imported){
-          var entry=imported[key];
-          if(typeof entry!=="object")continue;
-          if(!existing[key]){existing[key]={};addedCount++;}
-          else{updatedCount++;}
-          // Merge: update only non-empty fields
-          if(entry.email) existing[key].email=entry.email;
-          if(entry.phone) existing[key].phone=entry.phone;
-          if(entry.nationality) existing[key].nationality=entry.nationality;
-          if(entry.surname) existing[key].surname=entry.surname;
-          if(entry.firstName) existing[key].firstName=entry.firstName;
-          if(entry.arrDate) existing[key].arrDate=entry.arrDate;
-          if(entry.depDate) existing[key].depDate=entry.depDate;
-          existing[key].updatedAt=entry.updatedAt||localISO(new Date());
+        if(!imported||typeof imported!=="object"){alert("Geçersiz dosya formatı!");return;}
+        // Legacy (eski tek modüllü) dosya uyumluluğu
+        var isLegacyMailHistory=!imported.version&&!imported.data&&typeof imported==="object"&&!Array.isArray(imported)&&Object.keys(imported).some(function(k){return Array.isArray(imported[k])});
+        var isLegacyRehber=!imported.version&&!imported.data&&typeof imported==="object"&&!Array.isArray(imported)&&Object.keys(imported).some(function(k){return imported[k]&&typeof imported[k]==="object"&&(imported[k].email!==undefined||imported[k].phone!==undefined)});
+        if(isLegacyMailHistory){
+          if(!confirm("Bu eski format bir mail geçmişi yedeği.\nSadece mail geçmişi içe aktarılacak. Devam?"))return;
+          var r=mergeMailHistory(imported);
+          alert("Mail geçmişi: "+r.added+" yeni misafir, "+r.merged+" güncelleme.");
+          renderKutuphane();
+          return;
         }
-        saveRehberContacts(existing);
-        renderRehber();
-        alert("İçe aktarma tamamlandı!\n"+addedCount+" yeni kişi, "+updatedCount+" güncelleme.");
+        if(isLegacyRehber){
+          if(!confirm("Bu eski format bir rehber yedeği.\nSadece rehber içe aktarılacak. Devam?"))return;
+          var r2=mergeRehber(imported);
+          alert("Rehber: "+r2.added+" yeni kişi, "+r2.updated+" güncelleme.");
+          if(typeof renderRehber==="function")renderRehber();
+          return;
+        }
+        // Yeni format: version + data
+        if(!imported.data||typeof imported.data!=="object"){alert("Dosya formatı tanınmadı. Geçerli bir tam yedek dosyası seçin.");return;}
+        var who=imported.exportedBy||"bilinmiyor";
+        var when=imported.exportedAt?new Date(imported.exportedAt):null;
+        var whenStr=when?(when.toLocaleDateString("tr-TR")+" "+when.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})):"bilinmiyor";
+        var ageHrs=when?Math.round((new Date()-when)/36e5):null;
+        var ageInfo=(ageHrs!==null&&ageHrs>=0)?(ageHrs<1?" (az önce)":ageHrs<24?" ("+ageHrs+" saat önce)":" ("+Math.round(ageHrs/24)+" gün önce)"):"";
+        var mh=imported.data.mail_history||{};
+        var rb=imported.data.cc_contacts||{};
+        var bk=imported.data.kw_butler;
+        var sn=imported.data.skip_notes;
+        var summary="Bu yedek:\n  Alan: "+who+"\n  Tarih: "+whenStr+ageInfo+"\n\nİçerik:\n";
+        summary+="  • "+Object.keys(mh).length+" misafir (mail geçmişi)\n";
+        summary+="  • "+Object.keys(rb).length+" rehber kaydı\n";
+        if(Array.isArray(bk))summary+="  • "+bk.length+" butler\n";
+        if(sn&&typeof sn==="object")summary+="  • "+Object.keys(sn).length+" skip sebebi\n";
+        summary+="\nDevam edilsin mi? (Veriler MEVCUT verilerle birleştirilecek, silme yapılmaz.)";
+        if(!confirm(summary))return;
+        var report={mh:{added:0,merged:0},rb:{added:0,updated:0},bk:0,sn:0};
+        if(mh&&typeof mh==="object")report.mh=mergeMailHistory(mh);
+        if(rb&&typeof rb==="object")report.rb=mergeRehber(rb);
+        if(Array.isArray(bk)&&bk.length)report.bk=mergeButlerList(bk);
+        if(sn&&typeof sn==="object")report.sn=mergeSkipNotes(sn);
+        // Son import zamanı hatırla
+        try{localStorage.setItem("km_last_import",new Date().toISOString())}catch(e){}
+        updateLastBackupInfo();
+        var msg="Yükleme tamamlandı.\n\n";
+        msg+="Mail geçmişi: "+report.mh.added+" yeni misafir, "+report.mh.merged+" güncelleme.\n";
+        msg+="Rehber: "+report.rb.added+" yeni kişi, "+report.rb.updated+" güncelleme.\n";
+        if(report.bk)msg+="Butler listesi: "+report.bk+" yeni isim.\n";
+        if(report.sn)msg+="Skip sebepleri: "+report.sn+" yeni kayıt.\n";
+        alert(msg);
+        renderKutuphane();
+        if(typeof renderRehber==="function")renderRehber();
       }catch(err){alert("JSON parse hatası: "+err.message);}
     };
     reader.readAsText(file);
   };
   inp.click();
+}
+
+// --- Merge yardımcıları (paylaşımlı, birden fazla yerde kullanılıyor) ---
+function mergeMailHistory(imported){
+  var existing=getMailHistory();
+  var added=0,merged=0;
+  for(var key in imported){
+    if(!Array.isArray(imported[key]))continue;
+    if(!existing[key]){existing[key]=[];added++;} else {merged++;}
+    for(var i=0;i<imported[key].length;i++){
+      var entry=imported[key][i];
+      var dup=existing[key].some(function(r){
+        return r.date===entry.date&&r.type===entry.type&&(!!r.skip)===(!!entry.skip);
+      });
+      if(!dup)existing[key].push(entry);
+    }
+  }
+  saveMailHistory(existing);
+  return {added:added,merged:merged};
+}
+
+function mergeRehber(imported){
+  var existing=getRehberContacts();
+  var added=0,updated=0;
+  for(var key in imported){
+    var entry=imported[key];
+    if(typeof entry!=="object"||entry===null)continue;
+    if(!existing[key]){existing[key]={};added++;} else {updated++;}
+    if(entry.email) existing[key].email=entry.email;
+    if(entry.phone){
+      existing[key].phone=entry.phone;
+      // Yedekten gelen parse edilmiş alanları kullan, yoksa burada parse et
+      if(entry.phoneCC!==undefined) existing[key].phoneCC=entry.phoneCC;
+      if(entry.phoneNum!==undefined) existing[key].phoneNum=entry.phoneNum;
+      if(existing[key].phoneCC===undefined){
+        var _mp=splitPhone(entry.phone);
+        existing[key].phoneCC=_mp.cc;
+        existing[key].phoneNum=_mp.num;
+      }
+    }
+    if(entry.nationality) existing[key].nationality=entry.nationality;
+    if(entry.surname) existing[key].surname=entry.surname;
+    if(entry.firstName) existing[key].firstName=entry.firstName;
+    if(entry.arrDate) existing[key].arrDate=entry.arrDate;
+    if(entry.depDate) existing[key].depDate=entry.depDate;
+    existing[key].updatedAt=entry.updatedAt||localISO(new Date());
+  }
+  saveRehberContacts(existing);
+  return {added:added,updated:updated};
+}
+
+function mergeButlerList(imported){
+  var existing=getKW("butler");
+  var addedCount=0;
+  for(var i=0;i<imported.length;i++){
+    var name=imported[i];
+    if(typeof name!=="string"||!name)continue;
+    if(existing.indexOf(name)<0){existing.push(name);addedCount++;}
+  }
+  if(addedCount){localStorage.setItem("kw_butler",JSON.stringify(existing));}
+  return addedCount;
+}
+
+function mergeSkipNotes(imported){
+  var existing=getSkipNotes();
+  var addedCount=0;
+  for(var key in imported){
+    if(!existing[key]){existing[key]=imported[key];addedCount++;}
+  }
+  if(addedCount){localStorage.setItem("skip_notes",JSON.stringify(existing));}
+  return addedCount;
+}
+
+function updateLastBackupInfo(){
+  var el=document.getElementById("lastBackupInfo");
+  if(!el)return;
+  var lastExp=localStorage.getItem("km_last_export");
+  var lastImp=localStorage.getItem("km_last_import");
+  var parts=[];
+  if(lastExp){
+    var d=new Date(lastExp);
+    parts.push("Son yedek alma: "+d.toLocaleDateString("tr-TR")+" "+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}));
+  }
+  if(lastImp){
+    var d2=new Date(lastImp);
+    parts.push("Son yedek yükleme: "+d2.toLocaleDateString("tr-TR")+" "+d2.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}));
+  }
+  el.innerHTML=parts.join(" &nbsp;|&nbsp; ");
 }
 
 
@@ -2579,7 +3189,7 @@ function renderKutuphane(){
     displayName=displayName.trim();
     if(search && gKey.indexOf(search)<0) continue;
     var c=contacts[gKey]||null;
-    if(!guestMap[gKey]) guestMap[gKey]={name:displayName,key:gKey,email:c?c.email:"",phone:c?c.phone:"",pdCount:0,paCount:0,skipCount:0,lastDate:"",records:[]};
+    if(!guestMap[gKey]) guestMap[gKey]={name:displayName,key:gKey,email:c?c.email:"",phone:c?c.phone:"",pdCount:0,paCount:0,pdSkipCount:0,paSkipCount:0,lastDate:"",records:[]};
     var gm=guestMap[gKey];
     for(var e=0;e<entries.length;e++){
       var r=entries[e];
@@ -2590,8 +3200,10 @@ function renderKutuphane(){
       if(typeF==="skip" && !r.skip) continue;
       // Update email from record if available and not in rehber
       if(r.email && !gm.email) gm.email=r.email;
-      if(r.skip) gm.skipCount++;
-      else if(r.type==="pd") gm.pdCount++;
+      if(r.skip){
+        if(r.type==="pd") gm.pdSkipCount++;
+        else if(r.type==="pa") gm.paSkipCount++;
+      } else if(r.type==="pd") gm.pdCount++;
       else if(r.type==="pa") gm.paCount++;
       if(r.date>gm.lastDate) gm.lastDate=r.date;
       var noteText=r.skip?(notes[r.reason]||r.note||r.reason||""):"";
@@ -2653,9 +3265,10 @@ function kutRenderUI(){
     gc+='<div id="kutCard_'+globalIdx+'" onclick="kutToggleDetail('+globalIdx+')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;cursor:pointer;transition:box-shadow .15s;font-size:11px" onmouseenter="this.style.boxShadow=\'0 2px 6px rgba(0,0,0,.08)\'" onmouseleave="this.style.boxShadow=\'none\'">';
     gc+='<div style="font-weight:700;font-size:12px;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(g.name)+'">'+esc(g.name)+'</div>';
     gc+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">';
-    if(g.pdCount) gc+='<span style="background:#dbeafe;color:#1e40af;padding:0 5px;border-radius:8px;font-size:9px;font-weight:600">PD '+g.pdCount+'</span>';
-    if(g.paCount) gc+='<span style="background:#fef3c7;color:#92400e;padding:0 5px;border-radius:8px;font-size:9px;font-weight:600">PA '+g.paCount+'</span>';
-    if(g.skipCount) gc+='<span style="background:#fee2e2;color:#991b1b;padding:0 5px;border-radius:8px;font-size:9px;font-weight:600">'+g.skipCount+'×</span>';
+    if(g.pdCount) gc+='<span title="'+g.pdCount+' post-departure maili gönderildi" style="display:inline-flex;font-size:9px;font-weight:600;border-radius:8px;overflow:hidden;cursor:help"><span style="background:#1e40af;color:#fff;padding:1px 6px">PD</span><span style="background:#dbeafe;color:#1e40af;padding:1px 6px">&#10003; '+g.pdCount+'</span></span>';
+    if(g.pdSkipCount) gc+='<span title="'+g.pdSkipCount+' post-departure maili atılmadı" style="display:inline-flex;font-size:9px;font-weight:600;border-radius:8px;overflow:hidden;cursor:help"><span style="background:#991b1b;color:#fff;padding:1px 6px">PD</span><span style="background:#fee2e2;color:#991b1b;padding:1px 6px">&#10007; '+g.pdSkipCount+'</span></span>';
+    if(g.paCount) gc+='<span title="'+g.paCount+' pre-arrival maili gönderildi" style="display:inline-flex;font-size:9px;font-weight:600;border-radius:8px;overflow:hidden;cursor:help"><span style="background:#1e40af;color:#fff;padding:1px 6px">PA</span><span style="background:#dbeafe;color:#1e40af;padding:1px 6px">&#10003; '+g.paCount+'</span></span>';
+    if(g.paSkipCount) gc+='<span title="'+g.paSkipCount+' pre-arrival maili atılmadı" style="display:inline-flex;font-size:9px;font-weight:600;border-radius:8px;overflow:hidden;cursor:help"><span style="background:#991b1b;color:#fff;padding:1px 6px">PA</span><span style="background:#fee2e2;color:#991b1b;padding:1px 6px">&#10007; '+g.paSkipCount+'</span></span>';
     gc+='</div>';
     if(g.lastDate) gc+='<div style="font-size:9px;color:#94a3b8;margin-top:2px">'+fmtHistDate(g.lastDate)+'</div>';
     gc+='</div>';
@@ -2740,49 +3353,97 @@ function clearMailHistory(){
   renderKutuphane();
 }
 
-// === JSON Yedekleme ===
-function exportMailHistoryJSON(){
-  var h=getMailHistory();
-  var keys=Object.keys(h);
-  if(!keys.length){alert("Kütüphane boş!");return;}
-  var json=JSON.stringify(h,null,2);
-  var blob=new Blob([json],{type:"application/json;charset=utf-8"});
-  dlFile(blob,"mail_history_yedek_"+localISO(new Date())+".json","application/json");
+// ===== ELLE KAYIT EKLEME =====
+function kutOpenManualEntry(){
+  // Formu sıfırla
+  document.getElementById("kutMeSurname").value="";
+  document.getElementById("kutMeFirstName").value="";
+  // Tarih: bugün
+  var t=new Date();
+  document.getElementById("kutMeDate").value=t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2);
+  document.getElementById("kutMeType").value="pd";
+  document.getElementById("kutMeStatus").value="sent";
+  document.getElementById("kutMeReasonRow").style.display="none";
+  // Butler dropdown
+  var butlerSel=document.getElementById("kutMeButler");
+  butlerSel.innerHTML="";
+  var butlers=getKW("butler");
+  // Kullanıcının mevcut seçili butler'ını bul (PD/PA sayfalarında seçtiği)
+  var currentButler=(document.getElementById("pdButler")&&document.getElementById("pdButler").value)||(document.getElementById("paButler")&&document.getElementById("paButler").value)||"";
+  for(var i=0;i<butlers.length;i++){
+    var opt=document.createElement("option");
+    opt.value=butlers[i]; opt.textContent=butlers[i];
+    if(butlers[i]===currentButler) opt.selected=true;
+    butlerSel.appendChild(opt);
+  }
+  // Skip reason dropdown (durum değişince görünür)
+  var reasonSel=document.getElementById("kutMeReason");
+  reasonSel.innerHTML="";
+  var notes=getSkipNotes();
+  var reasonKeys=Object.keys(notes);
+  for(var j=0;j<reasonKeys.length;j++){
+    var ropt=document.createElement("option");
+    ropt.value=reasonKeys[j]; ropt.textContent=reasonKeys[j]+" ("+notes[reasonKeys[j]]+")";
+    reasonSel.appendChild(ropt);
+  }
+  // Modal göster
+  document.getElementById("kutManualModal").style.display="flex";
+  // İmleç ilk alana
+  setTimeout(function(){document.getElementById("kutMeSurname").focus()},50);
 }
 
-function importMailHistoryJSON(){
-  var inp=document.createElement("input");
-  inp.type="file";inp.accept=".json";
-  inp.onchange=function(e){
-    var file=e.target.files[0];if(!file)return;
-    var reader=new FileReader();
-    reader.onload=function(ev){
-      try{
-        var imported=JSON.parse(ev.target.result);
-        if(typeof imported!=="object"||Array.isArray(imported)){alert("Geçersiz dosya formatı!");return;}
-        var existing=getMailHistory();
-        var addedCount=0,mergedCount=0;
-        for(var key in imported){
-          if(!Array.isArray(imported[key]))continue;
-          if(!existing[key]){existing[key]=[];addedCount++;}
-          else{mergedCount++;}
-          // Merge entries: skip duplicates (same date+type+skip)
-          for(var i=0;i<imported[key].length;i++){
-            var entry=imported[key][i];
-            var dup=existing[key].some(function(r){
-              return r.date===entry.date&&r.type===entry.type&&(!!r.skip)===(!!entry.skip);
-            });
-            if(!dup)existing[key].push(entry);
-          }
-        }
-        saveMailHistory(existing);
-        renderKutuphane();
-        alert("İçe aktarma tamamlandı!\n"+addedCount+" yeni misafir eklendi, "+mergedCount+" mevcut misafir güncellendi.");
-      }catch(err){alert("JSON parse hatası: "+err.message);}
-    };
-    reader.readAsText(file);
-  };
-  inp.click();
+function kutCloseManualEntry(){
+  document.getElementById("kutManualModal").style.display="none";
+}
+
+function kutMeStatusChanged(){
+  var st=document.getElementById("kutMeStatus").value;
+  document.getElementById("kutMeReasonRow").style.display=(st==="skip")?"block":"none";
+}
+
+function kutSaveManualEntry(){
+  var surname=(document.getElementById("kutMeSurname").value||"").trim();
+  var firstName=(document.getElementById("kutMeFirstName").value||"").trim();
+  var date=document.getElementById("kutMeDate").value;
+  var type=document.getElementById("kutMeType").value;
+  var butler=document.getElementById("kutMeButler").value;
+  var status=document.getElementById("kutMeStatus").value;
+  var reason=document.getElementById("kutMeReason").value;
+  // Validasyon
+  if(!surname){alert("Soyad zorunlu.");return;}
+  if(!firstName){alert("İsim zorunlu.");return;}
+  if(!date){alert("Tarih zorunlu.");return;}
+  if(!butler){alert("Butler seçiniz.");return;}
+  if(status==="skip"&&!reason){alert("Atılmama sebebi seçiniz.");return;}
+  // Butler initials
+  var butlerInit=butler.split(" ").map(function(w){return w.charAt(0).toUpperCase()}).join("");
+  // Key
+  var key=mailHistoryKey(surname,firstName);
+  var h=getMailHistory();
+  // Duplicate kontrolü
+  if(h[key]){
+    var isSkipNow=(status==="skip");
+    var dup=h[key].some(function(r){
+      return r.date===date&&r.type===type&&(!!r.skip)===isSkipNow;
+    });
+    if(dup){
+      if(!confirm("Bu misafir için aynı tarih ve tipte kayıt zaten var.\nYine de eklensin mi?"))return;
+    }
+  }
+  // Kayıt oluştur
+  var rec={date:date,type:type,butler:butlerInit,_sn:surname,_fn:firstName,manual:true};
+  if(status==="skip"){
+    rec.skip=true;
+    rec.reason=reason;
+  }
+  // Ekle
+  if(!h[key])h[key]=[];
+  h[key].push(rec);
+  saveMailHistory(h);
+  // Kapat ve yenile
+  kutCloseManualEntry();
+  renderKutuphane();
+  alert("Kayıt eklendi: "+surname+" "+firstName+" — "+(type==="pd"?"Post-Departure":"Pre-Arrival")+" "+(status==="sent"?"Gönderildi":"Atılmadı"));
 }
 
 function kutToggleAll(checked){
@@ -3437,20 +4098,31 @@ function previewTemplateEdit(module){
   frame.contentDocument.close();
 }
 
+// Title normalizasyonu — SADECE "Ms" → "Ms." (PDF'te bazen noktasız geliyor)
+// Mr./Mrs./Dr./Sn./Bay/Bayan vb. dokunulmaz
+function normalizeTitle(title){
+  if(!title) return "";
+  var t=title.trim();
+  if(/^ms$/i.test(t)) return "Ms.";
+  if(/^hisex$/i.test(t)) return "His Excellency";
+  if(/^herex$/i.test(t)) return "Her Excellency";
+  return t;
+}
+
 function injectName(html,title,surname){
-  var t=(title||"").trim();
+  var t=normalizeTitle(title||"");
   var s=(surname||"").trim();
   var enGreet="Dear "+(t||"Mr.")+" "+s+",";
   var trGreet="Sayın "+s+",";
   var done=false;
-  // EN: "Dear Mr. ," or "Dear Mrs. ," etc
-  html=html.replace(/Dear\s+(Mr\.|Mrs\.|Ms\.?)\s*,/g,function(){done=true;return enGreet});
+  // EN: "Dear Mr. ," or "Dear Mrs. ," etc — HISEX/HEREX de destekli
+  html=html.replace(/Dear\s+(Mr\.|Mrs\.|Ms\.?|HISEX|HEREX)\s*,/gi,function(){done=true;return enGreet});
   // EN: "Dear…" or "Dear …"
   if(!done) html=html.replace(/Dear\s*[\u2026…]/g,function(){done=true;return enGreet});
   // EN: "Dear Mr. " followed by template text (no comma in template)
-  if(!done) html=html.replace(/Dear\s+(Mr\.|Mrs\.|Ms\.?)\s+/,function(){done=true;return enGreet+" "});
+  if(!done) html=html.replace(/Dear\s+(Mr\.|Mrs\.|Ms\.?|HISEX|HEREX)\s+/i,function(){done=true;return enGreet+" "});
   // EN: "Dear Mr." followed directly by HTML tag (no comma, no space)
-  if(!done) html=html.replace(/Dear\s+(Mr\.|Mrs\.|Ms\.?)(\s*<)/,function(m,title,after){done=true;return enGreet+after});
+  if(!done) html=html.replace(/Dear\s+(Mr\.|Mrs\.|Ms\.?|HISEX|HEREX)(\s*<)/i,function(m,title,after){done=true;return enGreet+after});
   // TR: "Sayın ," or "Sayın…"
   html=html.replace(/Say\u0131n\s*,/g,trGreet);
   html=html.replace(/Say\u0131n\s*[\u2026…]/g,trGreet);
@@ -3460,13 +4132,16 @@ function injectName(html,title,surname){
 }
 
 function selectTemplate(guest){
+  // Butler manuel override etmişse onu kullan
+  if(guest && guest.tplOverride) return guest.tplOverride;
   // Determine template key based on guest properties
   var lang=guest.lang||"EN";
   var isRepeat=(guest.type||"NEW")==="REPEAT"||(parseInt(guest.prevStays,10)||0)>0;
   var isBooking=false;
   // Check if booking.com guest (from travelAgent or company)
+  // NOTE: Only Booking.com uses bk_ templates. Expedia falls back to standard PA templates.
   var ta=((guest.travelAgent||"")+(guest.company||"")+(guest.companyRaw||"")).toLowerCase();
-  if(ta.indexOf("booking")>=0||ta.indexOf("expedia")>=0)isBooking=true;
+  if(ta.indexOf("booking")>=0)isBooking=true;
   // Check for special occasion (celebration keywords in notes)
   var notes=((guest.resComments||"")+" "+(guest.webNotes||"")+" "+(guest.specials||"")).toLowerCase();
   var isCeleb=/birthday|honeymoon|anniversary|wedding|celebration|cake|balloon/.test(notes);
@@ -3483,7 +4158,37 @@ function generateEML(to,bcc,subject,htmlBody,attachments,inlineImages,fromAddr,m
   var eml="";
   eml+="MIME-Version: 1.0\r\n";
   fromAddr=fromAddr||"";
-  if(fromAddr) eml+="From: "+fromAddr+"\r\n";
+  if(fromAddr){
+    // Outlook bazı sürümlerde display name'siz From'u görmezden gelir.
+    // "Butler Services <email>" formatına standartlaştır:
+    //  - Kullanıcı "Name <email>" yazmışsa olduğu gibi kullan
+    //  - Sadece email yazmışsa otomatik display name ekle
+    var fromHeader;
+    if(/^.+<.+@.+>$/.test(fromAddr.trim())){
+      fromHeader=fromAddr.trim();
+    } else if(/@/.test(fromAddr)){
+      // Email'den display name türet: "butlerservices.istanbul@raffles.com" → "Butler Services"
+      var local=fromAddr.split("@")[0];
+      var dn;
+      if(/butler/i.test(local)) dn="Butler Services";
+      else dn=local.replace(/[._-]+/g," ").split(" ").map(function(w){return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()}).join(" ");
+      fromHeader='"'+dn+'" <'+fromAddr.trim()+'>';
+    } else {
+      fromHeader=fromAddr;
+    }
+    eml+="From: "+fromHeader+"\r\n";
+    // Sender header — Send On Behalf Of zinciri için gerekli
+    // Kullanıcı Settings'te kişisel adresini girmişse ve From adresinden farklıysa
+    var senderAddr=getSenderAddress();
+    if(senderAddr){
+      // From'dan saf email'i çıkar (display name varsa at) — karşılaştırma için
+      var fromEmailOnly=fromAddr.toLowerCase().replace(/^.*<|>$/g,"").trim();
+      var senderEmailOnly=senderAddr.toLowerCase().trim();
+      if(senderEmailOnly!==fromEmailOnly){
+        eml+="Sender: "+senderAddr.trim()+"\r\n";
+      }
+    }
+  }
   eml+="To: "+to+"\r\n";
   if(bcc)eml+="Bcc: "+bcc+"\r\n";
   eml+="Subject: =?UTF-8?B?"+btoa(unescape(encodeURIComponent(subject)))+"?=\r\n";
@@ -3605,5 +4310,64 @@ function buildMailEML(guest,templateKey,subject,bcc,module){
 
 
 </script>
+
+<!-- ===== ELLE KAYIT EKLEME MODAL ===== -->
+<div id="kutManualModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+<div style="background:#fff;border-radius:10px;padding:24px;width:420px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.2)">
+<h2 style="margin:0 0 16px 0;font-size:18px;color:#1a6b5c">Elle Kayıt Ekle</h2>
+
+<div style="margin-bottom:12px">
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Soyad</label>
+<input id="kutMeSurname" type="text" placeholder="Örn: Yilmaz" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box">
+</div>
+
+<div style="margin-bottom:12px">
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">İsim</label>
+<input id="kutMeFirstName" type="text" placeholder="Örn: Ahmet" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box">
+</div>
+
+<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:12px">
+<div>
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Tarih</label>
+<input id="kutMeDate" type="date" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box">
+</div>
+<button onclick="document.getElementById('kutMeDate').value=new Date().getFullYear()+'-'+('0'+(new Date().getMonth()+1)).slice(-2)+'-'+('0'+new Date().getDate()).slice(-2)" style="padding:7px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;cursor:pointer;font-size:11px">Bugün</button>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+<div>
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Tip</label>
+<select id="kutMeType" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box">
+<option value="pd">Post-Departure</option>
+<option value="pa">Pre-Arrival</option>
+</select>
+</div>
+<div>
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Butler</label>
+<select id="kutMeButler" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"></select>
+</div>
+</div>
+
+<div style="margin-bottom:12px">
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Durum</label>
+<select id="kutMeStatus" onchange="kutMeStatusChanged()" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box">
+<option value="sent">✓ Gönderildi</option>
+<option value="skip">✗ Atılmadı</option>
+</select>
+</div>
+
+<div id="kutMeReasonRow" style="margin-bottom:12px;display:none">
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Atılmama Sebebi</label>
+<select id="kutMeReason" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"></select>
+</div>
+
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px">
+<button onclick="kutCloseManualEntry()" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">İptal</button>
+<button onclick="kutSaveManualEntry()" style="padding:8px 18px;background:#1a6b5c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">Kaydet</button>
+</div>
+
+</div>
+</div>
+
 </body>
 </html>
