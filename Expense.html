@@ -105,7 +105,14 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   </select>
   <button class="btn btn-primary" style="padding:5px 14px;font-size:12px" onclick="expDownloadXLSX()">Excel Indir</button>
   <button class="btn" style="padding:5px 12px;font-size:12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5" onclick="expClearMonth()">Temizle</button>
+  <div style="flex:1;min-width:200px;max-width:320px;position:relative">
+    <input id="expSearchInput" type="text" placeholder="Ara (tum aylarda): satici, misafir, not..." oninput="expDoSearch()" onkeydown="if(event.key==='Escape')expClearSearch()" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:6px 28px 6px 10px;font-size:12px">
+    <button id="expSearchClear" onclick="expClearSearch()" style="display:none;position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:#9ca3af;font-size:14px;cursor:pointer;padding:0 6px" title="Temizle">&times;</button>
+  </div>
 </div>
+
+<!-- Search results panel (shown only when searching) -->
+<div id="expSearchPanel" style="display:none;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:8px;padding:12px 14px;margin-bottom:12px"></div>
 
 <!-- Kasa Dashboard -->
 <div id="expKasaBar" style="margin-bottom:10px"></div>
@@ -119,8 +126,13 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <button id="exp_tab_receipt" onclick="expShowTab('receipt')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Fis (Manuel)</button>
   <button id="exp_tab_list" onclick="expShowTab('list')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Liste</button>
   <button id="exp_tab_tracking" onclick="expShowTab('tracking')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Takip</button>
+  <button id="exp_tab_report" onclick="expShowTab('report')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Rapor</button>
+  <button id="exp_tab_forms" onclick="expShowTab('forms')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Formlar</button>
   <button id="exp_tab_log" onclick="expShowTab('log')" style="padding:7px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px">Kasa Log</button>
 </div>
+
+<!-- Gec kalmis form uyari banner'i (her tab'da gorunur) -->
+<div id="expOverdueBanner" style="margin-bottom:10px"></div>
 
 <!-- TAB: FATURA PDF -->
 <div id="exp_tabcontent_invoice">
@@ -154,6 +166,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div id="exp_tabcontent_receipt" style="display:none">
   <div style="background:#faf5ff;border:1.5px solid #c4b5fd;border-radius:10px;padding:14px 18px;margin-bottom:14px">
     <div style="font-weight:700;font-size:13px;color:#5b21b6;margin-bottom:10px">Fis / Manuel Giris</div>
+    <div id="expRcpStatus" style="display:none;margin-bottom:10px;padding:6px 10px;border-radius:5px;font-size:11px;font-weight:600"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
         <label style="font-size:11px;color:#6b7280;font-weight:600">Satici</label>
@@ -235,6 +248,16 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <div id="expTrackingWrap"></div>
 </div>
 
+<!-- TAB: RAPOR -->
+<div id="exp_tabcontent_report" style="display:none">
+  <div id="expReportWrap"></div>
+</div>
+
+<!-- TAB: FORMLAR -->
+<div id="exp_tabcontent_forms" style="display:none">
+  <div id="expFormsWrap"></div>
+</div>
+
 <!-- TAB: KASA LOG -->
 <div id="exp_tabcontent_log" style="display:none">
   <div id="expLogWrap"></div>
@@ -281,6 +304,41 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 
 <div style="margin-bottom:16px">
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Butler Listesi</label>
+<div id="expButlerTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+<div style="display:flex;gap:6px">
+<input id="expButlerInput" placeholder="Butler adi ekle..." style="flex:1;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+<button class="btn btn-primary" style="font-size:12px;padding:6px 14px" onclick="addExpButler()">Ekle</button>
+</div>
+</div>
+
+<div style="margin-bottom:16px;padding-top:12px;border-top:1px solid #e5e7eb">
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Form Numarasi Ayarlari</label>
+<div style="font-size:10px;color:#6b7280;margin-bottom:6px">Formlar otomatik numaralandirilir. Format: [prefix] [numara]. Ornek: "Haktan Durgun Expenses 3"</div>
+<div style="display:grid;grid-template-columns:1fr 140px;gap:6px;margin-bottom:6px">
+<div>
+<label style="font-size:10px;color:#6b7280">Prefix (numara oncesi metin)</label>
+<input id="expFormPrefixInput" placeholder="Haktan Durgun Expenses" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+</div>
+<div>
+<label style="font-size:10px;color:#6b7280">Sonraki numara</label>
+<input id="expFormNextNumberInput" type="number" min="1" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 140px;gap:6px;margin-bottom:6px">
+<div>
+<label style="font-size:10px;color:#6b7280">Uyari esigi (kac gun sonra "gec kalmis" sayilsin)</label>
+<div style="font-size:9px;color:#9ca3af;margin-top:1px">Varsayilan: 14 gun (2 hafta). Finansta bu esikten uzun bekleyen formlar kirmizi uyari olarak one cikar.</div>
+</div>
+<div>
+<label style="font-size:10px;color:#6b7280">Gun</label>
+<input id="expOverdueDaysInput" type="number" min="1" max="90" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+</div>
+</div>
+<button class="btn btn-primary" style="font-size:12px;padding:6px 14px" onclick="saveExpFormSettings()">Kaydet</button>
+</div>
+
+<div style="margin-bottom:16px">
 <button class="btn btn-dark" style="font-size:12px;padding:6px 14px" onclick="expDownloadTemplate()">&#128196; Sablon Indir (XLSX)</button>
 </div>
 
@@ -293,12 +351,24 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 <div class="settings-body" style="display:none">
 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-  <button class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="expRebuildProfiles();renderExpVendorProfiles();alert('Profiller yeniden olusturuldu.')">Profilleri Yenile</button>
+  <button class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="expRebuildProfiles();renderExpVendorProfiles();renderExpPrefixMap();alert('Profiller yeniden olusturuldu.')">Profilleri Yenile</button>
   <button class="btn-sm" style="font-size:10px" onclick="expExportProfiles()">&#128190; Disa Aktar</button>
   <button class="btn-sm" style="font-size:10px" onclick="document.getElementById('expProfileImport').click()">&#128194; Ice Aktar</button>
   <input type="file" id="expProfileImport" accept=".json" style="display:none" onchange="expImportProfiles(this.files[0])">
 </div>
 <div id="expProfileList"></div>
+</div>
+</div>
+
+<div class="settings-segment">
+<div class="settings-header" onclick="toggleSettingsSection(this);renderExpPrefixMap()">
+<span>Ogrenilmis Fatura Prefixleri</span><span class="settings-arrow">&#9660;</span>
+</div>
+<div class="settings-body" style="display:none">
+<div class="settings-info">
+Her yeni fatura kaydedildiginde, fatura numarasinin basindaki harf/rakam kombinasyonu (ornek: HGE, RFS, AS1, DR0, M01) hangi saticiya ait oldugu ezberlenir. Boylece ayni saticidan sonraki faturalarda otomatik doldurma calisir.
+</div>
+<div id="expPrefixMapList"></div>
 </div>
 </div>
 </div>
@@ -337,6 +407,48 @@ function setExpKasa(v){localStorage.setItem("exp_kasa_"+exp_currentYear+"_"+exp_
 function getExpLogKey(){return"exp_log_"+exp_currentYear+"_"+exp_currentMonth}
 function expLoadLog(){try{var s=localStorage.getItem(getExpLogKey());expKasaLog=s?JSON.parse(s):[]}catch(e){expKasaLog=[]}}
 function expSaveLog(){localStorage.setItem(getExpLogKey(),JSON.stringify(expKasaLog))}
+
+// --- FORM SYSTEM ---
+// Form objesi: {id, number, prefix, closedAt, paidAt, status, total, entryIds}
+// entry.formId = null (acik listede) veya form.id (bir forma atanmis)
+// status: "acik" (acik liste), "finansta" (teslim edildi), "yatti" (odendi)
+var EXP_FORM_PREFIX_DEFAULT="Haktan Durgun Expenses";
+function getExpFormPrefix(){try{var s=localStorage.getItem("exp_form_prefix");return s||EXP_FORM_PREFIX_DEFAULT}catch(e){return EXP_FORM_PREFIX_DEFAULT}}
+function setExpFormPrefix(v){localStorage.setItem("exp_form_prefix",v||EXP_FORM_PREFIX_DEFAULT)}
+function getExpFormNextNumber(){try{var s=localStorage.getItem("exp_form_next_number");return s?parseInt(s):1}catch(e){return 1}}
+function setExpFormNextNumber(n){localStorage.setItem("exp_form_next_number",String(Math.max(1,parseInt(n)||1)))}
+// Overdue uyari esigi (varsayilan 14 gun = 2 hafta)
+var EXP_OVERDUE_DAYS_DEFAULT=14;
+function getExpOverdueDays(){try{var s=localStorage.getItem("exp_form_overdue_days");var n=parseInt(s);return (n&&n>0)?n:EXP_OVERDUE_DAYS_DEFAULT}catch(e){return EXP_OVERDUE_DAYS_DEFAULT}}
+function setExpOverdueDays(n){localStorage.setItem("exp_form_overdue_days",String(Math.max(1,parseInt(n)||EXP_OVERDUE_DAYS_DEFAULT)))}
+// Istanbul local-time ISO (UTC kaymasi yapmasin).
+function expLocalISO(d){d=d||new Date();var y=d.getFullYear();var m=String(d.getMonth()+1).padStart(2,"0");var da=String(d.getDate()).padStart(2,"0");return y+"-"+m+"-"+da}
+// Iki YYYY-MM-DD tarih arasi tam gun farki. Pozitif = gecmiste.
+function expDaysSince(isoDate){
+  if(!isoDate)return 0;
+  var parts=String(isoDate).split("-");
+  if(parts.length!==3)return 0;
+  var d1=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+  var now=new Date();
+  var d2=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  return Math.floor((d2-d1)/86400000);
+}
+// Finansta bekleyen formlari gun sayisiyla dondur, en uzun bekleyen ustte
+function expGetWaitingForms(){
+  var forms=getExpForms();
+  var out=[];
+  forms.forEach(function(f){
+    if(f.status!=="finansta")return;
+    var days=expDaysSince(f.closedAt);
+    out.push({form:f,days:days});
+  });
+  out.sort(function(a,b){return b.days-a.days});
+  return out;
+}
+function getExpForms(){try{var s=localStorage.getItem("exp_forms");return s?JSON.parse(s):[]}catch(e){return []}}
+function setExpForms(arr){localStorage.setItem("exp_forms",JSON.stringify(arr))}
+function expFormLabel(form){return (form.prefix||getExpFormPrefix())+" "+form.number}
+function expGenEntryId(){return "e_"+Date.now()+"_"+Math.floor(Math.random()*10000)}
 function expAddLog(action,entry){
   expKasaLog.push({ts:Date.now(),action:action,vendor:entry.vendor||"",amount:entry.totalAmount||0,guest:entry.guest||"",butler:entry.butler||"",category:entry.category||"",payType:entry.payType||"expense",fileRef:entry.fileRef||""});
   expSaveLog();
@@ -370,10 +482,37 @@ function expInit(){
   if(!localStorage.getItem("exp_vendor_profiles"))expRebuildProfiles();
   expUpdateVendorList();
   expUpdateItemList();
+  // Migration: eski kayitlara id + formId alanlari ekle
+  expMigrateEntries();
   expRenderAll();
   renderExpenseSettings();
   var d=document.getElementById("expRcpDate");
   if(d&&!d.value){var today=new Date();d.value=today.toISOString().split("T")[0]}
+}
+
+// Eski (v3 oncesi) kayitlara id ve formId alanlarini ekle
+// formId:null demek "henuz bir forma atanmamis, acik listede" demektir
+function expMigrateEntries(){
+  var migrated=0;
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!/^exp_\d+_\d+$/.test(key))continue;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      var changed=false;
+      list.forEach(function(e){
+        if(!e.id){e.id=expGenEntryId();changed=true;migrated++}
+        if(typeof e.formId==="undefined"){e.formId=null;changed=true}
+      });
+      if(changed)localStorage.setItem(key,JSON.stringify(list));
+    }catch(err){console.error("[EXP] Migration hatasi ("+key+"):",err)}
+  }
+  if(migrated>0){
+    console.log("[EXP] Migration: "+migrated+" eski kayit formId:null ile guncellendi (acik listede sayilacak)");
+    // expenseList de ayni referansi kullaniyor, reload et
+    expLoad();
+  }
 }
 
 function expPopulateCategories(){
@@ -387,7 +526,7 @@ function expPopulateCategories(){
 }
 
 function expShowTab(tab){
-  ["invoice","receipt","list","tracking","log"].forEach(function(t){
+  ["invoice","receipt","list","tracking","report","forms","log"].forEach(function(t){
     var el=document.getElementById("exp_tabcontent_"+t);
     var btn=document.getElementById("exp_tab_"+t);
     if(el)el.style.display=t===tab?"":"none";
@@ -397,7 +536,10 @@ function expShowTab(tab){
   if(listBtn)listBtn.textContent="Liste"+(expenseList.length?" ("+expenseList.length+")":"");
   if(tab==="list")expRenderList();
   if(tab==="tracking")expRenderTracking();
+  if(tab==="report")expRenderReport();
+  if(tab==="forms")expRenderForms();
   if(tab==="log")expRenderLog();
+  expRenderOverdueBanner();
 }
 
 function expSwitchMonth(){
@@ -428,6 +570,7 @@ function expRenderAll(){
   if(trackBtn)trackBtn.textContent="Takip"+(expenseList.length?" ("+expenseList.length+")":"");
   var logBtn=document.getElementById("exp_tab_log");
   if(logBtn)logBtn.textContent="Kasa Log"+(expKasaLog.length?" ("+expKasaLog.length+")":"");
+  expRenderOverdueBanner();
 }
 
 function expRenderKasa(){
@@ -515,7 +658,25 @@ function expRenderList(){
   var statusColors={"":"#fef9c3","bekliyor":"#fef9c3","yapildi":"#dbeafe","yatti":"#d1fae5"};
   var statusText={"":"Bekliyor","bekliyor":"Bekliyor","yapildi":"Yapildi","yatti":"Yatti"};
   var statusTxtColors={"":"#92400e","bekliyor":"#92400e","yapildi":"#1e40af","yatti":"#065f46"};
-  var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:#1a6b5c;color:#fff">'+
+  // Acik liste ozeti banner (bu aya ait + formId=null olan tum harcamalar)
+  var openEntries=expenseList.filter(function(e){return !e.formId});
+  var openTotal=openEntries.reduce(function(s,e){return s+(e.totalAmount||0)},0);
+  var h='';
+  if(openEntries.length){
+    var nextFormLabel=getExpFormPrefix()+" "+getExpFormNextNumber();
+    h+='<div style="background:#f0f9ff;border:1.5px solid #7dd3fc;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
+      +'<div>'
+        +'<div style="font-weight:700;color:#075985;font-size:13px;margin-bottom:2px">Acik Liste</div>'
+        +'<div style="font-size:11px;color:#0c4a6e">'+openEntries.length+' harcama &middot; Toplam: <b>'+fmt(openTotal)+' TL</b> &middot; Kapatilinca <b>'+esc(nextFormLabel)+'</b> olacak</div>'
+      +'</div>'
+      +'<button onclick="expCloseList()" style="background:#0284c7;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">&#10003; Listeyi Kapat ve Forma Donustur</button>'
+    +'</div>';
+  } else {
+    h+='<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#6b7280">'
+      +'Acik harcama yok. Tum kayitlar bir forma atanmis durumda. <a onclick="expShowTab(\'forms\')" style="color:#0284c7;cursor:pointer;font-weight:600">Formlar\'a git</a>'
+    +'</div>';
+  }
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:#1a6b5c;color:#fff">'+
     '<th style="padding:5px 6px;text-align:left">Tarih</th>'+
     '<th style="padding:5px 6px;text-align:left">Tip</th>'+
     '<th style="padding:5px 6px;text-align:left">Satici</th>'+
@@ -524,16 +685,28 @@ function expRenderList(){
     '<th style="padding:5px 6px;text-align:left">Kategori</th>'+
     '<th style="padding:5px 6px;text-align:center">E/C</th>'+
     '<th style="padding:5px 6px;text-align:right">Toplam</th>'+
+    '<th style="padding:5px 6px;text-align:center">Form</th>'+
     '<th style="padding:5px 6px;text-align:center">Durum</th>'+
     '<th style="padding:5px 6px;text-align:left">Dosya Ref</th>'+
-    '<th style="padding:5px 6px;text-align:center">Sil</th>'+
+    '<th style="padding:5px 6px;text-align:center">Islem</th>'+
     '</tr></thead><tbody>';
   var totalAll=0;
+  var forms=getExpForms();
+  var formsById={};
+  forms.forEach(function(f){formsById[f.id]=f});
   expenseList.forEach(function(e,idx){
     var bg=idx%2===0?"#fff":"#f9fafb";
+    // Forma atanmis satirlara hafif sari ton
+    if(e.formId)bg=idx%2===0?"#fffbeb":"#fef3c7";
     totalAll+=(e.totalAmount||0);
     var st=e.status||"bekliyor";
     var payBg=e.payType==="cep"?"#f3e8ff;color:#6b21a8":"#dbeafe;color:#1e40af";
+    var formCell='<span style="color:#9ca3af;font-size:10px">acik</span>';
+    if(e.formId&&formsById[e.formId]){
+      var f=formsById[e.formId];
+      var fbg=f.status==="yatti"?"#d1fae5;color:#065f46":(f.status==="finansta"?"#fef3c7;color:#92400e":"#e0e7ff;color:#3730a3");
+      formCell='<span style="padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:'+fbg+'" title="'+esc(expFormLabel(f))+' &mdash; '+esc(f.status||"")+'">#'+esc(String(f.number))+'</span>';
+    }
     h+='<tr style="background:'+bg+'">'+
       '<td style="padding:4px 6px;white-space:nowrap">'+esc(e.date||"")+'</td>'+
       '<td style="padding:4px 6px"><span style="padding:1px 5px;border-radius:8px;font-size:9px;font-weight:600;background:'+(e.type==="invoice"?"#dbeafe;color:#1e40af":"#f3e8ff;color:#6b21a8")+'">'+(e.type==="invoice"?"Fatura":"Fis")+'</span></td>'+
@@ -543,17 +716,230 @@ function expRenderList(){
       '<td style="padding:4px 6px">'+esc(e.category||"")+'</td>'+
       '<td style="padding:4px 6px;text-align:center"><span style="padding:1px 5px;border-radius:8px;font-size:9px;font-weight:600;background:'+payBg+'">'+(e.payType==="cep"?"C":"E")+'</span></td>'+
       '<td style="padding:4px 6px;text-align:right;font-weight:600">'+fmt(e.totalAmount)+'</td>'+
+      '<td style="padding:4px 6px;text-align:center">'+formCell+'</td>'+
       '<td style="padding:4px 6px;text-align:center"><button onclick="expToggleStatus('+idx+')" style="cursor:pointer;border:none;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700;background:'+statusColors[st]+';color:'+statusTxtColors[st]+'" title="Tikla: durum degistir">'+statusText[st]+'</button></td>'+
       '<td style="padding:4px 6px"><input value="'+esc(e.fileRef||"")+'" onchange="expUpdField('+idx+',\'fileRef\',this.value)" style="width:70px;border:1px solid #e5e7eb;border-radius:4px;padding:2px 4px;font-size:10px" placeholder="Ref"></td>'+
-      '<td style="padding:4px 6px;text-align:center"><button onclick="expDelete('+idx+')" style="cursor:pointer;border:none;background:none;color:#dc2626;font-weight:700;font-size:13px" title="Sil">&times;</button></td>'+
+      '<td style="padding:4px 6px;text-align:center;white-space:nowrap">'
+        +'<button onclick="expOpenEditModal('+idx+')" title="Duzenle" style="cursor:pointer;border:none;background:none;color:#0284c7;font-weight:700;font-size:14px;padding:0 4px">&#9998;</button>'
+        +'<button onclick="expCopyEntry('+idx+')" title="Kopyala (bugune)" style="cursor:pointer;border:none;background:none;color:#059669;font-weight:700;font-size:14px;padding:0 4px">&#10697;</button>'
+        +'<button onclick="expDelete('+idx+')" title="Sil" style="cursor:pointer;border:none;background:none;color:#dc2626;font-weight:700;font-size:14px;padding:0 4px">&times;</button>'
+      +'</td>'+
       '</tr>';
   });
   h+='<tr style="background:#f0fdf4;font-weight:700">'+
     '<td colspan="7" style="padding:5px 6px;text-align:right">TOPLAM</td>'+
     '<td style="padding:5px 6px;text-align:right">'+fmt(totalAll)+'</td>'+
-    '<td colspan="3"></td></tr>';
+    '<td colspan="4"></td></tr>';
   h+='</tbody></table></div>';
   el.innerHTML=h;
+}
+
+// --- FORM LIFECYCLE ---
+// Listeyi kapat: acik entry'leri bir forma ata, form numarasini artir
+function expCloseList(){
+  var openEntries=expenseList.filter(function(e){return !e.formId});
+  if(!openEntries.length){alert("Acik harcama yok. Kapatacak bir liste bulunmuyor.");return}
+  var total=openEntries.reduce(function(s,e){return s+(e.totalAmount||0)},0);
+  var prefix=getExpFormPrefix();
+  var number=getExpFormNextNumber();
+  var label=prefix+" "+number;
+  if(!confirm("Acik listeyi "+label+" olarak kapatmak istediginden emin misin?\n\n"
+    +openEntries.length+" harcama\nToplam: "+total.toLocaleString("tr-TR",{minimumFractionDigits:2})+" TL\n\n"
+    +"Kapattiktan sonra yeni harcamalar yeni bir acik listeye dusecek.\n"
+    +"Formun durumu 'finansta' olarak baslayacak.")){
+    return;
+  }
+  // Form nesnesi olustur
+  var form={
+    id:"f_"+Date.now()+"_"+Math.floor(Math.random()*10000),
+    number:number,
+    prefix:prefix,
+    label:label,
+    closedAt:new Date().toISOString().split("T")[0],
+    paidAt:null,
+    status:"finansta",  // finansta -> yatti (toggle ile)
+    total:Math.round(total*100)/100,
+    count:openEntries.length,
+    entryIds:openEntries.map(function(e){return e.id}).filter(Boolean),
+    year:exp_currentYear,
+    month:exp_currentMonth
+  };
+  // Form listesine ekle
+  var forms=getExpForms();
+  forms.push(form);
+  setExpForms(forms);
+  // Entry'lere formId ata — sadece bu aya ait acik olanlar
+  expenseList.forEach(function(e){
+    if(!e.formId)e.formId=form.id;
+  });
+  expSave();
+  // Sonraki numarayi artir
+  setExpFormNextNumber(number+1);
+  // Log'a yaz
+  expAddLog("form_close",{vendor:label,totalAmount:total,category:"FORM"});
+  alert(label+" olusturuldu.\n\n"+openEntries.length+" harcama atandi.\nToplam: "+total.toLocaleString("tr-TR",{minimumFractionDigits:2})+" TL\n\nDurum: finansta (yattiginda Formlar sekmesinden 'Yattı' yap).");
+  expRenderAll();
+  expShowTab("forms");
+}
+
+// Form durumunu toggle et: finansta -> yatti / yatti -> finansta (geri al)
+function expToggleFormStatus(formId){
+  var forms=getExpForms();
+  var idx=forms.findIndex(function(f){return f.id===formId});
+  if(idx<0)return;
+  var f=forms[idx];
+  if(f.status==="yatti"){
+    if(!confirm(expFormLabel(f)+" icin 'yatti' durumunu geri almak istiyor musun?"))return;
+    f.status="finansta";
+    f.paidAt=null;
+  } else {
+    if(!confirm(expFormLabel(f)+" odendi olarak isaretlensin mi?\nTutar: "+(f.total||0).toLocaleString("tr-TR",{minimumFractionDigits:2})+" TL"))return;
+    f.status="yatti";
+    f.paidAt=new Date().toISOString().split("T")[0];
+  }
+  forms[idx]=f;
+  setExpForms(forms);
+  expAddLog("form_"+f.status,{vendor:expFormLabel(f),totalAmount:f.total||0,category:"FORM"});
+  expRenderAll();
+  expRenderForms();
+}
+
+// Form'u finans formatinda Excel olarak indir
+function expDownloadFormExcel(formId){
+  var forms=getExpForms();
+  var f=forms.find(function(x){return x.id===formId});
+  if(!f){alert("Form bulunamadi.");return}
+  // Form'un entry'lerini tum aylardan topla
+  var entries=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!/^exp_\d+_\d+$/.test(key))continue;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      list.forEach(function(e){if(e.formId===formId)entries.push(e)});
+    }catch(err){}
+  }
+  if(!entries.length){alert("Bu forma ait harcama yok.");return}
+  entries.sort(function(a,b){return(a.date||"").localeCompare(b.date||"")});
+  // Tarih bilesenlerini Turkce finans formatina cevir (gun/ay/yil)
+  var fmtDate=function(iso){
+    if(!iso)return"";
+    var parts=iso.split("-");
+    if(parts.length!==3)return iso;
+    return parts[2]+"/"+parts[1]+"/"+parts[0];
+  };
+  // Accounting period: "2026/004" gibi (yil/ay 3 haneli)
+  var accPeriod=function(iso){
+    if(!iso)return"";
+    var parts=iso.split("-");
+    if(parts.length<2)return"";
+    return parts[0]+"/"+("00"+parts[1]).slice(-3);
+  };
+  var label=expFormLabel(f);
+  // Satirlar: finans ekranindaki kolonlar
+  var headers=["Accounting Period","Transaction Date","Base Amount","Currency","Transaction Amount","Tran. Currency","Rate","Transaction Ref.","Description"];
+  var rows=[headers];
+  var totalAmount=0;
+  entries.forEach(function(e){
+    var amt=-(e.totalAmount||0); // Harcama negatif (finans ekraninda da oyle)
+    totalAmount+=amt;
+    var desc=(e.vendor||"")+(e.category?" - "+e.category:"")+(e.description?" ("+e.description+")":"");
+    rows.push([
+      accPeriod(e.date),
+      fmtDate(e.date),
+      amt,
+      "TRY",
+      amt,
+      "TRY",
+      1,
+      label,
+      desc
+    ]);
+  });
+  // Odeme satiri varsa (yatti ise) yesil "PAYMENT" satiri ekle
+  if(f.status==="yatti"&&f.paidAt){
+    rows.push([
+      accPeriod(f.paidAt),
+      fmtDate(f.paidAt),
+      -totalAmount, // Pozitif (odeme)
+      "TRY",
+      -totalAmount,
+      "TRY",
+      1,
+      "PAYMENT-"+fmtDate(f.paidAt),
+      "Payment"
+    ]);
+  }
+  // Subtotal satiri
+  var subtotal=-totalAmount+(f.status==="yatti"?totalAmount:0); // bekliyorsa butun harcamalar, yatmissa 0
+  // Net alacak = harcama toplami - odenen
+  var netAlacak=Math.abs(totalAmount)-(f.status==="yatti"?Math.abs(totalAmount):0);
+  rows.push(["","Subtotal","","TRY",Math.abs(totalAmount)*(f.status==="yatti"?0:1),"TRY","","",""]);
+  // xlsx-js-style ile olustur
+  try{
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    // Kolon genislikleri
+    ws["!cols"]=[{wch:16},{wch:16},{wch:13},{wch:10},{wch:17},{wch:13},{wch:7},{wch:28},{wch:40}];
+    // Stil: satir satir renkli arkaplan (finans ekranindaki gibi)
+    var headerStyle={fill:{fgColor:{rgb:"1F2937"}},font:{color:{rgb:"FFFFFF"},bold:true,sz:11},alignment:{horizontal:"center"}};
+    var yellowStyle={fill:{fgColor:{rgb:"FEF08A"}},font:{sz:10}};
+    var greenStyle={fill:{fgColor:{rgb:"BBF7D0"}},font:{sz:10}};
+    var subtotalStyle={fill:{fgColor:{rgb:"D1D5DB"}},font:{bold:true,sz:10}};
+    // Header
+    for(var c=0;c<headers.length;c++){
+      var addr=XLSX.utils.encode_cell({r:0,c:c});
+      if(ws[addr])ws[addr].s=headerStyle;
+    }
+    // Harcama satirlari sari, odeme yesil, subtotal gri
+    for(var r=1;r<rows.length;r++){
+      var isPayment=String(rows[r][7]||"").indexOf("PAYMENT")===0;
+      var isSubtotal=String(rows[r][1]||"")==="Subtotal";
+      var style=isSubtotal?subtotalStyle:(isPayment?greenStyle:yellowStyle);
+      for(var c=0;c<headers.length;c++){
+        var addr=XLSX.utils.encode_cell({r:r,c:c});
+        if(ws[addr])ws[addr].s=style;
+      }
+    }
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,label.substring(0,30));
+    var filename=label.replace(/[^A-Za-z0-9_\- ]/g,"").replace(/\s+/g,"_")+".xlsx";
+    XLSX.writeFile(wb,filename);
+  }catch(err){
+    console.error("[EXP] Form Excel cikti hatasi:",err);
+    alert("Excel olustururken hata: "+err.message);
+  }
+}
+
+// Form'u sil (yanlislikla kapattiysan, entry'ler acik liste'ye geri doner)
+function expDeleteForm(formId){
+  var forms=getExpForms();
+  var idx=forms.findIndex(function(f){return f.id===formId});
+  if(idx<0)return;
+  var f=forms[idx];
+  if(!confirm(expFormLabel(f)+" formunu silmek istediginden emin misin?\n\nIcindeki "+(f.count||0)+" harcama tekrar acik listeye donecek.\nBu islem geri alinamaz."))return;
+  // Bu form'a bagli tum entry'lerin formId'sini null yap (tum aylarda)
+  var affected=0;
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!/^exp_\d+_\d+$/.test(key))continue;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      var changed=false;
+      list.forEach(function(e){if(e.formId===formId){e.formId=null;affected++;changed=true}});
+      if(changed)localStorage.setItem(key,JSON.stringify(list));
+    }catch(err){}
+  }
+  // Mevcut expenseList'i de guncelle (ay degismemis olabilir)
+  expenseList.forEach(function(e){if(e.formId===formId)e.formId=null});
+  // Form'u sil
+  forms.splice(idx,1);
+  setExpForms(forms);
+  expAddLog("form_delete",{vendor:expFormLabel(f),totalAmount:f.total||0,category:"FORM"});
+  alert(expFormLabel(f)+" silindi.\n"+affected+" harcama acik listeye geri donduruldu.");
+  expRenderAll();
+  expRenderForms();
 }
 
 function expToggleStatus(idx){
@@ -572,6 +958,516 @@ function expUpdField(idx,field,val){
   if(!expenseList[idx])return;
   expenseList[idx][field]=val;
   expSave();
+}
+
+function expRenderOverdueBanner(){
+  var el=document.getElementById("expOverdueBanner");
+  if(!el)return;
+  var threshold=getExpOverdueDays();
+  var waiting=expGetWaitingForms();
+  // Esigi asanlar (kirmizi) ve yaklasanlar (son 1/3 bolge - sari heads-up)
+  var warnThreshold=Math.max(1,Math.floor(threshold*2/3));
+  var overdue=waiting.filter(function(w){return w.days>=threshold});
+  var approaching=waiting.filter(function(w){return w.days>=warnThreshold&&w.days<threshold});
+  if(!overdue.length&&!approaching.length){el.innerHTML="";return}
+  var fmt=function(v){return(v||0).toLocaleString("tr-TR",{minimumFractionDigits:2})};
+  var h="";
+  // KIRMIZI: esigi asmis formlar
+  if(overdue.length){
+    h+='<div style="background:#fef2f2;border:1.5px solid #dc2626;border-left:5px solid #dc2626;border-radius:8px;padding:10px 14px;margin-bottom:6px">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+      +'<div style="font-weight:700;font-size:13px;color:#991b1b">&#9888; Finansta Uzun Sure Bekleyen Form'+(overdue.length>1?"lar":"")+' ('+overdue.length+')</div>'
+      +'<a onclick="expShowTab(\'forms\')" style="font-size:10px;color:#991b1b;cursor:pointer;text-decoration:underline;font-weight:600">Formlar sekmesine git &rarr;</a>'
+    +'</div>';
+    overdue.forEach(function(w){
+      var f=w.form;
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fff;border:1px solid #fecaca;border-radius:6px;margin-bottom:4px">';
+      h+='<div style="flex:1;min-width:0">'
+        +'<div style="font-weight:700;font-size:12px;color:#1e293b">'+esc(expFormLabel(f))+' <span style="background:#dc2626;color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;margin-left:4px">'+w.days+' GUN</span></div>'
+        +'<div style="font-size:10px;color:#6b7280;margin-top:2px">Kapatildi: '+esc(f.closedAt||"-")+' &middot; '+fmt(f.total)+' TL &middot; '+(f.count||0)+' harcama</div>'
+      +'</div>';
+      h+='<div style="white-space:nowrap;margin-left:8px">'
+        +'<button onclick="expToggleFormStatus(\''+esc(f.id)+'\')" title="Yatti olarak isaretle" style="cursor:pointer;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;background:#10b981;color:#fff;margin-right:4px">Yatti</button>'
+        +'<button onclick="expDownloadFormExcel(\''+esc(f.id)+'\')" title="Excel indir" style="cursor:pointer;border:1px solid #6b7280;background:#fff;color:#374151;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700">Excel</button>'
+      +'</div>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  // SARI: esige yaklasanlar (kucuk, tek satir ozet)
+  if(approaching.length){
+    var names=approaching.map(function(w){return "#"+w.form.number+" ("+w.days+"g)"}).join(", ");
+    h+='<div style="background:#fffbeb;border:1px solid #fbbf24;border-left:4px solid #f59e0b;border-radius:6px;padding:6px 12px;font-size:11px;color:#78350f">';
+    h+='<span style="font-weight:700">&#8987; Esige yaklasiyor:</span> '+esc(names)+' &middot; '+threshold+' gun esigi yakinda dolacak.';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+}
+
+function expRenderForms(){
+  var el=document.getElementById("expFormsWrap");
+  if(!el)return;
+  var forms=getExpForms();
+  var fmt=function(v){return(v||0).toLocaleString("tr-TR",{minimumFractionDigits:2})};
+  // Tum aylardaki acik (formId=null) harcamalari topla
+  var allOpenEntries=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!/^exp_\d+_\d+$/.test(key))continue;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      list.forEach(function(e){if(!e.formId)allOpenEntries.push(e)});
+    }catch(err){}
+  }
+  var openTotal=allOpenEntries.reduce(function(s,e){return s+(e.totalAmount||0)},0);
+  // Ozet kutular
+  var finansta=forms.filter(function(f){return f.status==="finansta"});
+  var yatti=forms.filter(function(f){return f.status==="yatti"});
+  var finanstaTotal=finansta.reduce(function(s,f){return s+(f.total||0)},0);
+  var yattiTotal=yatti.reduce(function(s,f){return s+(f.total||0)},0);
+  var h='';
+  // Dashboard: 3 kutu
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">';
+  h+='<div style="background:#f0f9ff;border:1.5px solid #7dd3fc;border-radius:8px;padding:10px 14px">'
+    +'<div style="font-size:10px;color:#075985;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Acik Liste</div>'
+    +'<div style="font-size:18px;font-weight:700;color:#0c4a6e">'+fmt(openTotal)+' TL</div>'
+    +'<div style="font-size:10px;color:#0369a1;margin-top:2px">'+allOpenEntries.length+' harcama &middot; henuz forma donusmedi</div>'
+  +'</div>';
+  h+='<div style="background:#fffbeb;border:1.5px solid #fbbf24;border-radius:8px;padding:10px 14px">'
+    +'<div style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Finansta Bekleyen</div>'
+    +'<div style="font-size:18px;font-weight:700;color:#78350f">'+fmt(finanstaTotal)+' TL</div>'
+    +'<div style="font-size:10px;color:#a16207;margin-top:2px">'+finansta.length+' form &middot; yatmasi bekleniyor</div>'
+  +'</div>';
+  h+='<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:10px 14px">'
+    +'<div style="font-size:10px;color:#065f46;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Toplam Yatan</div>'
+    +'<div style="font-size:18px;font-weight:700;color:#064e3b">'+fmt(yattiTotal)+' TL</div>'
+    +'<div style="font-size:10px;color:#047857;margin-top:2px">'+yatti.length+' form &middot; tahsil edildi</div>'
+  +'</div>';
+  h+='</div>';
+  if(!forms.length){
+    h+='<div style="text-align:center;color:#9ca3af;padding:30px;font-size:13px;border:1px dashed #d1d5db;border-radius:8px">'
+      +'Henuz kapatilmis form yok. Liste ekraninda acik harcamalar oldugunda "Listeyi Kapat" ile ilk formu olusturabilirsin.'
+    +'</div>';
+    el.innerHTML=h;
+    return;
+  }
+  // Finans ekrani formatinda tablo
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<div style="font-weight:700;font-size:14px;color:#1e293b">Formlar ('+forms.length+')</div>'
+    +'<div style="font-size:10px;color:#6b7280">Tikla: duruma bak / detay ac &middot; X: sil (geri al)</div>'
+  +'</div>';
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:#374151;color:#fff">'
+    +'<th style="padding:6px 8px;text-align:left">Transaction Ref</th>'
+    +'<th style="padding:6px 8px;text-align:left">Olusturma</th>'
+    +'<th style="padding:6px 8px;text-align:left">Odeme Tarihi</th>'
+    +'<th style="padding:6px 8px;text-align:right">Tutar (TRY)</th>'
+    +'<th style="padding:6px 8px;text-align:center">Adet</th>'
+    +'<th style="padding:6px 8px;text-align:center">Durum</th>'
+    +'<th style="padding:6px 8px;text-align:center">Islemler</th>'
+  +'</tr></thead><tbody>';
+  // En yeni form ustte
+  var overdueThreshold=getExpOverdueDays();
+  var warnThreshold=Math.max(1,Math.floor(overdueThreshold*2/3));
+  forms.slice().reverse().forEach(function(f){
+    // Finans ekranindaki gibi: sari=finansta, yesil=yatti
+    var bg=f.status==="yatti"?"#d1fae5":"#fef9c3";
+    var color=f.status==="yatti"?"#065f46":"#92400e";
+    var statusBadge=f.status==="yatti"?'<span style="padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;background:#10b981;color:#fff">YATTI</span>':'<span style="padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;background:#f59e0b;color:#fff">FINANSTA</span>';
+    // Finansta formlar icin gun rozeti ve kritik satir ici vurgusu
+    var daysBadge="";
+    var rowBorderLeft="";
+    if(f.status==="finansta"){
+      var days=expDaysSince(f.closedAt);
+      if(days>=overdueThreshold){
+        daysBadge=' <span style="background:#dc2626;color:#fff;padding:1px 7px;border-radius:8px;font-size:9px;font-weight:700;margin-left:4px" title="Esik: '+overdueThreshold+' gun">&#9888; '+days+'g</span>';
+        rowBorderLeft="border-left:4px solid #dc2626;";
+      } else if(days>=warnThreshold){
+        daysBadge=' <span style="background:#f59e0b;color:#fff;padding:1px 7px;border-radius:8px;font-size:9px;font-weight:700;margin-left:4px" title="Esik: '+overdueThreshold+' gun">'+days+'g</span>';
+      } else if(days>0){
+        daysBadge=' <span style="color:#78716c;font-size:9px;margin-left:4px">('+days+'g)</span>';
+      }
+    }
+    h+='<tr style="background:'+bg+';color:'+color+';cursor:pointer;'+rowBorderLeft+'" onclick="expToggleFormDetail(\''+esc(f.id)+'\')">'
+      +'<td style="padding:6px 8px;font-weight:700">'+esc(expFormLabel(f))+daysBadge+'</td>'
+      +'<td style="padding:6px 8px">'+esc(f.closedAt||"-")+'</td>'
+      +'<td style="padding:6px 8px">'+esc(f.paidAt||"-")+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-weight:700">'+fmt(f.total)+'</td>'
+      +'<td style="padding:6px 8px;text-align:center">'+(f.count||0)+'</td>'
+      +'<td style="padding:6px 8px;text-align:center">'+statusBadge+'</td>'
+      +'<td style="padding:6px 8px;text-align:center;white-space:nowrap" onclick="event.stopPropagation()">'
+        +'<button onclick="expToggleFormStatus(\''+esc(f.id)+'\')" title="'+(f.status==="yatti"?"Yatmadigina cevir":"Yatti olarak isaretle")+'" style="cursor:pointer;border:none;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;background:'+(f.status==="yatti"?"#6b7280":"#10b981")+';color:#fff;margin-right:4px">'+(f.status==="yatti"?"Geri":"Yatti")+'</button>'
+        +'<button onclick="expDownloadFormExcel(\''+esc(f.id)+'\')" title="Excel indir" style="cursor:pointer;border:1px solid #1a6b5c;background:#fff;color:#1a6b5c;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-right:4px">Excel</button>'
+        +'<button onclick="expDeleteForm(\''+esc(f.id)+'\')" title="Form sil — harcamalar acik listeye geri doner" style="cursor:pointer;border:none;background:none;color:#dc2626;font-size:14px;font-weight:700">&times;</button>'
+      +'</td>'
+    +'</tr>';
+    // Form detay satiri (varsayilan gizli)
+    h+='<tr id="expFormDetail_'+esc(f.id)+'" style="display:none"><td colspan="7" style="padding:0;background:#fafafa">'
+      +'<div id="expFormDetailBody_'+esc(f.id)+'" style="padding:10px 14px;font-size:10px;color:#374151"></div>'
+    +'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h;
+}
+
+// Form detay toggle: icindeki harcamalari goster
+function expToggleFormDetail(formId){
+  var row=document.getElementById("expFormDetail_"+formId);
+  var body=document.getElementById("expFormDetailBody_"+formId);
+  if(!row||!body)return;
+  if(row.style.display!=="none"){row.style.display="none";return}
+  // Form'un entry'lerini tum aylardan topla
+  var entries=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!/^exp_\d+_\d+$/.test(key))continue;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      list.forEach(function(e){if(e.formId===formId)entries.push(e)});
+    }catch(err){}
+  }
+  entries.sort(function(a,b){return(a.date||"").localeCompare(b.date||"")});
+  if(!entries.length){
+    body.innerHTML='<i>Bu forma ait harcama bulunamadi.</i>';
+  } else {
+    var fmt=function(v){return(v||0).toLocaleString("tr-TR",{minimumFractionDigits:2})};
+    var h='<table style="width:100%;border-collapse:collapse;font-size:10px">'
+      +'<tr style="background:#e5e7eb"><th style="padding:3px 6px;text-align:left">Tarih</th><th style="padding:3px 6px;text-align:left">Satici</th><th style="padding:3px 6px;text-align:left">Kategori</th><th style="padding:3px 6px;text-align:right">Tutar</th></tr>';
+    entries.forEach(function(e){
+      h+='<tr><td style="padding:2px 6px">'+esc(e.date||"")+'</td>'
+        +'<td style="padding:2px 6px">'+esc(e.vendor||"")+'</td>'
+        +'<td style="padding:2px 6px">'+esc(e.category||"")+'</td>'
+        +'<td style="padding:2px 6px;text-align:right;font-weight:600">'+fmt(e.totalAmount)+'</td></tr>';
+    });
+    h+='</table>';
+    body.innerHTML=h;
+  }
+  row.style.display="";
+}
+
+// ============================================================
+// SEARCH — tum aylardaki harcamalarda ara
+// ============================================================
+var _expSearchDebounce=null;
+function expDoSearch(){
+  clearTimeout(_expSearchDebounce);
+  _expSearchDebounce=setTimeout(expDoSearchNow,220);
+}
+function expDoSearchNow(){
+  var q=(document.getElementById("expSearchInput")||{}).value||"";
+  q=q.trim().toLocaleLowerCase("tr-TR");
+  var panel=document.getElementById("expSearchPanel");
+  var clearBtn=document.getElementById("expSearchClear");
+  if(!q){
+    if(panel)panel.style.display="none";
+    if(clearBtn)clearBtn.style.display="none";
+    return;
+  }
+  if(clearBtn)clearBtn.style.display="";
+  // Tum ay kayitlarini tara
+  var matches=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    var m=key&&key.match(/^exp_(\d+)_(\d+)$/);
+    if(!m)continue;
+    var year=parseInt(m[1]),month=parseInt(m[2]);
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      list.forEach(function(e,origIdx){
+        var haystack=[e.vendor,e.guest,e.butler,e.category,e.description,e.item,e.purpose,e.invoiceNo]
+          .filter(Boolean).join(" ").toLocaleLowerCase("tr-TR");
+        if(haystack.indexOf(q)>=0){
+          matches.push({entry:e,year:year,month:month,origIdx:origIdx,storageKey:key});
+        }
+      });
+    }catch(err){}
+  }
+  // Tarih yeniden eskiye sirala
+  matches.sort(function(a,b){return(b.entry.date||"").localeCompare(a.entry.date||"")});
+  var fmt=function(v){return(v||0).toLocaleString("tr-TR",{minimumFractionDigits:2})};
+  var monthNames=["","Ocak","Subat","Mart","Nisan","Mayis","Haziran","Temmuz","Agustos","Eylul","Ekim","Kasim","Aralik"];
+  var total=matches.reduce(function(s,m){return s+(m.entry.totalAmount||0)},0);
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+    +'<div style="font-weight:700;color:#92400e;font-size:13px">Arama sonuclari: <b>'+matches.length+'</b> kayit'+(matches.length?' &middot; toplam '+fmt(total)+' TL':'')+'</div>'
+    +'<button onclick="expClearSearch()" style="background:#fff;border:1px solid #fbbf24;color:#92400e;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer">Aramayi Kapat</button>'
+    +'</div>';
+  if(!matches.length){
+    h+='<div style="text-align:center;color:#92400e;padding:10px;font-size:12px">"'+esc(q)+'" icin sonuc bulunamadi.</div>';
+  } else {
+    h+='<div style="max-height:360px;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;background:#fff">'
+      +'<thead><tr style="background:#92400e;color:#fff">'
+      +'<th style="padding:5px 6px;text-align:left">Tarih</th>'
+      +'<th style="padding:5px 6px;text-align:left">Ay</th>'
+      +'<th style="padding:5px 6px;text-align:left">Satici</th>'
+      +'<th style="padding:5px 6px;text-align:left">Misafir</th>'
+      +'<th style="padding:5px 6px;text-align:left">Kategori</th>'
+      +'<th style="padding:5px 6px;text-align:right">Tutar</th>'
+      +'<th style="padding:5px 6px;text-align:center">Form</th>'
+      +'<th style="padding:5px 6px;text-align:center">Git</th>'
+      +'</tr></thead><tbody>';
+    // Form lookup for badges
+    var forms=getExpForms();
+    var formsById={};
+    forms.forEach(function(f){formsById[f.id]=f});
+    matches.slice(0,100).forEach(function(m,i){
+      var e=m.entry;
+      var bg=i%2===0?"#fff":"#fafafa";
+      var formCell='<span style="color:#9ca3af;font-size:10px">acik</span>';
+      if(e.formId&&formsById[e.formId]){
+        var f=formsById[e.formId];
+        var fbg=f.status==="yatti"?"#d1fae5;color:#065f46":(f.status==="finansta"?"#fef3c7;color:#92400e":"#e0e7ff;color:#3730a3");
+        formCell='<span style="padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:'+fbg+'">#'+esc(String(f.number))+'</span>';
+      }
+      h+='<tr style="background:'+bg+'">'
+        +'<td style="padding:4px 6px;white-space:nowrap">'+esc(e.date||"")+'</td>'
+        +'<td style="padding:4px 6px;white-space:nowrap">'+esc(monthNames[m.month]||m.month)+' '+m.year+'</td>'
+        +'<td style="padding:4px 6px">'+esc(e.vendor||"")+'</td>'
+        +'<td style="padding:4px 6px">'+esc(e.guest||"")+'</td>'
+        +'<td style="padding:4px 6px">'+esc(e.category||"")+'</td>'
+        +'<td style="padding:4px 6px;text-align:right;font-weight:600">'+fmt(e.totalAmount)+'</td>'
+        +'<td style="padding:4px 6px;text-align:center">'+formCell+'</td>'
+        +'<td style="padding:4px 6px;text-align:center"><button onclick="expJumpTo('+m.year+','+m.month+')" title="O aya git" style="cursor:pointer;border:none;background:#0284c7;color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700">&rsaquo;</button></td>'
+        +'</tr>';
+    });
+    h+='</tbody></table></div>';
+    if(matches.length>100){
+      h+='<div style="text-align:center;color:#92400e;font-size:10px;margin-top:6px">Not: sadece ilk 100 sonuc gosteriliyor. Daha dar arama icin daha ozel terim yaz.</div>';
+    }
+  }
+  if(panel){panel.style.display="";panel.innerHTML=h}
+}
+
+function expClearSearch(){
+  var inp=document.getElementById("expSearchInput");
+  if(inp)inp.value="";
+  var panel=document.getElementById("expSearchPanel");
+  if(panel)panel.style.display="none";
+  var clearBtn=document.getElementById("expSearchClear");
+  if(clearBtn)clearBtn.style.display="none";
+}
+
+// Belirli ay/yil'a atla (arama sonucundan)
+function expJumpTo(year,month){
+  exp_currentYear=year;
+  exp_currentMonth=month;
+  var ms=document.getElementById("exp_monthSel");if(ms)ms.value=month;
+  var ys=document.getElementById("exp_yearSel");if(ys)ys.value=year;
+  expLoad();
+  expLoadLog();
+  expClearSearch();
+  expRenderAll();
+  expShowTab("list");
+}
+
+// ============================================================
+// RAPOR — filtreli analiz
+// ============================================================
+var _expReportFilter={
+  dateFrom:"",
+  dateTo:"",
+  category:"",
+  payType:"",
+  formStatus:"" // "", "open", "finansta", "yatti"
+};
+
+function expRenderReport(){
+  var el=document.getElementById("expReportWrap");
+  if(!el)return;
+  var fmt=function(v){return(v||0).toLocaleString("tr-TR",{minimumFractionDigits:2})};
+  var cats=getExpCategories();
+  var f=_expReportFilter;
+  // Filtre formu
+  var h='<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:14px">'
+    +'<div style="font-weight:700;font-size:12px;color:#374151;margin-bottom:8px">Filtre</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;align-items:end">'
+    +'<div><label style="font-size:10px;color:#6b7280;font-weight:600">Bas. tarih</label>'
+      +'<input type="date" id="expRepDateFrom" value="'+esc(f.dateFrom)+'" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;font-size:11px"></div>'
+    +'<div><label style="font-size:10px;color:#6b7280;font-weight:600">Bit. tarih</label>'
+      +'<input type="date" id="expRepDateTo" value="'+esc(f.dateTo)+'" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;font-size:11px"></div>'
+    +'<div><label style="font-size:10px;color:#6b7280;font-weight:600">Kategori</label>'
+      +'<select id="expRepCategory" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;font-size:11px"><option value="">Hepsi</option>';
+  cats.forEach(function(c){h+='<option value="'+esc(c)+'"'+(f.category===c?" selected":"")+'>'+esc(c)+'</option>'});
+  h+='</select></div>'
+    +'<div><label style="font-size:10px;color:#6b7280;font-weight:600">Odeme</label>'
+      +'<select id="expRepPayType" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;font-size:11px">'
+        +'<option value="">Hepsi</option>'
+        +'<option value="expense"'+(f.payType==="expense"?" selected":"")+'>Expense (E)</option>'
+        +'<option value="cep"'+(f.payType==="cep"?" selected":"")+'>Cep (C)</option>'
+      +'</select></div>'
+    +'<div><label style="font-size:10px;color:#6b7280;font-weight:600">Form durumu</label>'
+      +'<select id="expRepFormStatus" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;font-size:11px">'
+        +'<option value="">Hepsi</option>'
+        +'<option value="open"'+(f.formStatus==="open"?" selected":"")+'>Acik (henuz form yok)</option>'
+        +'<option value="finansta"'+(f.formStatus==="finansta"?" selected":"")+'>Finansta</option>'
+        +'<option value="yatti"'+(f.formStatus==="yatti"?" selected":"")+'>Yatti</option>'
+      +'</select></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">'
+      +'<button onclick="expApplyReportFilter()" style="background:#0284c7;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer">Uygula</button>'
+      +'<button onclick="expClearReportFilter()" style="background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:5px;padding:5px 12px;font-size:11px;cursor:pointer">Temizle</button>'
+      +'<button onclick="expReportQuickRange(\'thisMonth\')" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:5px;padding:5px 10px;font-size:10px;cursor:pointer">Bu ay</button>'
+      +'<button onclick="expReportQuickRange(\'lastMonth\')" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:5px;padding:5px 10px;font-size:10px;cursor:pointer">Gecen ay</button>'
+      +'<button onclick="expReportQuickRange(\'last30\')" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:5px;padding:5px 10px;font-size:10px;cursor:pointer">Son 30 gun</button>'
+      +'<button onclick="expReportQuickRange(\'thisYear\')" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:5px;padding:5px 10px;font-size:10px;cursor:pointer">Bu yil</button>'
+    +'</div>';
+  h+='</div>';
+  // Veri topla
+  var forms=getExpForms();
+  var formsById={};
+  forms.forEach(function(fo){formsById[fo.id]=fo});
+  var entries=[];
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!/^exp_\d+_\d+$/.test(key))continue;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      list.forEach(function(e){
+        // Filtreleri uygula
+        if(f.dateFrom&&(e.date||"")<f.dateFrom)return;
+        if(f.dateTo&&(e.date||"")>f.dateTo)return;
+        if(f.category&&e.category!==f.category)return;
+        if(f.payType&&(e.payType||"expense")!==f.payType)return;
+        if(f.formStatus){
+          if(f.formStatus==="open"&&e.formId)return;
+          if(f.formStatus==="finansta"&&(!e.formId||(formsById[e.formId]||{}).status!=="finansta"))return;
+          if(f.formStatus==="yatti"&&(!e.formId||(formsById[e.formId]||{}).status!=="yatti"))return;
+        }
+        entries.push(e);
+      });
+    }catch(err){}
+  }
+  if(!entries.length){
+    h+='<div style="text-align:center;color:#9ca3af;padding:40px;font-size:13px;border:1px dashed #d1d5db;border-radius:8px">Filtreye uyan kayit bulunamadi. Filtreyi temizleyip tekrar deneyin.</div>';
+    el.innerHTML=h;
+    return;
+  }
+  // Ozet kutular
+  var grandTotal=entries.reduce(function(s,e){return s+(e.totalAmount||0)},0);
+  var expenseTotal=entries.filter(function(e){return(e.payType||"expense")==="expense"}).reduce(function(s,e){return s+(e.totalAmount||0)},0);
+  var cepTotal=entries.filter(function(e){return e.payType==="cep"}).reduce(function(s,e){return s+(e.totalAmount||0)},0);
+  var openCount=entries.filter(function(e){return !e.formId}).length;
+  var finanstaTotal=0,yattiTotal=0;
+  entries.forEach(function(e){
+    if(!e.formId)return;
+    var fo=formsById[e.formId];
+    if(!fo)return;
+    if(fo.status==="yatti")yattiTotal+=(e.totalAmount||0);
+    else if(fo.status==="finansta")finanstaTotal+=(e.totalAmount||0);
+  });
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px">'
+    +'<div style="background:#eff6ff;border:1.5px solid #60a5fa;border-radius:8px;padding:10px 12px">'
+      +'<div style="font-size:10px;color:#1e40af;font-weight:700;text-transform:uppercase;margin-bottom:3px">Toplam</div>'
+      +'<div style="font-size:18px;font-weight:700;color:#1e3a8a">'+fmt(grandTotal)+' TL</div>'
+      +'<div style="font-size:10px;color:#2563eb;margin-top:2px">'+entries.length+' kayit</div></div>'
+    +'<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:10px 12px">'
+      +'<div style="font-size:10px;color:#991b1b;font-weight:700;text-transform:uppercase;margin-bottom:3px">Expense (E)</div>'
+      +'<div style="font-size:18px;font-weight:700;color:#7f1d1d">'+fmt(expenseTotal)+' TL</div>'
+      +'<div style="font-size:10px;color:#b91c1c;margin-top:2px">Cep: '+fmt(cepTotal)+'</div></div>'
+    +'<div style="background:#fffbeb;border:1.5px solid #fbbf24;border-radius:8px;padding:10px 12px">'
+      +'<div style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;margin-bottom:3px">Finansta</div>'
+      +'<div style="font-size:18px;font-weight:700;color:#78350f">'+fmt(finanstaTotal)+' TL</div>'
+      +'<div style="font-size:10px;color:#a16207;margin-top:2px">'+openCount+' acik harcama</div></div>'
+    +'<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:10px 12px">'
+      +'<div style="font-size:10px;color:#065f46;font-weight:700;text-transform:uppercase;margin-bottom:3px">Yatan</div>'
+      +'<div style="font-size:18px;font-weight:700;color:#064e3b">'+fmt(yattiTotal)+' TL</div>'
+      +'<div style="font-size:10px;color:#047857;margin-top:2px">tahsil edildi</div></div>'
+    +'</div>';
+  // Yardimci: gruplama
+  function group(arr,field){
+    var g={};
+    arr.forEach(function(e){
+      var k=(e[field]||"(bos)");
+      if(!g[k])g[k]={count:0,total:0};
+      g[k].count++;g[k].total+=(e.totalAmount||0);
+    });
+    return Object.keys(g).map(function(k){return{key:k,count:g[k].count,total:g[k].total}}).sort(function(a,b){return b.total-a.total});
+  }
+  function renderBars(title,rows,emptyMsg){
+    if(!rows.length)return '<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;color:#1e293b;margin-bottom:6px">'+title+'</div><div style="font-size:11px;color:#9ca3af;padding:8px">'+emptyMsg+'</div></div>';
+    var max=rows[0].total;
+    var hh='<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;color:#1e293b;margin-bottom:6px">'+title+'</div>';
+    hh+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px">';
+    rows.slice(0,8).forEach(function(r){
+      var pct=max>0?Math.round(r.total/max*100):0;
+      var ratio=grandTotal>0?Math.round(r.total/grandTotal*100):0;
+      hh+='<div style="margin-bottom:5px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">'
+          +'<span style="font-weight:600;color:#374151">'+esc(r.key)+' <span style="color:#9ca3af;font-weight:400">('+r.count+'x)</span></span>'
+          +'<span style="font-weight:700;color:#1e293b">'+fmt(r.total)+' TL <span style="color:#9ca3af;font-weight:400;font-size:10px">%'+ratio+'</span></span>'
+        +'</div>'
+        +'<div style="background:#f3f4f6;border-radius:3px;height:8px;overflow:hidden"><div style="background:#0284c7;height:100%;width:'+pct+'%"></div></div>'
+      +'</div>';
+    });
+    if(rows.length>8)hh+='<div style="font-size:10px;color:#9ca3af;margin-top:4px">... ve '+(rows.length-8)+' tane daha</div>';
+    hh+='</div></div>';
+    return hh;
+  }
+  // Analizler 2 kolon halinde
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
+  h+='<div>'
+    +renderBars("En cok satici (top)",group(entries,"vendor"),"")
+    +renderBars("Kategori dagilimi",group(entries,"category"),"")
+    +'</div>';
+  h+='<div>'
+    +renderBars("Butler bazinda",group(entries.filter(function(e){return e.butler}),"butler"),"Butler atanmis kayit yok.")
+    +renderBars("Misafir bazinda",group(entries.filter(function(e){return e.guest}),"guest"),"Misafir atanmis kayit yok.")
+    +'</div>';
+  h+='</div>';
+  // Son harcamalar listesi (kucuk)
+  var recent=entries.slice().sort(function(a,b){return(b.date||"").localeCompare(a.date||"")}).slice(0,10);
+  h+='<div style="margin-top:14px"><div style="font-weight:700;font-size:12px;color:#1e293b;margin-bottom:6px">Son 10 kayit (filtreli)</div>'
+    +'<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden">'
+    +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
+    +'<thead><tr style="background:#f9fafb"><th style="padding:5px 8px;text-align:left;color:#6b7280">Tarih</th><th style="padding:5px 8px;text-align:left;color:#6b7280">Satici</th><th style="padding:5px 8px;text-align:left;color:#6b7280">Kategori</th><th style="padding:5px 8px;text-align:right;color:#6b7280">Tutar</th></tr></thead><tbody>';
+  recent.forEach(function(e,i){
+    var bg=i%2===0?"#fff":"#fafafa";
+    h+='<tr style="background:'+bg+'">'
+      +'<td style="padding:4px 8px;white-space:nowrap">'+esc(e.date||"")+'</td>'
+      +'<td style="padding:4px 8px">'+esc(e.vendor||"")+'</td>'
+      +'<td style="padding:4px 8px">'+esc(e.category||"")+'</td>'
+      +'<td style="padding:4px 8px;text-align:right;font-weight:600">'+fmt(e.totalAmount)+'</td>'
+      +'</tr>';
+  });
+  h+='</tbody></table></div></div>';
+  el.innerHTML=h;
+}
+
+function expApplyReportFilter(){
+  _expReportFilter.dateFrom=(document.getElementById("expRepDateFrom")||{}).value||"";
+  _expReportFilter.dateTo=(document.getElementById("expRepDateTo")||{}).value||"";
+  _expReportFilter.category=(document.getElementById("expRepCategory")||{}).value||"";
+  _expReportFilter.payType=(document.getElementById("expRepPayType")||{}).value||"";
+  _expReportFilter.formStatus=(document.getElementById("expRepFormStatus")||{}).value||"";
+  expRenderReport();
+}
+
+function expClearReportFilter(){
+  _expReportFilter={dateFrom:"",dateTo:"",category:"",payType:"",formStatus:""};
+  expRenderReport();
+}
+
+function expReportQuickRange(which){
+  var now=new Date();
+  var pad=function(n){return(n<10?"0":"")+n};
+  var toISO=function(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+  if(which==="thisMonth"){
+    _expReportFilter.dateFrom=toISO(new Date(now.getFullYear(),now.getMonth(),1));
+    _expReportFilter.dateTo=toISO(new Date(now.getFullYear(),now.getMonth()+1,0));
+  } else if(which==="lastMonth"){
+    _expReportFilter.dateFrom=toISO(new Date(now.getFullYear(),now.getMonth()-1,1));
+    _expReportFilter.dateTo=toISO(new Date(now.getFullYear(),now.getMonth(),0));
+  } else if(which==="last30"){
+    var from=new Date(now);from.setDate(from.getDate()-30);
+    _expReportFilter.dateFrom=toISO(from);
+    _expReportFilter.dateTo=toISO(now);
+  } else if(which==="thisYear"){
+    _expReportFilter.dateFrom=now.getFullYear()+"-01-01";
+    _expReportFilter.dateTo=now.getFullYear()+"-12-31";
+  }
+  expRenderReport();
 }
 
 function expRenderLog(){
@@ -616,11 +1512,266 @@ function saveExpKasa(){
   expRenderKasa();
 }
 
+// --- EDIT MODAL ---
+var _expEditIdx=-1; // Duzenlenmekte olan entry index'i
+var _expEditOriginal=null; // Profil geri-cikarmak icin orijinal entry'nin kopyasi
+
+function expOpenEditModal(idx){
+  var e=expenseList[idx];
+  if(!e)return;
+  _expEditIdx=idx;
+  _expEditOriginal=JSON.parse(JSON.stringify(e)); // derin kopya
+  // Dropdown'lari doldur
+  var catSel=document.getElementById("expEd_category");
+  if(catSel){
+    catSel.innerHTML="";
+    getExpCategories().forEach(function(c){
+      var o=document.createElement("option");o.value=c;o.textContent=c;catSel.appendChild(o);
+    });
+  }
+  var butSel=document.getElementById("expEd_butler");
+  if(butSel){
+    butSel.innerHTML='<option value=""></option>';
+    var butlers=[];
+    try{butlers=JSON.parse(localStorage.getItem("kw_butler"))||[]}catch(e){butlers=[]}
+    butlers.forEach(function(b){
+      var o=document.createElement("option");o.value=b;o.textContent=b;butSel.appendChild(o);
+    });
+  }
+  var purSel=document.getElementById("expEd_purpose");
+  if(purSel){
+    purSel.innerHTML='<option value=""></option>';
+    getExpPurposes().forEach(function(p){
+      var o=document.createElement("option");o.value=p;o.textContent=p;purSel.appendChild(o);
+    });
+  }
+  // Alanlari doldur
+  document.getElementById("expEd_date").value=e.date||"";
+  document.getElementById("expEd_vendor").value=e.vendor||"";
+  document.getElementById("expEd_invoiceNo").value=e.invoiceNo||"";
+  document.getElementById("expEd_total").value=e.totalAmount||0;
+  document.getElementById("expEd_vatRate").value=e.vatRate||0;
+  if(catSel)catSel.value=e.category||"";
+  document.getElementById("expEd_payType").value=e.payType||"expense";
+  document.getElementById("expEd_guest").value=e.guest||"";
+  if(butSel)butSel.value=e.butler||"";
+  document.getElementById("expEd_item").value=e.item||"";
+  if(purSel)purSel.value=e.purpose||"";
+  document.getElementById("expEd_description").value=e.description||"";
+  // Meta bilgi: forma atanmissa uyari, tip bilgisi
+  var meta='<span style="padding:1px 6px;border-radius:4px;background:'+(e.type==="invoice"?"#dbeafe;color:#1e40af":"#f3e8ff;color:#6b21a8")+';font-weight:600">'+(e.type==="invoice"?"Fatura":"Fis")+'</span>';
+  if(e.formId){
+    var f=getExpForms().find(function(x){return x.id===e.formId});
+    if(f){
+      meta+=' &middot; Atanmis: <b>'+esc(expFormLabel(f))+'</b>';
+      if(f.status==="yatti")meta+=' <span style="color:#dc2626">(Bu form yatmis — duzenleme Excel ciktisini etkiler)</span>';
+    }
+  } else {
+    meta+=' &middot; Acik listede';
+  }
+  document.getElementById("expEditMetaInfo").innerHTML=meta;
+  // Modal goster
+  var modal=document.getElementById("expEditModal");
+  modal.style.display="flex";
+  // ESC veya disa tiklama ile kapat
+  modal.onclick=function(ev){if(ev.target===modal)expCancelEdit()};
+  document.onkeydown=function(ev){if(ev.key==="Escape"){expCancelEdit();document.onkeydown=null}};
+}
+
+function expCancelEdit(){
+  _expEditIdx=-1;
+  _expEditOriginal=null;
+  var modal=document.getElementById("expEditModal");
+  if(modal)modal.style.display="none";
+}
+
+function expSaveEdit(){
+  if(_expEditIdx<0||!_expEditOriginal)return;
+  var e=expenseList[_expEditIdx];
+  if(!e){expCancelEdit();return}
+  // Yeni degerleri oku
+  var newVendor=(document.getElementById("expEd_vendor").value||"").trim();
+  if(!newVendor){alert("Satici adi bos olamaz.");return}
+  var newTotal=parseFloat(document.getElementById("expEd_total").value)||0;
+  if(newTotal<=0){alert("Tutar sifirdan buyuk olmali.");return}
+  var newVatRate=parseInt(document.getElementById("expEd_vatRate").value)||0;
+  var newNet=newVatRate>0?newTotal/(1+newVatRate/100):newTotal;
+  var newVat=newTotal-newNet;
+  // Orijinal profilden cikar, yeni profile ekle
+  expRemoveFromProfile(_expEditOriginal);
+  // Entry'yi guncelle
+  e.date=document.getElementById("expEd_date").value||e.date;
+  e.vendor=newVendor;
+  e.invoiceNo=(document.getElementById("expEd_invoiceNo").value||"").trim();
+  e.totalAmount=Math.round(newTotal*100)/100;
+  e.vatRate=newVatRate;
+  e.netAmount=Math.round(newNet*100)/100;
+  e.vatAmount=Math.round(newVat*100)/100;
+  e.category=document.getElementById("expEd_category").value||"";
+  e.payType=document.getElementById("expEd_payType").value||"expense";
+  e.guest=document.getElementById("expEd_guest").value||"";
+  e.butler=document.getElementById("expEd_butler").value||"";
+  e.item=document.getElementById("expEd_item").value||"";
+  e.purpose=document.getElementById("expEd_purpose").value||"";
+  e.description=document.getElementById("expEd_description").value||"";
+  // Yeni degerlerle profil update et
+  try{
+    expUpdateProfile(e);
+    expUpdateKeywords(e);
+  }catch(err){
+    console.error("[EXP] Duzenleme profil update hata:",err);
+  }
+  // Eger forma atanmisse, form total'ini yeniden hesapla
+  if(e.formId){
+    var forms=getExpForms();
+    var fidx=forms.findIndex(function(f){return f.id===e.formId});
+    if(fidx>=0){
+      // Form'a atanmis tum entry'leri topla
+      var total=0;
+      for(var i=0;i<localStorage.length;i++){
+        var key=localStorage.key(i);
+        if(!/^exp_\d+_\d+$/.test(key))continue;
+        try{
+          var list=JSON.parse(localStorage.getItem(key));
+          if(!Array.isArray(list))continue;
+          list.forEach(function(x){if(x.formId===e.formId)total+=(x.totalAmount||0)});
+        }catch(err2){}
+      }
+      forms[fidx].total=Math.round(total*100)/100;
+      setExpForms(forms);
+    }
+  }
+  expSave();
+  expAddLog("edit",e);
+  expUpdateVendorList();
+  expUpdateItemList();
+  expCancelEdit();
+  expRenderAll();
+}
+
+// Profil "geri-cikarma" — bir entry silindiğinde veya duzenlendiğinde sayaçlardan 1 dus
+function expRemoveFromProfile(entry){
+  if(!entry||!entry.vendor)return;
+  var profiles=expGetProfiles();
+  var vk=expNormVendor(entry.vendor);
+  var p=profiles[vk];
+  if(!p)return;
+  if(p.count<=1){
+    // Tek kayit varsa profili tamamen sil
+    delete profiles[vk];
+    expSaveProfiles(profiles);
+    return;
+  }
+  // Sayaclardan 1 dus (yoksa zaten yok)
+  function decFreq(obj,key){
+    if(!key||!obj||!obj[key])return;
+    obj[key]--;
+    if(obj[key]<=0)delete obj[key];
+  }
+  // avgAmount'i tersten hesapla
+  var oldTotal=p.avgAmount*p.count;
+  p.count--;
+  if(p.count>0){
+    p.avgAmount=Math.round((oldTotal-(entry.totalAmount||0))/p.count*100)/100;
+    if(p.avgAmount<0)p.avgAmount=0;
+  } else {
+    p.avgAmount=0;
+  }
+  decFreq(p.categories,entry.category);
+  decFreq(p.vatRates,String(entry.vatRate||0));
+  decFreq(p.butlers,entry.butler);
+  decFreq(p.payTypes,entry.payType);
+  decFreq(p.items,entry.item);
+  decFreq(p.purposes,entry.purpose);
+  if(entry.invoiceNo){
+    var pfx=expExtractInvPrefix(entry.invoiceNo);
+    if(pfx)decFreq(p.invoicePrefixes,pfx);
+  }
+  profiles[vk]=p;
+  expSaveProfiles(profiles);
+}
+
+// --- COPY ENTRY ---
+// Secili satiri bugune yeni kayit olarak kopyala (acik listede, formId=null)
+function expCopyEntry(idx){
+  var src=expenseList[idx];
+  if(!src)return;
+  var today=new Date().toISOString().split("T")[0];
+  var copy=JSON.parse(JSON.stringify(src));
+  copy.id=expGenEntryId();
+  copy.formId=null; // yeni kopya her zaman acik listede
+  copy.date=today;
+  copy.status="bekliyor";
+  // Fatura no sifirla (ayni no iki kez yazilmamali)
+  if(src.type==="invoice"&&copy.invoiceNo){
+    copy.invoiceNo=""; // yeni fatura farkli no'lu olur
+  }
+  copy.fileRef="";
+  // Bu ayda mi, degil mi — tarih bazinda ekleriz
+  var ed=new Date(today);
+  var em=ed.getMonth()+1,ey=ed.getFullYear();
+  if(em!==exp_currentMonth||ey!==exp_currentYear){
+    exp_currentMonth=em;exp_currentYear=ey;
+    document.getElementById("exp_monthSel").value=em;
+    document.getElementById("exp_yearSel").value=ey;
+    expLoad();
+    expLoadLog();
+  }
+  expenseList.push(copy);
+  expSave();
+  expAddLog("copy",copy);
+  try{expUpdateProfile(copy);expUpdateKeywords(copy);}catch(err){}
+  expUpdateVendorList();
+  expRenderAll();
+  // Kullaniciya bildirim
+  var vn=copy.vendor||"(isimsiz)";
+  var amt=(copy.totalAmount||0).toLocaleString("tr-TR",{minimumFractionDigits:2});
+  // Kisa bir toast benzeri bildirim
+  var toast=document.createElement("div");
+  toast.style.cssText="position:fixed;top:20px;right:20px;background:#059669;color:#fff;padding:10px 16px;border-radius:6px;font-size:12px;font-weight:600;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,.2)";
+  toast.innerHTML="&#10003; Kopyalandi: "+esc(vn)+" &middot; "+amt+" TL &middot; bugun";
+  document.body.appendChild(toast);
+  setTimeout(function(){toast.style.opacity="0";toast.style.transition="opacity .3s"},2500);
+  setTimeout(function(){if(toast.parentNode)toast.parentNode.removeChild(toast)},3000);
+}
+
 function expDelete(idx){
   var e=expenseList[idx];
-  if(e)expAddLog("delete",e);
+  if(!e)return;
+  var vn=e.vendor||"(isimsiz)";
+  var amt=(e.totalAmount||0).toLocaleString("tr-TR",{minimumFractionDigits:2});
+  if(!confirm("Bu kaydi silmek istediginden emin misin?\n\n"+vn+" &middot; "+amt+" TL &middot; "+(e.date||"")))return;
+  // Profil sayaçlarindan çikar
+  try{expRemoveFromProfile(e)}catch(err){console.error("[EXP] Silme profil güncelleme:",err)}
+  var wasFormId=e.formId;
+  expAddLog("delete",e);
   expenseList.splice(idx,1);
   expSave();
+  // Eger forma atanmissa, form total'ini güncelle
+  if(wasFormId){
+    var forms=getExpForms();
+    var fidx=forms.findIndex(function(f){return f.id===wasFormId});
+    if(fidx>=0){
+      var total=0,cnt=0;
+      for(var i=0;i<localStorage.length;i++){
+        var key=localStorage.key(i);
+        if(!/^exp_\d+_\d+$/.test(key))continue;
+        try{
+          var list=JSON.parse(localStorage.getItem(key));
+          if(!Array.isArray(list))continue;
+          list.forEach(function(x){if(x.formId===wasFormId){total+=(x.totalAmount||0);cnt++}});
+        }catch(err2){}
+      }
+      forms[fidx].total=Math.round(total*100)/100;
+      forms[fidx].count=cnt;
+      if(cnt===0){
+        // Form'da hiç entry kalmadiysa form'u sil
+        forms.splice(fidx,1);
+      }
+      setExpForms(forms);
+    }
+  }
+  expUpdateVendorList();
   expRenderAll();
 }
 
@@ -637,7 +1788,7 @@ function expClearMonth(){
 // ---- INVOICE PDF PARSER ----
 function parseTurkishNumber(s){
   if(!s)return 0;
-  s=s.replace(/\s/g,"").replace(/TL$/i,"").trim();
+  s=String(s).replace(/\s/g,"").replace(/(?:TL|TRY)$/i,"").trim();
   // Turkish: 1.500,00 → 1500.00
   s=s.replace(/\./g,"").replace(",",".");
   return parseFloat(s)||0;
@@ -672,6 +1823,7 @@ function expParseInvoicePdf(file){
           return;
         }
         _expParsedData=parsed;
+        expUpdateVendorList();
         showParsedPreview(parsed);
         status.innerHTML='<span style="color:#059669">PDF basariyla parse edildi</span>';
       });
@@ -705,33 +1857,82 @@ function parseInvoiceText(text){
     }
   }
 
-  // Odenecek Tutar (total including VAT)
-  m=text.match(/[OÖö]denecek\s*Tutar\s*:?\s*([\d\.\s,]+)\s*(?:TL)?/i);
-  if(m)r.totalAmount=parseTurkishNumber(m[1]);
-
-  // Net Tutar — try multiple patterns
-  m=text.match(/Mal\s*Hizmet\s*Toplam\s*Tutar[ıi]?\s*:?\s*([\d\.\s,]+)\s*(?:TL)?/i);
-  if(!m)m=text.match(/Vergi(?:ler)?\s*Hari[cç]\s*Tutar\s*:?\s*([\d\.\s,]+)\s*(?:TL)?/i);
-  if(m)r.netAmount=parseTurkishNumber(m[1]);
-
-  // KDV breakdown — multiple rates possible
-  var re=/Hesaplanan\s*KDV[^%]*%(\d+)[^)]*\)?\s*:?\s*([\d\.\s,]+)\s*(?:TL)?/gi;
-  var match;
-  while((match=re.exec(text))!==null){
-    var rate=parseInt(match[1]);
-    var amt=parseTurkishNumber(match[2]);
-    r.vatBreakdown.push({rate:rate,amount:amt});
-    r.vatAmount+=amt;
-    if(!r.vatRate||rate>r.vatRate)r.vatRate=rate;
+  // --- ÖDENECEK TUTAR (KDV dahil toplam) ---
+  // Oncelik: "Odenecek Tutar" > "Vergiler Dahil Toplam Tutar" > "Fatura Toplami"
+  // Regex'ler kesin etiket sonra sayi + TL/TRY arar, arada en fazla 10 karakter boşluk/simge olabilir
+  var totalPatterns=[
+    /[OÖö]denecek\s*Tutar[^\d]{1,10}([\d][\d\.,\s]*?)\s*(?:TL|TRY)/gi,
+    /Vergi(?:ler)?\s*Dahil\s*Toplam\s*Tutar[^\d]{1,10}([\d][\d\.,\s]*?)\s*(?:TL|TRY)/gi,
+    /Fatura\s*Toplam[ıi]?[^\d]{1,10}([\d][\d\.,\s]*?)(?:\s*$|\s*TL|\s*TRY|\s*\n)/gi
+  ];
+  for(var pi=0;pi<totalPatterns.length&&!r.totalAmount;pi++){
+    var matches=[];var re=totalPatterns[pi];var mm;
+    while((mm=re.exec(text))!==null)matches.push(parseTurkishNumber(mm[1]));
+    if(matches.length)r.totalAmount=Math.max.apply(null,matches);
   }
 
-  // If no net found but total and vat found
-  if(!r.netAmount&&r.totalAmount&&r.vatAmount){
-    r.netAmount=r.totalAmount-r.vatAmount;
+  // --- NET TUTAR (KDV haric) ---
+  // Oncelik: "Vergi Haric" > "KDV Matrahi" > "KDVsiz Toplam" > "Mal Hizmet Toplam"
+  var netPatterns=[
+    /Vergi(?:ler)?\s*Hari[cç]\s*(?:Toplam|Tutar)[^\d]{1,10}([\d][\d\.,\s]*?)\s*(?:TL|TRY)/gi,
+    /KDV\s*Matrah[ıi]?\s*(?:\([^)]*\))?\s*[:\s]{1,3}([\d][\d\.,\s]*?)\s*(?:TL|TRY)/gi,
+    /KDVsiz\s*Toplam[^\d]{1,10}([\d][\d\.,\s]*?)(?:\s*$|\s*TL|\s*TRY|\s*\n)/gi,
+    /Mal\s*Hizmet\s*Toplam\s*(?:Tutar[ıi]?)?[^\d]{1,10}([\d][\d\.,\s]*?)\s*(?:TL|TRY)/gi
+  ];
+  for(var pi=0;pi<netPatterns.length&&!r.netAmount;pi++){
+    var matches=[];var re=netPatterns[pi];var mm;
+    while((mm=re.exec(text))!==null)matches.push(parseTurkishNumber(mm[1]));
+    if(matches.length)r.netAmount=matches[0];
   }
-  // If no total but net + vat
-  if(!r.totalAmount&&r.netAmount&&r.vatAmount){
-    r.totalAmount=r.netAmount+r.vatAmount;
+
+  // --- KDV TUTAR ---
+  // Oncelik: "Toplam Vergi" > "KDV Toplami" > "Hesaplanan KDV(%X) SAYI" > "GERCEK USULDE KATMA DEGER..."
+  // ONEMLI: "Hesaplanan KDV (%20): 1.666,67 333,33" gibi durumlar var — matrah araya giriyor.
+  // Cozum: KAPALI PARANTEZ + dogrudan SAYI kalibini zorla (parantez hemen sayidan once)
+  m=text.match(/Toplam\s*Vergi[^\d]{1,10}([\d][\d\.,\s]*?)\s*(?:TL|TRY)/i);
+  if(m)r.vatAmount=parseTurkishNumber(m[1]);
+  if(!r.vatAmount){
+    m=text.match(/KDV\s*Toplam[ıi]?[^\d]{1,10}([\d][\d\.,\s]*?)(?:\s*$|\s*TL|\s*TRY|\s*\n)/i);
+    if(m)r.vatAmount=parseTurkishNumber(m[1]);
+  }
+  if(!r.vatAmount){
+    m=text.match(/Hesaplanan\s*KDV\s*\(\s*%\s*\d+\s*\)\s*[:\s]{0,3}([\d][\d\.,\s]*?)\s*(?:TL|TRY)/i);
+    if(m)r.vatAmount=parseTurkishNumber(m[1]);
+  }
+  if(!r.vatAmount){
+    m=text.match(/KATMA\s*DE[ĞG]ER\s*VERG[İI]S[İI]\s*\(\s*%\s*\d+\s*\)\s*[:\s]{0,3}([\d][\d\.,\s]*?)\s*(?:TL|TRY)/i);
+    if(m)r.vatAmount=parseTurkishNumber(m[1]);
+  }
+
+  // --- KDV ORAN ---
+  // Oncelik: "Hesaplanan KDV(%X)" > "KDV Orani: %X" > "KDV (%X)" > "KATMA DEGER VERGISI (%X)"
+  // Metindeki ilk "%X"i almak yanlis — iskonto orani olabilir (%0 gibi)
+  m=text.match(/Hesaplanan\s*KDV[^%]{0,30}%\s*(\d+)/i);
+  if(m)r.vatRate=parseInt(m[1]);
+  if(!r.vatRate){
+    m=text.match(/KDV\s*Oran[ıi]?[^%]{0,10}%\s*(\d+)/i);
+    if(m)r.vatRate=parseInt(m[1]);
+  }
+  if(!r.vatRate){
+    m=text.match(/KDV\s*\(\s*%\s*(\d+)/i);
+    if(m)r.vatRate=parseInt(m[1]);
+  }
+  if(!r.vatRate){
+    m=text.match(/KATMA\s*DE[ĞG]ER\s*VERG[İI]S[İI]\s*\(\s*%\s*(\d+)/i);
+    if(m)r.vatRate=parseInt(m[1]);
+  }
+
+  // vatBreakdown — eski yapıyı korumak için
+  if(r.vatAmount){
+    r.vatBreakdown.push({rate:r.vatRate,amount:r.vatAmount});
+  }
+
+  // Eksik alanlari tamamla
+  if(!r.netAmount&&r.totalAmount&&r.vatAmount!==undefined){
+    r.netAmount=Math.round((r.totalAmount-r.vatAmount)*100)/100;
+  }
+  if(!r.totalAmount&&r.netAmount&&r.vatAmount!==undefined){
+    r.totalAmount=Math.round((r.netAmount+r.vatAmount)*100)/100;
   }
 
   // ---- VENDOR DETECTION ----
@@ -756,6 +1957,14 @@ function parseInvoiceText(text){
   return r;
 }
 
+function expCalcTotal(){
+  var net=parseFloat((document.getElementById("expE_net")||{}).value)||0;
+  var vat=parseFloat((document.getElementById("expE_vat")||{}).value)||0;
+  var total=Math.round((net+vat)*100)/100;
+  var el=document.getElementById("expE_total");
+  if(el)el.value=total;
+}
+
 function showParsedPreview(p){
   var preview=document.getElementById("expParsedPreview");
   var fields=document.getElementById("expParsedFields");
@@ -765,11 +1974,18 @@ function showParsedPreview(p){
     '<div style="display:grid;grid-template-columns:120px 1fr;gap:4px 8px;align-items:center">'+
     '<strong>Fatura No:</strong> <input id="expE_invoiceNo" value="'+esc(p.invoiceNo||"")+'" style="border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px">'+
     '<strong>Tarih:</strong> <input id="expE_date" type="date" value="'+esc(p.date||"")+'" style="border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px">'+
-    '<strong>Satici:</strong> <input id="expE_vendor" value="'+esc(p.vendor||"")+'" style="border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px;font-weight:600;color:#065f46">'+
+    '<strong>Satici:</strong> <input id="expE_vendor" list="expVendorList" value="'+esc(p.vendor||"")+'" placeholder="Satici adini yazin" style="border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px;font-weight:600;color:#065f46" oninput="expAutoFillInvoice(this.value,document.getElementById(\'expE_invoiceNo\').value)">'+
     '<strong>Tip:</strong> <select id="expE_type" style="border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px"><option value="SATIS"'+(p.invoiceType==="SATIS"?" selected":"")+'>SATIS</option><option value="IADE"'+(p.invoiceType==="IADE"?" selected":"")+'>IADE</option></select>'+
     '<strong>Net Tutar:</strong> <input id="expE_net" type="number" step="0.01" value="'+(p.netAmount||0)+'" style="border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px">'+
-    '<strong>KDV:</strong> <span style="font-size:12px">'+fmt(p.vatAmount)+(p.vatRate?" (%"+p.vatRate+")":"")+'</span>'+
-    '<strong>Odenecek Tutar:</strong> <input id="expE_total" type="number" step="0.01" value="'+(p.totalAmount||0)+'" style="border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px;font-weight:700;color:#059669">'+
+    '<strong>KDV Tutar:</strong> <div style="display:flex;gap:6px;align-items:center">'+
+      '<input id="expE_vat" type="number" step="0.01" value="'+(p.vatAmount||0)+'" style="flex:1;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px">'+
+      '<span style="font-size:11px;color:#6b7280">%</span>'+
+      '<input id="expE_vatRate" type="number" step="1" value="'+(p.vatRate||20)+'" style="width:60px;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px">'+
+    '</div>'+
+    '<strong>Odenecek Tutar:</strong> <div style="display:flex;gap:6px;align-items:center">'+
+      '<input id="expE_total" type="number" step="0.01" value="'+(p.totalAmount||0)+'" style="flex:1;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:12px;font-weight:700;color:#059669">'+
+      '<button type="button" onclick="expCalcTotal()" style="border:1px solid #d1d5db;background:#f9fafb;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer" title="Net + KDV = Odenecek">Net+KDV</button>'+
+    '</div>'+
     '</div>';
   setTimeout(function(){expAutoFillInvoice(p.vendor,p.invoiceNo)},50);
 }
@@ -787,16 +2003,22 @@ function expAddFromParsed(){
   var entryDate=(document.getElementById("expE_date")||{}).value||p.date||new Date().toISOString().split("T")[0];
   var netAmount=parseFloat((document.getElementById("expE_net")||{}).value)||p.netAmount||0;
   var totalAmount=parseFloat((document.getElementById("expE_total")||{}).value)||p.totalAmount||0;
+  var vatAmount=parseFloat((document.getElementById("expE_vat")||{}).value);
+  if(isNaN(vatAmount))vatAmount=p.vatAmount||0;
+  var vatRate=parseFloat((document.getElementById("expE_vatRate")||{}).value);
+  if(isNaN(vatRate))vatRate=p.vatRate||0;
   var invoiceType=(document.getElementById("expE_type")||{}).value||p.invoiceType||"SATIS";
   var entry={
+    id:expGenEntryId(),
+    formId:null,
     type:"invoice",
     date:entryDate,
     vendor:vendor,
     invoiceNo:invoiceNo,
     netAmount:netAmount,
-    vatAmount:p.vatAmount||0,
+    vatAmount:vatAmount,
     totalAmount:totalAmount,
-    vatRate:p.vatRate||0,
+    vatRate:vatRate,
     vatBreakdown:p.vatBreakdown||[],
     invoiceType:invoiceType,
     category:cat||"",
@@ -819,9 +2041,26 @@ function expAddFromParsed(){
   expenseList.push(entry);
   expSave();
   expAddLog("add",entry);
-  expUpdateProfile(entry);
-  expUpdateKeywords(entry);
+  try{
+    expUpdateProfile(entry);
+    expUpdateKeywords(entry);
+    console.log("[EXP] Fatura kaydedildi ve ogrenildi:",entry.vendor,"entry=",entry);
+  }catch(err){
+    console.error("[EXP] Fatura ogrenme HATASI:",err,"entry=",entry);
+    alert("UYARI: Fatura eklendi ama profil ogrenme bolumunde hata olustu.\n\nHata: "+err.message+"\n\nKonsol (F12) ayrintilari gosterir.");
+  }
   expUpdateVendorList();
+  // Basarili kayit bildirimi — list'e gecmeden once gorunur olsun
+  var profiles=expGetProfiles();
+  var vkAfter=expNormVendor(vendor);
+  var pAfter=profiles[vkAfter];
+  var cntAfter=pAfter?pAfter.count:1;
+  var isNewVendor=cntAfter===1;
+  var pdfStatus=document.getElementById("expPdfStatus");
+  if(pdfStatus){
+    pdfStatus.innerHTML='<span style="color:#059669">&#10003; Kaydedildi: '+esc(vendor||"(isimsiz)")+' — '
+      +(isNewVendor?'yeni profil':'profil guncellendi, '+cntAfter+'x')+'</span>';
+  }
   expCancelParsed();
   expRenderAll();
   expShowTab("list");
@@ -862,6 +2101,8 @@ function expAddReceipt(){
   var net=vatPct>0?amt/(1+vatPct/100):amt;
   var vat=amt-net;
   var entry={
+    id:expGenEntryId(),
+    formId:null,
     type:"receipt",
     date:date||new Date().toISOString().split("T")[0],
     vendor:vendor,
@@ -896,8 +2137,14 @@ function expAddReceipt(){
   _expLastReceipt={vendor:vendor,vatPct:vatPct,cat:cat,butler:butler,payType:payType,item:item,purpose:purpose};
   expSave();
   expAddLog("add",entry);
-  expUpdateProfile(entry);
-  expUpdateKeywords(entry);
+  try{
+    expUpdateProfile(entry);
+    expUpdateKeywords(entry);
+    console.log("[EXP] Fis kaydedildi ve ogrenildi:",entry.vendor,"entry=",entry);
+  }catch(err){
+    console.error("[EXP] Fis ogrenme HATASI:",err,"entry=",entry);
+    alert("UYARI: Kayit eklendi ama profil ogrenme bolumunde hata olustu.\n\nHata: "+err.message+"\n\nKonsol (F12) ayrintilari gosterir.");
+  }
   expUpdateVendorList();
   expUpdateItemList();
   expClearSuggestion();
@@ -908,6 +2155,24 @@ function expAddReceipt(){
   document.getElementById("expRcpGuest").value="";
   if(document.getElementById("expRcpItem"))document.getElementById("expRcpItem").value="";
   if(document.getElementById("expRcpPurpose"))document.getElementById("expRcpPurpose").value="";
+  // Basarili kayit rozeti
+  var statusEl=document.getElementById("expRcpStatus");
+  if(statusEl){
+    var profiles=expGetProfiles();
+    var vk=expNormVendor(vendor);
+    var p=profiles[vk];
+    var cnt=p?p.count:1;
+    var isNew=cnt===1;
+    statusEl.style.display="";
+    statusEl.style.background=isNew?"#f0f9ff":"#ecfdf5";
+    statusEl.style.border="1px solid "+(isNew?"#7dd3fc":"#86efac");
+    statusEl.style.color=isNew?"#075985":"#065f46";
+    statusEl.innerHTML='<span>&#10003; Kaydedildi: '+esc(vendor)+'</span>'
+      +' <span style="font-weight:400;margin-left:6px">'
+      +(isNew?'yeni profil olusturuldu':'profil guncellendi — toplam '+cnt+' kayit')
+      +'</span>';
+    setTimeout(function(){if(statusEl)statusEl.style.display="none"},4000);
+  }
   expRenderAll();
   expShowTab("list");
 }
@@ -1078,12 +2343,43 @@ function renderExpenseSettings(){
   if(el){
     el.innerHTML="";
     cats.forEach(function(c,i){
-      el.innerHTML+='<span style="display:inline-flex;align-items:center;gap:3px;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">'+
-        esc(c)+' <button onclick="removeExpCategory('+i+')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-weight:700;font-size:12px;padding:0 2px">&times;</button></span>';
+      el.innerHTML+='<span style="display:inline-flex;align-items:center;gap:3px;background:#e0e7ff;color:#3730a3;padding:2px 4px 2px 8px;border-radius:10px;font-size:11px;font-weight:600">'+
+        esc(c)+
+        ' <button onclick="renameExpCategory('+i+')" style="border:none;background:none;color:#3730a3;cursor:pointer;font-size:11px;padding:0 3px" title="Adini degistir">&#9998;</button>'+
+        '<button onclick="removeExpCategory('+i+')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-weight:700;font-size:12px;padding:0 4px 0 2px" title="Sil">&times;</button></span>';
     });
   }
+  // Butlers
+  var butlers=getKW("butler");
+  var bel=document.getElementById("expButlerTags");
+  if(bel){
+    bel.innerHTML="";
+    butlers.forEach(function(b,i){
+      bel.innerHTML+='<span style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">'+
+        esc(b)+' <button onclick="removeExpButler('+i+')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-weight:700;font-size:12px;padding:0 2px">&times;</button></span>';
+    });
+  }
+  // Form ayarlari
+  var fp=document.getElementById("expFormPrefixInput");
+  if(fp)fp.value=getExpFormPrefix();
+  var fn=document.getElementById("expFormNextNumberInput");
+  if(fn)fn.value=getExpFormNextNumber();
+  var fo=document.getElementById("expOverdueDaysInput");
+  if(fo)fo.value=getExpOverdueDays();
   // Vendor profiles
   renderExpVendorProfiles();
+}
+
+function saveExpFormSettings(){
+  var prefix=(document.getElementById("expFormPrefixInput")||{}).value||"";
+  var num=parseInt((document.getElementById("expFormNextNumberInput")||{}).value)||1;
+  var od=parseInt((document.getElementById("expOverdueDaysInput")||{}).value)||EXP_OVERDUE_DAYS_DEFAULT;
+  setExpFormPrefix(prefix.trim()||EXP_FORM_PREFIX_DEFAULT);
+  setExpFormNextNumber(num);
+  setExpOverdueDays(od);
+  alert("Form ayarlari kaydedildi.\n\nPrefix: "+getExpFormPrefix()+"\nSonraki numara: "+getExpFormNextNumber()+"\nUyari esigi: "+getExpOverdueDays()+" gun");
+  expRenderOverdueBanner();
+  if(document.getElementById("exp_tabcontent_forms")&&document.getElementById("exp_tabcontent_forms").style.display!=="none"){expRenderForms();}
 }
 
 function saveExpBudget(){
@@ -1103,6 +2399,109 @@ function addExpCategory(){
 
 function removeExpCategory(idx){
   var cats=getExpCategories();cats.splice(idx,1);setExpCategories(cats);renderExpenseSettings();expPopulateCategories();
+}
+
+// Kategoriyi yeniden adlandir — tum localStorage'da migrate et
+function renameExpCategory(idx){
+  var cats=getExpCategories();
+  var oldName=cats[idx];
+  if(!oldName)return;
+  var newName=prompt("Yeni kategori adi:",oldName);
+  if(!newName)return;
+  newName=newName.trim();
+  if(!newName||newName===oldName)return;
+  if(cats.indexOf(newName)>=0){
+    alert("Bu isimde bir kategori zaten var: "+newName);
+    return;
+  }
+  var migrated=0;
+  // Once tum localStorage key'lerini topla (iterasyon sirasinda degisiklik riski olmasin)
+  var allKeys=[];
+  for(var i=0;i<localStorage.length;i++)allKeys.push(localStorage.key(i));
+  // 1) Kategori listesi
+  cats[idx]=newName;
+  setExpCategories(cats);
+  // 2) Tum exp_YYYY_MM kayitlarindaki entry.category
+  allKeys.forEach(function(key){
+    if(!/^exp_\d+_\d+$/.test(key))return;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))return;
+      var changed=false;
+      list.forEach(function(entry){
+        if(entry.category===oldName){entry.category=newName;migrated++;changed=true}
+      });
+      if(changed)localStorage.setItem(key,JSON.stringify(list));
+    }catch(e){}
+  });
+  // 3) Kasa log'u — ay bazinda exp_log_YYYY_MM key'leri var
+  allKeys.forEach(function(lkey){
+    if(!/^exp_log_\d+_\d+$/.test(lkey))return;
+    try{
+      var log=JSON.parse(localStorage.getItem(lkey)||"[]");
+      if(!Array.isArray(log))return;
+      var logChanged=false;
+      log.forEach(function(l){
+        if(l.category===oldName){l.category=newName;logChanged=true}
+      });
+      if(logChanged)localStorage.setItem(lkey,JSON.stringify(log));
+    }catch(e){}
+  });
+  // 4) Vendor profilleri — p.categories icindeki frekansi migrate et
+  var profiles=expGetProfiles();
+  var profChanged=false;
+  for(var vk in profiles){
+    var p=profiles[vk];
+    if(p.categories&&p.categories[oldName]!==undefined){
+      p.categories[newName]=(p.categories[newName]||0)+p.categories[oldName];
+      delete p.categories[oldName];
+      profChanged=true;
+    }
+  }
+  if(profChanged)expSaveProfiles(profiles);
+  // 5) Keywords — kw[word][category]
+  try{
+    var kw=expGetKeywords();
+    var kwChanged=false;
+    for(var word in kw){
+      if(kw[word][oldName]!==undefined){
+        kw[word][newName]=(kw[word][newName]||0)+kw[word][oldName];
+        delete kw[word][oldName];
+        kwChanged=true;
+      }
+    }
+    if(kwChanged)expSaveKeywords(kw);
+  }catch(e){}
+  // UI'yi guncelle
+  expLoad();
+  expLoadLog();
+  expRenderAll();
+  renderExpenseSettings();
+  expPopulateCategories();
+  alert("Kategori guncellendi: \""+oldName+"\" -> \""+newName+"\"\n"+
+        "Migrate edilen kayit sayisi: "+migrated);
+}
+
+function addExpButler(){
+  var inp=document.getElementById("expButlerInput");
+  var v=inp.value.trim();
+  if(!v)return;
+  var butlers=getKW("butler");
+  if(butlers.indexOf(v)<0){
+    butlers.push(v);
+    localStorage.setItem("kw_butler",JSON.stringify(butlers));
+    renderExpenseSettings();
+    expPopulateButlers();
+  }
+  inp.value="";
+}
+
+function removeExpButler(idx){
+  var butlers=getKW("butler");
+  butlers.splice(idx,1);
+  localStorage.setItem("kw_butler",JSON.stringify(butlers));
+  renderExpenseSettings();
+  expPopulateButlers();
 }
 
 // ============================================================
@@ -1177,24 +2576,45 @@ function expRebuildProfiles(){
           var pfx=expExtractInvPrefix(entry.invoiceNo);
           if(pfx){
             expIncFreq(p.invoicePrefixes,pfx);
-            if(!prefixMap[pfx])prefixMap[pfx]={vendor:vk,count:0};
+            var entryDate=entry.date||new Date().toISOString().split("T")[0];
+            if(!prefixMap[pfx]){
+              prefixMap[pfx]={vendor:vk,count:0,firstSeen:entryDate,lastSeen:entryDate,alts:{}};
+            }
+            // Ayni prefix farkli vendor icin de gorulmusse alts'a ekle
+            if(prefixMap[pfx].vendor!==vk){
+              if(!prefixMap[pfx].alts)prefixMap[pfx].alts={};
+              prefixMap[pfx].alts[vk]=(prefixMap[pfx].alts[vk]||0)+1;
+            }
             prefixMap[pfx].count++;
+            if(entryDate>prefixMap[pfx].lastSeen)prefixMap[pfx].lastSeen=entryDate;
+            if(entryDate<prefixMap[pfx].firstSeen)prefixMap[pfx].firstSeen=entryDate;
           }
         }
         profiles[vk]=p;
       });
-    }catch(e){}
+    }catch(e){
+      console.error("[EXP] expRebuildProfiles hata (key="+key+"):",e);
+    }
   }
   expSaveProfiles(profiles);
   localStorage.setItem("exp_inv_prefix_map",JSON.stringify(prefixMap));
   expRebuildKeywords();
+  console.log("[EXP] Profiller yeniden olusturuldu:",Object.keys(profiles).length,"profil,",Object.keys(prefixMap).length,"prefix");
 }
 
 // --- Invoice Prefix → Vendor Matching ---
+// Turk e-Fatura formati: PPP+YYYY+NNNNNNNNN (3 harf + yil + 9 rakam gibi)
+// Ornek: HGE2026000000151, AS12026000000002, DR02026000007229, M012026000000026
+// Yilin onundeki tum karakterleri prefix olarak al (harf + rakam karisimi olabilir)
 function expExtractInvPrefix(invoiceNo){
   if(!invoiceNo)return"";
-  var m=String(invoiceNo).match(/^([A-ZÇĞİÖŞÜa-zçğıöşü]{2,4})/);
-  return m?m[1].toUpperCase():"";
+  var s=String(invoiceNo).trim();
+  // Yil (20xx) oncesi her sey prefix
+  var m=s.match(/^(.+?)(20\d{2})/);
+  if(m&&m[1].length>=2)return m[1].toUpperCase();
+  // Fallback: eski davranis — ilk 2-4 harf
+  var m2=s.match(/^([A-ZÇĞİÖŞÜa-zçğıöşü]{2,4})/);
+  return m2?m2[1].toUpperCase():"";
 }
 
 function expUpdateInvPrefix(invoiceNo,vendor){
@@ -1203,8 +2623,18 @@ function expUpdateInvPrefix(invoiceNo,vendor){
   if(!pfx)return;
   var map;
   try{map=JSON.parse(localStorage.getItem("exp_inv_prefix_map"))||{}}catch(e){map={}}
-  if(!map[pfx])map[pfx]={vendor:expNormVendor(vendor),count:0};
+  var normV=expNormVendor(vendor);
+  var today=new Date().toISOString().split("T")[0];
+  if(!map[pfx]){
+    map[pfx]={vendor:normV,count:0,firstSeen:today,lastSeen:today,alts:{}};
+  }
+  // Ayni prefix, FARKLI vendor ile geldiyse kaydet (ileride uyari icin)
+  if(map[pfx].vendor!==normV){
+    if(!map[pfx].alts)map[pfx].alts={};
+    map[pfx].alts[normV]=(map[pfx].alts[normV]||0)+1;
+  }
   map[pfx].count++;
+  map[pfx].lastSeen=today;
   localStorage.setItem("exp_inv_prefix_map",JSON.stringify(map));
 }
 
@@ -1320,7 +2750,6 @@ function expAutoFill(vendorName){
   var topPurpose=expTopValue(p.purposes);
   if(topCat){var cs=document.getElementById("expRcpCategory");if(cs)cs.value=topCat}
   if(topVat){var vs=document.getElementById("expRcpVat");if(vs)vs.value=topVat;expCalcNet()}
-  if(topButler){var bs=document.getElementById("expRcpButler");if(bs)bs.value=topButler}
   if(topPay){var ps=document.getElementById("expRcpPayType");if(ps)ps.value=topPay}
   if(topPurpose){var pp=document.getElementById("expRcpPurpose");if(pp)pp.value=topPurpose}
   if(sugEl){
@@ -1328,8 +2757,7 @@ function expAutoFill(vendorName){
     sugEl.innerHTML='<span style="font-weight:700">&#10003; '+esc(vendorName)+' tanindi:</span> '
       +(topCat?esc(topCat):"?")+" | "
       +(topVat?"%"+topVat:"?")+" KDV | "
-      +(topPay||"?")+" | "
-      +(topButler||"?")
+      +(topPay||"?")
       +' <span style="margin-left:6px;color:#6b7280">('+p.count+'x)</span>'
       +' <button onclick="expClearSuggestion()" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:11px;margin-left:4px">&times;</button>';
   }
@@ -1345,44 +2773,150 @@ function expAutoFillInvoice(vendorName,invoiceNo){
   var profiles=expGetProfiles();
   var p=profiles[vk];
   var source="profil";
+  var pfxResult=null;
+  var pfx=expExtractInvPrefix(invoiceNo);
+  // Once satici adinden profil ara; bulunamadiysa prefix'e bak
   if(!p&&invoiceNo){
-    var pfxResult=expLookupByInvPrefix(invoiceNo);
-    if(pfxResult){p=profiles[pfxResult.vendor];source="fatura no";vk=pfxResult.vendor}
+    pfxResult=expLookupByInvPrefix(invoiceNo);
+    if(pfxResult){
+      p=profiles[pfxResult.vendor];
+      source="fatura no";
+      vk=pfxResult.vendor;
+      // Satici adi bos veya cok farkliysa prefix'teki vendor'la doldur
+      var vInput=document.getElementById("expE_vendor");
+      if(vInput && (!vendorName || vendorName.trim().length<2)){
+        vInput.value=pfxResult.vendor;
+        console.log("[EXP] Prefix'ten satici adi dolduruldu:",pfxResult.vendor,"(prefix:",pfx+")");
+      }
+    }
   }
-  if(!p)return;
-  var topCat=expTopValue(p.categories);
-  var topButler=expTopValue(p.butlers);
-  var topPay=expTopValue(p.payTypes);
-  if(topCat){var cs=document.getElementById("expInvCategory");if(cs)cs.value=topCat}
-  if(topButler){var bs=document.getElementById("expInvButler");if(bs)bs.value=topButler}
-  if(topPay){var ps=document.getElementById("expInvPayType");if(ps)ps.value=topPay}
+  // Profil bulunduysa auto-fill yap (butler HARIC — her fatura farkli butler olabilir)
+  if(p){
+    var topCat=expTopValue(p.categories);
+    var topPay=expTopValue(p.payTypes);
+    var topVat=expTopValue(p.vatRates);
+    if(topCat){var cs=document.getElementById("expInvCategory");if(cs)cs.value=topCat}
+    if(topPay){var ps=document.getElementById("expInvPayType");if(ps)ps.value=topPay}
+    // KDV orani yoksa profilden al
+    var vrInput=document.getElementById("expE_vatRate");
+    if(vrInput && topVat && (!vrInput.value || parseFloat(vrInput.value)===0)){
+      vrInput.value=topVat;
+    }
+  }
+  // Her zaman durum rozeti goster (yeni satici veya mevcut profil/prefix)
+  expShowMatchStatus(p,source,vk,pfx,pfxResult,vendorName);
+}
+
+// Durum rozeti: yeni satici / profil / prefix-guvenli / prefix-guvensiz
+function expShowMatchStatus(profile,source,vk,pfx,pfxResult,originalVendor){
   var preview=document.getElementById("expParsedPreview");
-  if(preview){
-    var bar=document.getElementById("expInvSuggestion");
-    if(!bar){bar=document.createElement("div");bar.id="expInvSuggestion";bar.style.cssText="background:#ecfdf5;border:1px solid #86efac;border-radius:5px;padding:4px 10px;font-size:10px;color:#065f46;margin-top:6px";preview.appendChild(bar)}
-    bar.innerHTML='<span style="font-weight:700">&#10003; '+esc(source==="fatura no"?"Fatura no\'dan tanindi: "+vk:vk)+'</span> — '
-      +(topCat||"?")+" | "+(topPay||"?")+" | "+(topButler||"?")
-      +' <span style="color:#6b7280">('+p.count+'x)</span>';
+  if(!preview)return;
+  var bar=document.getElementById("expInvSuggestion");
+  if(!bar){
+    bar=document.createElement("div");
+    bar.id="expInvSuggestion";
+    bar.style.cssText="border-radius:5px;padding:6px 10px;font-size:10px;margin-top:6px;line-height:1.5";
+    preview.appendChild(bar);
   }
+  var html="";
+  var bg="",border="",color="";
+
+  if(profile){
+    // BULUNDU
+    var topCat=expTopValue(profile.categories)||"?";
+    var topPay=expTopValue(profile.payTypes)||"?";
+    var topButler=expTopValue(profile.butlers)||"?";
+    if(source==="profil"){
+      // Satici adi dogrudan tanindi — en guvenli
+      bg="#ecfdf5";border="#86efac";color="#065f46";
+      html='<span style="font-weight:700">&#10003; Tanindi: '+esc(vk)+'</span>'
+        +' <span style="color:#6b7280">('+profile.count+'x)</span>'
+        +' &mdash; '+esc(topCat)+' | '+esc(topPay);
+    } else {
+      // Fatura no prefix'inden eslesme
+      var count=pfxResult?pfxResult.count:0;
+      var hasAlts=pfxResult&&pfxResult.alts&&Object.keys(pfxResult.alts).length>0;
+      if(count>=3&&!hasAlts){
+        // Guvenli prefix eslesme
+        bg="#ecfdf5";border="#86efac";color="#065f46";
+        html='<span style="font-weight:700">&#10003; Fatura no\'dan tanindi: '+esc(vk)+'</span>'
+          +' <span style="color:#6b7280">(prefix: '+esc(pfx)+', '+count+'x)</span>'
+          +'<br>'+esc(topCat)+' | '+esc(topPay);
+      } else {
+        // Guvensiz: ya count<3 ya da birden fazla vendor ayni prefix'e yazilmis
+        bg="#fef3c7";border="#fcd34d";color="#92400e";
+        html='<span style="font-weight:700">&#9888; Muhtemel eslesme: '+esc(vk)+'</span>'
+          +' <span style="color:#6b7280">(prefix: '+esc(pfx)+', '+count+'x'
+          +(hasAlts?', '+Object.keys(pfxResult.alts).length+' alternatif':'')+')</span>'
+          +'<br>Dogrulayin: '+esc(topCat)+' | '+esc(topPay);
+      }
+    }
+  } else {
+    // BULUNAMADI
+    bg="#f3f4f6";border="#d1d5db";color="#374151";
+    if(pfx){
+      html='<span style="font-weight:700">&#9679; Yeni satici</span>'
+        +' <span style="color:#6b7280">(prefix: '+esc(pfx)+')</span>'
+        +'<br>Kaydedince bu prefix\'i ogrenecegim.';
+    } else {
+      html='<span style="font-weight:700">&#9679; Yeni satici</span>'
+        +'<br>Fatura no prefix\'i okunamadi, sadece satici adindan ogrenecegim.';
+    }
+  }
+  bar.style.background=bg;
+  bar.style.border="1px solid "+border;
+  bar.style.color=color;
+  bar.innerHTML=html;
 }
 
 // --- Expanded Datalist ---
 function expUpdateVendorList(){
-  var dl=document.getElementById("expVendorList");
-  if(!dl)return;
   var vendors={};
-  expenseList.forEach(function(e){if(e.vendor)vendors[e.vendor]=1});
+  // 1) Tum aylarin kayitlarindan topla (sadece o ayki expenseList degil)
+  for(var i=0;i<localStorage.length;i++){
+    var key=localStorage.key(i);
+    if(!/^exp_\d+_\d+$/.test(key))continue;
+    try{
+      var list=JSON.parse(localStorage.getItem(key));
+      if(!Array.isArray(list))continue;
+      list.forEach(function(e){if(e.vendor)vendors[e.vendor]=1});
+    }catch(e){}
+  }
+  // 2) Profillerden de orijinal yazilimi al (olusturulurken kullanilan formu koru)
   var profiles=expGetProfiles();
   for(var vk in profiles){
-    var name=vk.charAt(0)+vk.slice(1).toLowerCase();
-    vendors[name]=1;
-    if(profiles[vk].count>0){var orig=null;
-      expenseList.forEach(function(e){if(expNormVendor(e.vendor)===vk&&!orig)orig=e.vendor});
-      if(orig)vendors[orig]=1;
+    var orig=null;
+    // Kayitlarda bu profil key'ine karsilik gelen ilk orijinal yazilimi bul
+    for(var i=0;i<localStorage.length&&!orig;i++){
+      var key=localStorage.key(i);
+      if(!/^exp_\d+_\d+$/.test(key))continue;
+      try{
+        var list=JSON.parse(localStorage.getItem(key));
+        if(!Array.isArray(list))continue;
+        for(var j=0;j<list.length;j++){
+          if(list[j].vendor&&expNormVendor(list[j].vendor)===vk){orig=list[j].vendor;break}
+        }
+      }catch(e){}
     }
+    if(orig)vendors[orig]=1;
+    else vendors[vk]=1; // Son care: profildeki UPPERCASE key'i goster
   }
-  dl.innerHTML="";
-  Object.keys(vendors).sort().forEach(function(v){var o=document.createElement("option");o.value=v;dl.appendChild(o)});
+  // 3) Fatura prefix map'indeki saticilari da ekle (prefix uzerinden ogrenilenler)
+  try{
+    var pmap=JSON.parse(localStorage.getItem("exp_inv_prefix_map")||"{}");
+    for(var pfx in pmap){
+      if(pmap[pfx]&&pmap[pfx].vendor)vendors[pmap[pfx].vendor]=1;
+    }
+  }catch(e){}
+  // Tum datalist'leri guncelle (fatura + fis ayni listeyi paylasiyor)
+  ["expVendorList"].forEach(function(dlId){
+    var dl=document.getElementById(dlId);
+    if(!dl)return;
+    dl.innerHTML="";
+    Object.keys(vendors).sort(function(a,b){return a.localeCompare(b,"tr")}).forEach(function(v){
+      var o=document.createElement("option");o.value=v;dl.appendChild(o);
+    });
+  });
 }
 
 function expUpdateItemList(){
@@ -1506,9 +3040,10 @@ function expRenderTracking(){
 // --- Settings: Profile Management ---
 function renderExpVendorProfiles(){
   var el=document.getElementById("expProfileList");
-  if(!el)return;
+  if(!el){console.log("[EXP] renderExpVendorProfiles: expProfileList DOM elementi yok");return}
   var profiles=expGetProfiles();
   var keys=Object.keys(profiles).sort(function(a,b){return(profiles[b].count||0)-(profiles[a].count||0)});
+  console.log("[EXP] renderExpVendorProfiles:",keys.length,"profil var — keys:",keys);
   if(!keys.length){el.innerHTML='<p style="font-size:11px;color:#9ca3af">Henuz ogrenilmis profil yok.</p>';return}
   var h='<div style="font-size:10px;color:#6b7280;margin-bottom:6px">'+keys.length+' vendor profili</div>';
   keys.forEach(function(vk,idx){
@@ -1550,6 +3085,63 @@ function expDeleteProfile(vk){
   renderExpVendorProfiles();
 }
 
+// --- Prefix Map UI ---
+function renderExpPrefixMap(){
+  var el=document.getElementById("expPrefixMapList");
+  if(!el)return;
+  var map={};
+  try{map=JSON.parse(localStorage.getItem("exp_inv_prefix_map")||"{}")}catch(e){}
+  var keys=Object.keys(map).sort(function(a,b){return(map[b].count||0)-(map[a].count||0)});
+  if(!keys.length){
+    el.innerHTML='<p style="font-size:11px;color:#9ca3af">Henuz ogrenilmis prefix yok. Ilk fatura kaydedildiginde burada gorunecek.</p>';
+    return;
+  }
+  var h='<div style="font-size:10px;color:#6b7280;margin-bottom:6px">'+keys.length+' prefix ogrenilmis</div>';
+  h+='<table style="width:100%;font-size:11px;border-collapse:collapse">';
+  h+='<thead><tr style="background:#f3f4f6;color:#374151">'
+    +'<th style="padding:5px 8px;text-align:left;font-weight:600">Prefix</th>'
+    +'<th style="padding:5px 8px;text-align:left;font-weight:600">Satici</th>'
+    +'<th style="padding:5px 8px;text-align:center;font-weight:600">Kac Kez</th>'
+    +'<th style="padding:5px 8px;text-align:center;font-weight:600">Son</th>'
+    +'<th style="padding:5px 8px;text-align:center;font-weight:600">Durum</th>'
+    +'<th style="padding:5px 8px"></th></tr></thead><tbody>';
+  keys.forEach(function(pfx,idx){
+    var entry=map[pfx];
+    var count=entry.count||0;
+    var alts=entry.alts&&Object.keys(entry.alts).length||0;
+    var status="",statusColor="";
+    if(count>=3&&!alts){status="Guvenli";statusColor="#059669"}
+    else if(alts>0){status="Cakisma ("+alts+")";statusColor="#dc2626"}
+    else {status="Yeni ("+count+"x)";statusColor="#d97706"}
+    h+='<tr style="border-bottom:1px solid #f3f4f6;background:'+(idx%2===0?"#fff":"#fafafa")+'">'
+      +'<td style="padding:5px 8px;font-family:monospace;font-weight:700;color:#7c3aed">'+esc(pfx)+'</td>'
+      +'<td style="padding:5px 8px;color:#1e293b">'+esc(entry.vendor||"-")+'</td>'
+      +'<td style="padding:5px 8px;text-align:center;color:#6b7280">'+count+'</td>'
+      +'<td style="padding:5px 8px;text-align:center;color:#6b7280;font-size:10px">'+esc(entry.lastSeen||"-")+'</td>'
+      +'<td style="padding:5px 8px;text-align:center;font-size:10px;font-weight:600;color:'+statusColor+'">'+status+'</td>'
+      +'<td style="padding:5px 8px;text-align:right">'
+      +'<button onclick="expDeletePrefix(\''+esc(pfx)+'\')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:13px;font-weight:700" title="Bu prefix ezberini sil">&times;</button>'
+      +'</td></tr>';
+    if(alts>0){
+      h+='<tr style="background:'+(idx%2===0?"#fef2f2":"#fee2e2")+'"><td></td><td colspan="5" style="padding:3px 8px 6px;font-size:10px;color:#991b1b">'
+        +'Ayni prefix bu saticilar icin de gorulmus: '
+        +Object.keys(entry.alts).map(function(v){return esc(v)+" ("+entry.alts[v]+"x)"}).join(", ")
+        +'</td></tr>';
+    }
+  });
+  h+='</tbody></table>';
+  el.innerHTML=h;
+}
+
+function expDeletePrefix(pfx){
+  if(!confirm("Bu prefix ezberini silmek istediginize emin misiniz?\n\nPrefix: "+pfx))return;
+  var map={};
+  try{map=JSON.parse(localStorage.getItem("exp_inv_prefix_map")||"{}")}catch(e){}
+  delete map[pfx];
+  localStorage.setItem("exp_inv_prefix_map",JSON.stringify(map));
+  renderExpPrefixMap();
+}
+
 function expExportProfiles(){
   var data={version:"EXP_PROFILES_v1",profiles:expGetProfiles(),prefixMap:JSON.parse(localStorage.getItem("exp_inv_prefix_map")||"{}"),keywords:expGetKeywords()};
   var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
@@ -1589,6 +3181,91 @@ var _origExportHandoff=typeof exportHandoff==="function"?exportHandoff:null;
 // ============================================================
 // END EXPENSE MODULE
 
+// Sayfa hazir olunca kategori, butler, purpose dropdownlarini doldur
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",function(){try{expInit()}catch(e){console.error("expInit error:",e)}});
+}else{
+  try{expInit()}catch(e){console.error("expInit error:",e)}
+}
+
 </script>
+
+<!-- EDIT MODAL -->
+<div id="expEditModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:10px;padding:20px 24px;max-width:720px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid #e5e7eb;padding-bottom:10px">
+      <div style="font-weight:700;font-size:15px;color:#1e293b">Harcama Duzenle</div>
+      <button onclick="expCancelEdit()" style="border:none;background:none;color:#6b7280;font-size:22px;cursor:pointer;line-height:1">&times;</button>
+    </div>
+    <div id="expEditMetaInfo" style="font-size:11px;color:#6b7280;margin-bottom:12px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Tarih</label>
+        <input id="expEd_date" type="date" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Satici</label>
+        <input id="expEd_vendor" list="expVendorList" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Fatura/Fis No</label>
+        <input id="expEd_invoiceNo" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Toplam (TL)</label>
+        <input id="expEd_total" type="number" step="0.01" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">KDV (%)</label>
+        <input id="expEd_vatRate" type="number" min="0" max="100" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Kategori</label>
+        <select id="expEd_category" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px"></select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Odeme Tipi</label>
+        <select id="expEd_payType" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+          <option value="expense">Expense (E)</option>
+          <option value="cep">Cep (C)</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Misafir</label>
+        <input id="expEd_guest" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Kim Aldi (Butler)</label>
+        <select id="expEd_butler" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px"></select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Urun/Item</label>
+        <input id="expEd_item" list="expItemList" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6b7280;font-weight:600">Amac</label>
+        <select id="expEd_purpose" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px"></select>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;color:#6b7280;font-weight:600">Aciklama / Not</label>
+      <input id="expEd_description" style="width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:5px;padding:5px 8px;font-size:12px">
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb">
+      <div style="font-size:10px;color:#9ca3af">Kaydederken profil bilgileri de guncellenecek</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="expCancelEdit()" style="background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer">Iptal</button>
+        <button onclick="expSaveEdit()" style="background:#0284c7;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">&#10003; Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
