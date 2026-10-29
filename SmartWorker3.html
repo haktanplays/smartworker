@@ -865,6 +865,13 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-pm-head{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--soft);border-bottom:1px solid var(--line)}
 #page-didit .bd-pm-pre{margin:0;padding:10px 12px;font:12px/1.5 Consolas,"Segoe UI Mono",monospace;white-space:pre-wrap;color:var(--ink)}
 #page-didit .bd-dept.w{background:#fde8e6;color:#b3261e}
+#page-didit .bd-pt-st{font-size:11px;font-weight:600;border-radius:5px;padding:1px 7px;white-space:nowrap}
+#page-didit .bd-pt-st.ok{background:#e6f4ea;color:#1e7b3a}
+#page-didit .bd-pt-st.new{background:#fff1dc;color:#93570a}
+#page-didit .bd-pt-st.changed{background:#fde8e6;color:#b3261e}
+#page-didit .bd-pt-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;background:#fff}
+#page-didit .bd-pt-row .bd-pt-blks{display:flex;flex-wrap:wrap;gap:4px;flex:1;min-width:200px}
+#page-didit .bd-pt-blk{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;background:var(--soft)}
 #page-didit .bd-xf-dlg{background:#fff;border-radius:12px;padding:18px 20px;width:min(760px,100%);max-height:92vh;overflow:auto}
 #page-didit .bd-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:9px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:700}
 #page-didit .bd-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -1551,7 +1558,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <section id="bdiTab_brief" class="bd-pane" style="display:none">
 <div class="bd-panel">
   <div class="bd-panel-head"><h2 style="margin:0">Brifing ve devir</h2>
-    <div class="bd-seg" id="bdiBriefSeg" role="group" aria-label="Görünüm"><button type="button" data-m="day" class="active" onclick="bdiBriefSetMode('day')">Günün brifingi</button><button type="button" data-m="shift" onclick="bdiBriefSetMode('shift')">Vardiya devri</button><button type="button" data-m="gr" onclick="bdiBriefSetMode('gr')">Guest Relations</button><button type="button" data-m="ipad" onclick="bdiBriefSetMode('ipad')">iPad rehberi</button></div>
+    <div class="bd-seg" id="bdiBriefSeg" role="group" aria-label="Görünüm"><button type="button" data-m="day" class="active" onclick="bdiBriefSetMode('day')">Günün brifingi</button><button type="button" data-m="shift" onclick="bdiBriefSetMode('shift')">Vardiya devri</button><button type="button" data-m="gr" onclick="bdiBriefSetMode('gr')">Guest Relations</button><button type="button" data-m="protel" onclick="bdiBriefSetMode('protel')">Protel'e girilecekler<span id="bdiProtelCnt" class="bd-sub"></span></button><button type="button" data-m="ipad" onclick="bdiBriefSetMode('ipad')">iPad rehberi</button></div>
     <button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiBriefFor()">Varış brief'i yazdır</button>
   </div>
   <div id="bdiBriefBody"></div>
@@ -8597,6 +8604,7 @@ async function bdiGMLoad(){
   _bdiGM.insights=(await _gmGetMeta("insights"))||{};
   _bdiGM.state=(await _gmGetMeta("state"))||{};
   _bdiGM.dna=(await _gmGetMeta("dna"))||{};
+  _bdiGM.protel=(await _gmGetMeta("protel"))||{};
   _bdiGM.loaded=true;
   if(!_bdiGM.state.migratedV1){ // eski localStorage birlestirmeleri ve notlari tasinir (bir kez)
     var now=Date.now();
@@ -8789,8 +8797,9 @@ async function bdiGMMerge(gids,target){
     var sd=(_bdiGM.dna||{})[g];if(sd){_bdiGM.dna=_bdiGM.dna||{};var td=_bdiGM.dna[target]||(_bdiGM.dna[target]={addr:null,items:{}});td.items=td.items||{}; // DNA da hedef profile tasinir
       for(var dk in (sd.items||{}))if(!td.items[dk])td.items[dk]=Object.assign({},sd.items[dk],{u:now});
       if(sd.addr&&(!td.addr||!td.addr.form))td.addr=Object.assign({},sd.addr,{u:now});}
+    var sp=(_bdiGM.protel||{})[g];if(sp){var tp=_bdiGM.protel[target]||(_bdiGM.protel[target]={});for(var pk in sp)if(!tp[pk])tp[pk]=Object.assign({},sp[pk],{u:now})} // Protel "girildi" isaretleri
   });
-  await _gmPutMeta("aliases",_bdiGM.aliases);await _gmPutMeta("notes",_bdiGM.notes);await _gmPutMeta("insights",_bdiGM.insights);await _gmPutMeta("dna",_bdiGM.dna||{});
+  await _gmPutMeta("aliases",_bdiGM.aliases);await _gmPutMeta("notes",_bdiGM.notes);await _gmPutMeta("insights",_bdiGM.insights);await _gmPutMeta("dna",_bdiGM.dna||{});await _gmPutMeta("protel",_bdiGM.protel||{});
   _bdiGMProf=null;bdiGMBackupSoon();
 }
 async function bdiGMUnmerge(key){
@@ -9638,18 +9647,86 @@ function bdiProtelNotes(p){
   if(iss.length)out.push({title:"Issues",n:iss.length,text:block("Issues",iss)});
   return out;
 }
-var _bdiProtelLast=null;
+var _bdiProtelLast=null,_bdiProtelGid="";
 function bdiProtelCopy(gid){
   var p=bdiGMProfiles().byGid[gid];if(!p)return;
-  var notes=bdiProtelNotes(p);_bdiProtelLast=notes;
+  var notes=bdiProtelNotes(p);_bdiProtelLast=notes;_bdiProtelGid=gid;
   if(!notes.length){bdiToast("Protel'e girecek onaylı not yok: önce içgörüleri onayla ya da DNA'ya ekle.");return}
   var m=document.getElementById("bdiProtelModal");
   if(!m){m=document.createElement("div");m.id="bdiProtelModal";m.className="bd-xf-modal";m.addEventListener("click",function(e){if(e.target===m)m.classList.remove("on")});document.getElementById("page-didit").appendChild(m)}
-  var h='<div class="bd-xf-dlg"><div class="bd-toolbar" style="margin-bottom:6px"><h3 class="bd-h3" style="margin:0">Protel notları · '+esc(p.name)+'</h3><span style="flex:1"></span><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelCopyBlock(-1)">Hepsini kopyala</button><button type="button" class="bd-btn bd-btn-sm" onclick="document.getElementById(\'bdiProtelModal\').classList.remove(\'on\')">Kapat</button></div>';
-  h+='<p class="bd-sub" style="margin:0 0 10px">Her blok Protel\'de <b>ayrı bir Web Note</b>: Note Type "Web Notes", Note Title = blok adı. Başlık satırı (***...***) notun içinde kalmalı; arrival raporu Note Title\'ı göstermez.</p>';
-  notes.forEach(function(n,i){h+='<div class="bd-pm-blk"><div class="bd-pm-head"><span class="bd-dept'+(n.title==="WARNING"?' w':'')+'">Note Title: '+esc(n.title)+'</span><span class="bd-sub">'+n.n+' satır</span><span style="flex:1"></span><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelCopyBlock('+i+')">Kopyala</button></div><pre class="bd-pm-pre">'+esc(n.text)+'</pre></div>'});
+  var h='<div class="bd-xf-dlg"><div class="bd-toolbar" style="margin-bottom:6px"><h3 class="bd-h3" style="margin:0">Protel notları · '+esc(p.name)+'</h3><span style="flex:1"></span><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelCopyBlock(-1)">Hepsini kopyala</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelMarkIdx(-1,true)">Hepsi girildi</button><button type="button" class="bd-btn bd-btn-sm" onclick="document.getElementById(\'bdiProtelModal\').classList.remove(\'on\')">Kapat</button></div>';
+  h+='<p class="bd-sub" style="margin:0 0 10px">Her blok Protel\'de <b>ayrı bir Web Note</b>: Note Type "Web Notes", Note Title = blok adı. Başlık satırı (***...***) notun içinde kalmalı; arrival raporu Note Title\'ı göstermez. Protel\'e yapıştırdığın bloğu <b>Girildi</b> diye işaretle; blok sonradan değişirse Brifing › Protel\'e girilecekler listesinde tekrar çıkar.</p>';
+  notes.forEach(function(n,i){var st=bdiProtelState(gid,n);h+='<div class="bd-pm-blk"><div class="bd-pm-head"><span class="bd-dept'+(n.title==="WARNING"?' w':'')+'">Note Title: '+esc(n.title)+'</span><span class="bd-sub">'+n.n+' satır</span>'+bdiProtelStHtml(st)+'<span style="flex:1"></span><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelCopyBlock('+i+')">Kopyala</button>'+(st.s==="ok"?'<button type="button" class="bd-link" onclick="bdiProtelMarkIdx('+i+',false)">geri al</button>':'<button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiProtelMarkIdx('+i+',true)">Girildi</button>')+'</div><pre class="bd-pm-pre">'+esc(n.text)+'</pre></div>'});
   m.innerHTML=h+'</div>';m.classList.add("on");
 }
+// ---------- PROTEL'E GIRILECEKLER (2026-10-29, vizyon "toplu liste + girildi isareti") ----------
+// Her misafir + blok icin Protel'e girilen metnin parmak izi: _bdiGM.protel[gid][blok]={h,at,by,u} (geri alinca {off,u}).
+// Blok metni degisirse (yeni onay, DNA ogesi, yeni issue) iz tutmaz -> "degisti, tekrar gir". Misafir hafizasiyla senkronlanir.
+function bdiProtelHash(t){var x=String(t||"").replace(/\s+/g," ").trim(),h=5381;for(var i=0;i<x.length;i++)h=((h<<5)+h+x.charCodeAt(i))|0;return (h>>>0).toString(36)+"."+x.length}
+function bdiProtelState(gid,n){var r=((_bdiGM.protel||{})[gid]||{})[n.title];if(!r||r.off||!r.h)return {s:"new"};return {s:r.h===bdiProtelHash(n.text)?"ok":"changed",r:r}}
+function bdiProtelStHtml(st){
+  if(st.s==="ok")return '<span class="bd-pt-st ok">&#10003; girildi '+esc(bdiSigDate(st.r.at))+(st.r.by?' · '+esc(bdiInitials(st.r.by)):'')+'</span>';
+  if(st.s==="changed")return '<span class="bd-pt-st changed">değişti, tekrar gir</span>';
+  return '<span class="bd-pt-st new">girilmedi</span>';
+}
+async function bdiProtelMark(gid,titles,on){
+  await bdiGMLoad();var p=bdiGMProfiles().byGid[gid];if(!p)return;
+  var notes=bdiProtelNotes(p),now=Date.now(),by=bdiWho(),n=0;_bdiGM.protel=_bdiGM.protel||{};var m=_bdiGM.protel[gid]||(_bdiGM.protel[gid]={});
+  notes.forEach(function(x){if(titles&&titles.indexOf(x.title)<0)return;m[x.title]=on?{h:bdiProtelHash(x.text),at:now,by:by,u:now}:{off:1,u:now};n++});
+  if(!n)return;
+  await _gmPutMeta("protel",_bdiGM.protel);bdiGMBackupSoon();
+  bdiToast(on?(n>1?n+" blok":"\""+titles[0]+"\"")+" Protel'e girildi olarak işaretlendi.":"İşaret geri alındı.");
+  var md=document.getElementById("bdiProtelModal");if(md&&md.classList.contains("on")&&_bdiProtelGid===gid)bdiProtelCopy(gid);
+  bdiProtelRefresh();
+}
+function bdiProtelMarkIdx(i,on){var n=_bdiProtelLast||[];if(!_bdiProtelGid||!n.length)return;bdiProtelMark(_bdiProtelGid,i<0?n.map(function(x){return x.title}):[n[i].title],on)}
+function bdiProtelMarkAll(gid){
+  var p=bdiGMProfiles().byGid[gid];if(!p)return;
+  var pend=bdiProtelNotes(p).filter(function(n){return bdiProtelState(gid,n).s!=="ok"});if(!pend.length)return;
+  if(!confirm(p.name+": "+pend.map(function(n){return n.title}).join(", ")+"\n\nBu bloklar Protel'e girildi olarak işaretlensin mi?"))return;
+  bdiProtelMark(gid,pend.map(function(n){return n.title}),true);
+}
+// Liste: bugun gelenler (butun bloklar), oteldekiler (Butler Did It haric: o blok konaklamanin ozeti, ayrilista girilir),
+// son 7 gunde ayrilanlar, digerleri (onayli notu olan eski misafirler). Sadece girilmemis ya da degismis blogu olanlar.
+function bdiProtelTodo(){
+  var prof=bdiGMProfiles(),today=bdiYmd(new Date()),wk=bdiYmd(new Date(Date.now()-7*864e5)),seen={},G={arr:[],inh:[],dep:[],oth:[]},okN=0,blocks=0;
+  var roomsOf=function(p){var s=p.currentStay||p.stays[p.stays.length-1];return Object.keys((s&&s.rooms)||{}).join(", ")};
+  var add=function(g,p,room){
+    if(!p||seen[p.gid])return;seen[p.gid]=1;
+    var notes=bdiProtelNotes(p);if(!notes.length)return;
+    var st=notes.map(function(n){var x=bdiProtelState(p.gid,n);x.title=n.title;x.later=g==="inh"&&n.title==="Butler Did It"&&x.s!=="ok";return x});
+    var pend=st.filter(function(x){return x.s!=="ok"&&!x.later});
+    if(!pend.length){okN++;return}
+    blocks+=pend.length;G[g].push({p:p,room:room||roomsOf(p),st:st,pend:pend.length});
+  };
+  bdiArrivalsToday().forEach(function(x){add("arr",x.p,x.room)});
+  prof.list.forEach(function(p){if(p.inhouse)add("inh",p)});
+  prof.list.forEach(function(p){var ls=p.stays[p.stays.length-1];if(ls&&!p.inhouse&&ls.to>=wk&&ls.to<today)add("dep",p)});
+  prof.list.forEach(function(p){
+    if(seen[p.gid])return;var ins=(_bdiGM.insights||{})[p.gid]||{};
+    if(Object.keys(ins).some(function(k){return ins[k]&&ins[k].s==="accepted"})||bdiDnaManual(p.gid).length||bdiDnaOf(p.gid).addr||(_bdiGM.protel||{})[p.gid])add("oth",p);
+  });
+  G.oth.sort(function(a,b){return (b.p.lastSeen||"")<(a.p.lastSeen||"")?-1:1});
+  return {G:G,okN:okN,blocks:blocks,guests:G.arr.length+G.inh.length+G.dep.length+G.oth.length};
+}
+function bdiProtelRowHtml(x){
+  var p=x.p;
+  return '<div class="bd-pt-row"><button type="button" class="bd-link bd-q-name" onclick="bdiGuestOpen(\''+p.gid+'\')">'+esc(p.name)+'</button><span class="bd-sub">'+(x.room?'Oda '+esc(x.room):'')+'</span>'+
+    '<span class="bd-pt-blks">'+x.st.map(function(b){return '<span class="bd-pt-blk"><b>'+esc(b.title)+'</b> '+(b.later?'<span class="bd-pt-st new" title="Konaklamanın özeti; misafir ayrılınca listeye girer">ayrılışta</span>':bdiProtelStHtml(b))+'</span>'}).join("")+'</span>'+
+    '<button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiProtelCopy(\''+p.gid+'\')">Notları aç</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelMarkAll(\''+p.gid+'\')">Hepsi girildi</button></div>';
+}
+function bdiProtelListHtml(){
+  var t=bdiProtelTodo(),G=t.G,h='';bdiProtelBadge(t);
+  h+='<p class="bd-sub" style="margin:0 0 12px">Protel\'e girilecek <b>'+t.blocks+' blok</b> ('+t.guests+' misafir)'+(t.okN?' · '+t.okN+' misafirin notları Protel\'de güncel':'')+'. Akış: <b>Notları aç</b> → bloğu kopyala → Protel\'de Web Note olarak yapıştır → <b>Girildi</b>. Bir blok sonradan değişirse (yeni tercih onaylandı, yeni issue) burada <b>değişti</b> diye tekrar çıkar.</p>';
+  var sec=function(title,list,empty,note){h+='<div class="bd-bf-sec"><h3 class="bd-h3">'+title+' <span class="bd-sub">'+list.length+'</span></h3>'+(note?'<p class="bd-sub" style="margin:-4px 0 8px">'+note+'</p>':'')+(list.length?list.map(bdiProtelRowHtml).join(""):'<p class="bd-empty">'+empty+'</p>')+'</div>'};
+  sec("Bugün gelenler",G.arr,(window.guests||[]).length?"Bugün gelenlerin Protel notları güncel.":"Varış listesi yok (Mektuplar sekmesinde ARR yükle).","Arrival raporuna basılmadan önce girilmeli.");
+  sec("Oteldekiler",G.inh,"Oteldeki misafirlerin notları güncel.","Butler Did It bloğu konaklamanın özeti: misafir ayrılınca listeye girer.");
+  sec("Son 7 günde ayrılanlar",G.dep,"Yeni ayrılan misafirlerin notları güncel.","Konaklamanın Butler Did It ve Issues blokları.");
+  if(G.oth.length)h+='<details class="bd-bf-sec"><summary class="bd-h3" style="cursor:pointer">Diğer misafirler <span class="bd-sub">'+G.oth.length+' · onaylı notu olan eski misafirler</span></summary>'+G.oth.slice(0,60).map(bdiProtelRowHtml).join("")+(G.oth.length>60?'<p class="bd-sub">… ve '+(G.oth.length-60)+' misafir daha</p>':'')+'</details>';
+  return h;
+}
+function bdiProtelBadge(t){var el=document.getElementById("bdiProtelCnt");if(!el)return;try{t=t||bdiProtelTodo()}catch(e){return}var n=t.G.arr.length+t.G.inh.length+t.G.dep.length;el.textContent=n?" "+n:""}
+function bdiProtelRefresh(){if(_bdiBriefMode!=="protel")return bdiProtelBadge();var el=document.getElementById("bdiBriefBody");if(el&&document.querySelector('#bdiBriefSeg button[data-m="protel"].active'))el.innerHTML=bdiProtelListHtml()}
 function bdiProtelCopyBlock(i){
   var n=_bdiProtelLast||[];var t=i<0?n.map(function(x){return x.text}).join("\n\n"):(n[i]||{}).text;if(!t)return;
   bdiCopyText(t).then(function(){bdiToast(i<0?"Tüm bloklar kopyalandı ("+n.length+").":"\""+n[i].title+"\" kopyalandı. Protel'de Note Title: "+n[i].title)});
@@ -10008,7 +10085,7 @@ async function renderBdiAlice(){
 // ----- yedek: yerel gunluk kopya + ortak klasor dosyasi -----
 function bdiGMExportObj(){
   var ev=Object.keys(_bdiGM.events).map(function(k){return _bdiGM.events[k]});
-  return {version:1,app:"SmartWorker",kind:"guest-memory",updated:new Date().toISOString(),events:ev,aliases:_bdiGM.aliases,notes:_bdiGM.notes,dismissed:_bdiGM.dismissed,insights:_bdiGM.insights,dna:_bdiGM.dna||{}};
+  return {version:1,app:"SmartWorker",kind:"guest-memory",updated:new Date().toISOString(),events:ev,aliases:_bdiGM.aliases,notes:_bdiGM.notes,dismissed:_bdiGM.dismissed,insights:_bdiGM.insights,dna:_bdiGM.dna||{},protel:_bdiGM.protel||{}};
 }
 async function bdiGMDailySnapshot(){
   var today=bdiYmd(new Date());
@@ -10036,13 +10113,17 @@ async function bdiGMMergeObj(obj){
     if(Rd.addr&&(!Ld.addr||(Rd.addr.u||0)>(Ld.addr.u||0))){Ld.addr=Rd.addr;dnaCh=true;got++}
     for(var dk in (Rd.items||{})){var ra=Rd.items[dk],la=Ld.items[dk];if(ra&&(!la||(ra.u||0)>(la.u||0))){Ld.items[dk]=ra;dnaCh=true;got++}}}
   if(dnaCh)await _gmPutMeta("dna",_bdiGM.dna);
+  var rp=obj.protel||{};_bdiGM.protel=_bdiGM.protel||{};var ptCh=false; // Protel "girildi" isaretleri: misafir+blok bazinda yeni-u kazanir
+  for(var pg in rp){var Lp=_bdiGM.protel[pg]||(_bdiGM.protel[pg]={});for(var pt in (rp[pg]||{})){var ra2=rp[pg][pt],la2=Lp[pt];if(ra2&&(!la2||(ra2.u||0)>(la2.u||0))){Lp[pt]=ra2;ptCh=true;got++}}}
+  if(ptCh)await _gmPutMeta("protel",_bdiGM.protel);
   var ri=obj.insights||{};for(var ig in ri){var lm=_bdiGM.insights[ig]||(_bdiGM.insights[ig]={});for(var ii in ri[ig]){var a2=ri[ig][ii],b2=lm[ii];if(a2&&(!b2||(a2.u||0)>(b2.u||0))){lm[ii]=a2;metaCh=true;got++}}}
   await _gmPutEvents(put);
   if(metaCh){_bdiRuleCache=null;await _gmPutMeta("aliases",_bdiGM.aliases);await _gmPutMeta("notes",_bdiGM.notes);await _gmPutMeta("dismissed",_bdiGM.dismissed);await _gmPutMeta("insights",_bdiGM.insights)}
   if(got)_bdiGMProf=null;
   return got;
 }
-function bdiGMSig(o){var n=0,mu=0;(o.events||[]).forEach(function(e){n++;if((e.u||0)>mu)mu=e.u||0});return JSON.stringify(o.dna||{}).length+"|"+n+"|"+mu+"|"+JSON.stringify(o.aliases||{}).length+"|"+JSON.stringify(o.notes||{}).length+"|"+Object.keys(o.dismissed||{}).length+"|"+JSON.stringify(o.insights||{}).length}
+function bdiGMSig(o){var n=0,mu=0;(o.events||[]).forEach(function(e){n++;if((e.u||0)>mu)mu=e.u||0});return JSON.stringify(o.dna||{}).length+"|"+n+"|"+mu+"|"+JSON.stringify(o.aliases||{}).length+"|"+JSON.stringify(o.notes||{}).length+"|"+Object.keys(o.dismissed||{}).length+"|"+JSON.stringify(o.insights||{}).length+"|"+bdiProtelSig(o.protel)}
+function bdiProtelSig(m){var n=0,mu=0;for(var g in (m||{}))for(var t in (m[g]||{})){n++;var u=(m[g][t]||{}).u||0;if(u>mu)mu=u}return n+"/"+mu} // uzunluk degil en yeni damga: ayni uzunlukta yeniden isaretleme de yazilir
 async function _bdiGuestMemSyncFile(dir){
   var res={got:0,sent:0};
   await bdiGMIngest();
@@ -10147,7 +10228,8 @@ async function renderBdiBriefTab(){
   try{await bdiGMIngest()}catch(e){console.warn(e)}
   _bdiGMProf=null;
   if(_bdiBriefMode==="ipad"){el.innerHTML=bgdPanelHtml();bgdScanFolder(true);return}
-  el.innerHTML=_bdiBriefMode==="shift"?bdiShiftHtml():_bdiBriefMode==="gr"?bdiGrHtml():bdiBriefDayHtml();
+  el.innerHTML=_bdiBriefMode==="shift"?bdiShiftHtml():_bdiBriefMode==="gr"?bdiGrHtml():_bdiBriefMode==="protel"?bdiProtelListHtml():bdiBriefDayHtml();
+  if(_bdiBriefMode!=="protel")bdiProtelBadge();
 }
 function bdiBriefSetMode(m){_bdiBriefMode=m;renderBdiBriefTab()}
 // ===== iPad BUTLER REHBERI (2026-10-29): sabah uretim + aksam ice alma =====
@@ -10464,6 +10546,8 @@ function bdiBriefDayHtml(){
       h+='<div class="bd-bf-guest'+(done?' done':'')+'"><div class="bd-bf-gh"><button type="button" class="bd-link bd-q-name" onclick="bdiGuestOpen(\''+p.gid+'\')">'+esc(p.name)+'</button><span class="bd-sub">'+(x.room?'Oda '+esc(x.room)+' · ':'')+(p.prevStays.length?(p.prevStays.length+1)+'. konaklama':'ilk kayıtlı konaklama')+'</span>'+
         '<span class="bd-bf-prep">'+(done?'<span class="bd-ok">&#10003; Hazırlık tamam: '+esc(pr.by||"?")+' '+esc(bdiFmtTs(pr.at).slice(-5))+'</span> <button type="button" class="bd-link" onclick="bdiPrepMark(\''+p.gid+'\',false)">geri al</button>':'<select class="bd-bf-by" id="bdiPrepBy_'+esc(p.gid)+'">'+bdiButlerOptions(bdiWho(),"Butler")+'</select><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiPrepMark(\''+p.gid+'\',true)">Hazırlık tamam</button>')+'</span></div>';
       if(adr)h+='<div class="bd-bf-row"><span>Hitap</span><b>'+esc(adr)+'</b></div>';
+      var ptp=bdiProtelNotes(p).filter(function(n){return bdiProtelState(p.gid,n).s!=="ok"});
+      if(ptp.length)h+='<div class="bd-bf-row"><span>Protel</span><span><span class="bd-pt-st new">'+ptp.length+' blok girilmedi</span> '+esc(ptp.map(function(n){return n.title}).join(", "))+' <button type="button" class="bd-link" onclick="bdiProtelCopy(\''+p.gid+'\')">notları aç</button></span></div>';
       if(hl.length)h+='<ul class="bd-bf-hl">'+hl.map(function(i){return '<li class="k-'+i.k+'">'+esc(i.t)+'</li>'}).join("")+'</ul>';
       else h+='<div class="bd-bf-row"><span>DNA</span><span class="bd-sub">Henüz onaylı not yok'+(pend?' ('+pend+' güçlü öneri bekliyor)':'')+'</span></div>';
       h+='</div>';
@@ -14600,7 +14684,7 @@ window.bdiLogs = bdiLogs;
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
   bdiGMSuggestAct, bdiGMUnmerge, bdiGMSaveNote, bdiGuestOpen, bdiGraphSelect, bdiGMDownload, bdiGMRestoreFile, bdiGMRestoreSnapshot,
-  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
+  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bdiProtelMarkIdx, bdiProtelMarkAll, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
   bdiAliceImportFile, bdiAliceSetPeriod, bdiStaffSet, renderBdiAlice,
   bdiSetReaction, bdiReactText, bdiReactQuick, bdiReactClose, bdiDnaAdd, bdiDnaDel, bdiDnaSaveAddr,
   renderBdiBriefTab, bdiBriefSetMode, bdiPrepMark, bdiShiftSet, bdiShiftSaveNote, bdiShiftCopy, bdiShiftPrint,
