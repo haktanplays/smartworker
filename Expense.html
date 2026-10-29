@@ -647,7 +647,7 @@ function renderDashboard(){
   let forms=liveForms(),submitted=forms.filter(f=>f.status==="submitted"),created=forms.filter(f=>f.status==="created");
   let overdue=submitted.filter(f=>daysSince(f.submittedAt||f.createdAt)>=data.settings.overdueDays);
   let paidMonth=forms.filter(f=>f.status==="paid"&&String(f.paidAt||"").slice(0,7)===mk).reduce((s,f)=>s+formTotal(f),0);
-  let html=syncStripe()+legacyCard();
+  let html=syncStripe()+incomingCard()+legacyCard();
   let locked=kasaLocked();kasaTouchUnlock();
   let monthAdj=(data.cashAdjustments||[]).filter(a=>!a.deleted&&a.type!=="start"&&String(a.date||"").slice(0,7)===mk).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   let monthDelta=round2(monthAdj.reduce((s,a)=>s+(+a.amount||0),0));
@@ -866,7 +866,7 @@ function renderExpenses(){
    '<div id="pdfPanel" style="display:none;margin-top:12px">'+entryPdfHtml()+'</div></div>';
   html+=monthSelector()+'<div class="card"><div class="split"><div><h2>'+esc(monthLabel(mk))+' · kim ne aldı</h2><p class="hint">'+rows.length+' kayıt · '+money(rows.reduce((s,e)=>s+(+e.totalAmount||0),0))+' TL'+(k.owed?' · kişilere borç '+Object.entries(k.owedBy).map(x=>esc(x[0])+" "+money(x[1])).join(", "):"")+'</p></div><div class="actions"><button class="btn btn-primary" onclick="createFormsFromSelection()">Seçili hazırlardan form yap</button><button class="btn btn-gold" onclick="exportTrackingExcel()">Excel (bu ay)</button></div></div>'+
    '<div class="row" style="margin:6px 0 10px">'+[["all","Hepsi",rows.length],["waiting","Bekliyor",cnt.waiting||0],["ready","Hazır",cnt.ready||0],["done","Yapıldı",cnt.done||0],["paid","Yattı",cnt.paid||0]].map(x=>chip(x[1]+" "+x[2],f===x[0],"state.expFilter='"+x[0]+"';renderExpenses()")).join("")+'<span style="width:12px"></span>'+data.settings.butlers.map(b=>chip(b,fb===b,"state.expButler=state.expButler==='"+esc(b)+"'?'':'"+esc(b)+"';renderExpenses()")).join("")+'</div>'+
-   (shown.length?expenseTable(shown):'<div class="empty">Bu filtrede kayıt yok.</div>')+'</div>';
+   otherMonthsHint(mk,f,fb)+(shown.length?expenseTable(shown):'<div class="empty">Bu ayda bu filtrede kayıt yok.</div>')+'</div>';
   $("page-expenses").innerHTML=html;
   mountFields("new",{butler:st.lastButler});
   if(state.prefillGuest){$("newGuest").value=state.prefillGuest;state.prefillGuest=null;showGuestHint("new")}
@@ -900,7 +900,7 @@ function saveNewEntry(){
 }
 function editEntry(id){
   let e=data.entries.find(x=>x.id===id);if(!e)return;let f=e.formId?getForm(e.formId):null;if(f&&f.locked)return alert("Bu kayıt yatmış bir formda; önce Formlar'dan kilidini aç.");
-  modal('<h2>Kaydı düzenle</h2><div id="edFields">'+fieldsHtml("ed",e)+'</div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">İptal</button><button class="btn btn-primary" onclick="saveEntryEdit(\''+id+'\')">Kaydet</button></div>');
+  modal('<h2>Kaydı düzenle</h2>'+originHtml(e)+'<div id="edFields">'+fieldsHtml("ed",e)+'</div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">İptal</button><button class="btn btn-primary" onclick="saveEntryEdit(\''+id+'\')">Kaydet</button></div>');
   mountFields("ed",e);
 }
 function saveEntryEdit(id){let e=data.entries.find(x=>x.id===id);if(!e)return;let n=readFields("ed",{id:e.id});if(!validateFields(n))return;n.guest=canonicalGuestField(n.guest);Object.assign(e,n);touch(e);learnFromEntry(e);rememberGuest(e);log("entry_edit",{id});saveData();closeModal();renderAll()}
@@ -1233,6 +1233,50 @@ function dedupeEntries(){
   victims.forEach(e=>{e.deleted=true;touch(e)});log("dedupe",{count:victims.length,ids:victims.map(e=>e.id)});saveData();renderAll();notice(victims.length+" mükerrer kayıt silindi.","ok");
 }
 
+// ---------- KAYIT KOKENI (2026-10-29, Haktan: "bu 850 TL'nin nereden geldigini bilmiyorum") ----------
+// Her kayit icin: nasil girildi (elle / PDF / finans Excel'i / eski surumden aktarim / yedek-senkron), ne zaman, hangi bilgisayar.
+// Kaynak bilgisi kaydin kendisinde (legacy, fileRef, formun importedFrom'u, dev) ve senkronlanan islem gunlugunde zaten vardi.
+// Diger bilgisayardan senkronla gelen YENI kayitlar ana sayfada listelenir: taninmayan kayit gorulur, acilir ya da silinir.
+const INCOMING_KEY="sw_expense_incoming";
+const LOG_LBL={entry_add:"elle eklendi",entry_add_pdf:"PDF'ten eklendi",entry_edit:"düzenlendi",entry_row_edit:"satırda düzenlendi",entry_delete:"silindi",entry_settled:"kişiye ödendi",entry_settled_bulk:"kişiye ödendi",dedupe:"mükerrer diye silindi"};
+function devLabel(id){if(!id)return "";if(id===deviceId())return deviceName()+" (bu bilgisayar)";let d=(syncState.devices||{})[id];return d&&d.name?d.name:"başka bir bilgisayar ("+String(id).slice(3,7).toUpperCase()+")"}
+function entryOrigin(e){
+  let logs=data.logs.filter(l=>l&&l.details&&(l.details.id===e.id||(Array.isArray(l.details.ids)&&l.details.ids.includes(e.id)))).sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
+  let f=e.formId?getForm(e.formId):null,add=logs.find(l=>l.action==="entry_add"||l.action==="entry_add_pdf"),how="",short="";
+  if(e.legacy&&e.legacy.src){short="eski sürümden aktarıldı ("+e.legacy.src+")";how="Eski Expense sürümünden ("+(e.legacy.src==="v1"?"ilk sürüm, v1":"ara sürüm, v2")+") \"Eski Sürüm Verisini Kontrol Et → İçe Aktar\" ile aktarıldı. Kayıt aslında o eski sürümde, o bilgisayarın tarayıcısında girilmişti."}
+  else if(f&&f.importedFrom){short="finans Excel'inden";how="Finansın Excel dosyasından içeri alındı: "+f.importedFrom}
+  else if((add&&add.action==="entry_add_pdf")||e.fileRef){short="PDF faturadan";how="e-Fatura PDF'inden okunarak eklendi"+(e.fileRef?": "+e.fileRef:"")}
+  else if(add){short="elle girildi";how="Harcamalar ekranında elle girildi"+(add.details&&add.details.butler?" (kim aldı: "+add.details.butler+")":"")}
+  else{short="kaynağı kayıtlı değil";let bk=data.logs.filter(l=>l&&(l.action==="backup_merge"||l.action==="legacy_import"));how="Giriş kaydı yok: eski bir sürümde, işlem günlüğü tutulmadan önce girilmiş ya da bir yedek dosyası yüklenerek eklenmiş olabilir"+(bk.length?" (yüklenen yedek / aktarımlar: "+bk.slice(0,3).map(l=>((l.details&&l.details.file)||(l.action==="legacy_import"?"eski sürüm aktarımı":"yedek"))+" "+new Date(l.ts).toLocaleString("tr-TR")).join(", ")+")":"")+"."}
+  return {how,short,logs,created:e.createdAt||"",by:devLabel(e.dev)};
+}
+function originHtml(e){
+  let o=entryOrigin(e);
+  return '<div class="notice info" style="margin-bottom:10px"><b>Bu kayıt nereden geldi?</b><br>'+esc(o.how)+
+    (o.created?'<br>Oluşturulma: '+esc(new Date(o.created).toLocaleString("tr-TR")):'')+
+    (o.by?'<br>Son değiştiren bilgisayar: '+esc(o.by):'')+
+    (o.logs.length?'<br>İşlem günlüğü: '+o.logs.map(l=>esc(new Date(l.ts).toLocaleString("tr-TR")+" "+(LOG_LBL[l.action]||l.action))).join(" · "):'')+'</div>';
+}
+function incomingList(){let a=[];try{a=JSON.parse(localStorage.getItem(INCOMING_KEY)||"[]")}catch(e){}return Array.isArray(a)?a:[]}
+function noteIncoming(ids){if(!ids.length)return;let a=incomingList(),seen={};a.forEach(x=>seen[x.id]=1);ids.forEach(id=>{if(!seen[id])a.push({id,at:Date.now()})});localStorage.setItem(INCOMING_KEY,JSON.stringify(a.slice(-100)))}
+function incomingSeen(id){localStorage.setItem(INCOMING_KEY,JSON.stringify(id?incomingList().filter(x=>x.id!==id):[]));renderAll()}
+function incomingDelete(id){let e=data.entries.find(x=>x.id===id);if(!e)return;if(!confirm(money(e.totalAmount)+" TL · "+(e.vendor||"")+" · "+isoToDisplay(e.date)+"\n\nBu kayıt silinsin mi? Silme bütün bilgisayarlara gider (yedek klasöründe eski hali durur)."))return;e.deleted=true;touch(e);log("entry_delete",{id,vendor:e.vendor,from:"incoming"});saveData();incomingSeen(id)}
+function incomingCard(){
+  let byId={};data.entries.forEach(e=>byId[e.id]=e);
+  let rows=incomingList().map(x=>byId[x.id]).filter(e=>e&&!e.deleted);
+  if(!rows.length)return "";
+  let tot=round2(rows.reduce((s,e)=>s+(+e.totalAmount||0),0));
+  return '<div class="card" style="border-color:#93c5fd;background:#f8fbff"><div class="split"><div><h2>Diğer bilgisayarlardan gelen yeni kayıtlar <span class="tiny">'+rows.length+' kayıt · '+money(tot)+' TL</span></h2><p class="hint">Senkronla bu bilgisayara yeni gelen kayıtlar. Tanımadığın bir kayıt varsa aç: nereden geldiği yazar. Yanlışsa sil; silme bütün bilgisayarlara gider.</p></div><div class="actions"><button class="btn btn-sm btn-outline" onclick="incomingSeen()">Hepsini gördüm</button></div></div>'+
+    '<div class="table-wrap"><table><thead><tr><th>Tarih</th><th>Satıcı / ürün</th><th class="right">Tutar</th><th>Kim aldı</th><th>Nereden</th><th></th></tr></thead><tbody>'+
+    rows.map(e=>{let o=entryOrigin(e);return '<tr><td>'+esc(isoToDisplay(e.date))+'</td><td><b>'+esc(e.vendor||"")+'</b><br><span class="tiny">'+esc(e.item||"")+(e.guest?" · "+esc(e.guest):"")+'</span></td><td class="money">'+money(e.totalAmount)+'</td><td>'+esc(e.butler||"")+'</td><td class="tiny">'+esc(o.short)+(o.by?'<br>'+esc(o.by):'')+'</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn btn-sm btn-outline" onclick="editEntry(\''+e.id+'\')">Aç</button><button class="btn btn-sm btn-outline" onclick="incomingSeen(\''+e.id+'\')">Tamam</button><button class="btn btn-sm btn-danger" onclick="incomingDelete(\''+e.id+'\')">Sil</button></div></td></tr>'}).join("")+
+    '</tbody></table></div></div>';
+}
+// Harcamalar ay ay gosterir: secili ayda olmayan (filtreye uyan) kayitlar "Diger aylarda" kisayoluyla bulunur
+function otherMonthsHint(mk,f,fb){
+  let g={};activeEntries().forEach(e=>{let m=String(e.date||"").slice(0,7);if(!m||m===mk)return;if(f!=="all"&&entryState(e)!==f)return;if(fb&&e.butler!==fb)return;(g[m]=g[m]||[]).push(e)});
+  let ms=Object.keys(g).sort().reverse();if(!ms.length)return "";
+  return '<div class="notice warn" style="margin-bottom:8px">Diğer aylarda'+(f!=="all"?' bu filtreye uyan':'')+': '+ms.slice(0,12).map(m=>'<a href="javascript:void 0" onclick="state.year='+(+m.slice(0,4))+';state.month='+(+m.slice(5,7))+';renderAll()"><b>'+esc(monthLabel(m))+'</b> ('+g[m].length+' kayıt, '+money(g[m].reduce((s,e)=>s+(+e.totalAmount||0),0))+' TL)</a>').join(" · ")+'</div>';
+}
 // ---------- EXPENSES KLASORU: SENKRON + AYLIK EXCEL (2026-10-29, tek ayar) ----------
 // Haktan'in iki bilgisayari farkli klasorlere senkronluyordu (biri "Expenses", digeri "10-Ekim 2026" secilmisti) ve birbirini
 // hic gormuyordu. Artik secilecek senkron klasoru YOK: tek ayar Expenses klasoru (ACCOR > HA5E2_SPOF - DPT-BS > Expenses,
@@ -1379,11 +1423,12 @@ async function syncNow(isAuto){
       let j=await readSyncJson(h);if(j&&j.__bad)bad.push(SYNC_DIR+"/"+h.name);else if(j&&j.app==="SmartWorkerExpense"){srcs.push(j);if(j.device&&j.device.id)devs[j.device.id]=j.device}
     }
     if(!syncState.legacyDone){try{legacy=await findLegacyDirs();for(let L of legacy)srcs.push(...await readLegacySources(L))}catch(e){console.warn("Eski konum taranamadı:",e)}}
+    let known={};data.entries.forEach(x=>{if(!x.deleted)known[x.id]=1});let hadData=Object.keys(known).length>0;
     let st={got:0,sent:pend,renamed:[]},ep=s=>(s&&s.dataEpochShared)?+(s.dataEpoch||0):0;
     let le=ep(data.settings),re=srcs.reduce((m,j)=>Math.max(m,ep(j.settings)),0);
     if(re>le){ // baska bilgisayar (bagliyken) sifirladi: bu bilgisayardaki eski veri once yedeklenir, sifirlanmis veri alinir
       await backupBeforeReset(deviceName().replace(/[^\w-]+/g,"_"),JSON.stringify(syncPayload()));
-      data=normalizeData(JSON.parse(JSON.stringify(srcs.filter(j=>ep(j.settings)===re)[0])));le=re;
+      data=normalizeData(JSON.parse(JSON.stringify(srcs.filter(j=>ep(j.settings)===re)[0])));le=re;hadData=false; // sifirlamada "yeni gelen" listesi doldurulmaz
       notice("Başka bir bilgisayarda veri sıfırlanmış ("+new Date(re).toLocaleString("tr-TR")+"); ortak veri alındı. Bu bilgisayardaki eski veri yedek/ klasörüne kaydedildi.","warn",9000);
     }else if(le>re&&lj&&lj.app==="SmartWorkerExpense")await backupBeforeReset("ortak",JSON.stringify(lj)); // bu bilgisayarda bagliyken sifirlandi
     srcs.forEach(j=>{
@@ -1392,6 +1437,7 @@ async function syncNow(isAuto){
       if(defaultishSettings(j.settings))j.settings=Object.assign({},j.settings,{u:0});else if(defaultishSettings(data.settings))data.settings.u=0;
       let m=EXP.mergeData(data,j);data=normalizeData(m.data);st.got+=m.stats.got;st.renamed=st.renamed.concat(m.stats.renamed||[]);
     });
+    if(hadData)noteIncoming(data.entries.filter(x=>!x.deleted&&!known[x.id]&&x.dev!==me).map(x=>x.id)); // yeni gelenler ana sayfada listelenir
     let now=Date.now();devs[me]={id:me,name:deviceName(),last:now,xlsx:xlsxOn()};syncState.devices=devs;
     let payload=syncPayload();payload.device=devs[me];
     let txtOut=JSON.stringify(payload);
