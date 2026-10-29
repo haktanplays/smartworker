@@ -633,13 +633,20 @@ async function hashPin(pin){let txt="sw-expense-kasa|"+String(pin);if(window.cry
 // Sahte rakam SADECE gorunumdur: hesaplara, sayima, Excel formlarina girmez.
 const KASA_TRUST_KEY="sw_expense_kasa_trust";
 function kasaHasPin(){return !!data.settings.kasaPinHash}
-function kasaLocked(){if(!kasaHasPin())return false;try{if(localStorage.getItem(KASA_TRUST_KEY)===data.settings.kasaPinHash)return false}catch(e){}let t=+sessionStorage.getItem("sw_expense_kasa_unlocked")||0;return !(t&&Date.now()-t<KASA_UNLOCK_MS)}
-function kasaTouchUnlock(){if(!kasaLocked())sessionStorage.setItem("sw_expense_kasa_unlocked",String(Date.now()))}
+// Acik oturum = "zaman|sifre ozeti", sadece dogru sifre girilince yazilir. Sifre yokken hicbir sey yazilmaz: eskiden sifresiz
+// bilgisayar her ekranda oturumu "acik" isaretliyordu, senkronla sifre gelince gercek kasa gorunuyordu (2026-10-29 hatasi).
+// Sure ekran yenilenince degil, sadece kullanici tiklayip yazdikca uzar: 10 dk dokunulmazsa kilitlenir.
+const KASA_SESSION_KEY="sw_expense_kasa_unlocked";
+function kasaSessionOpen(){let v=String(sessionStorage.getItem(KASA_SESSION_KEY)||"").split("|"),t=+v[0]||0;return !!(t&&v[1]&&v[1]===String(data.settings.kasaPinHash).slice(0,16)&&Date.now()-t<KASA_UNLOCK_MS)}
+function kasaOpenSession(){sessionStorage.setItem(KASA_SESSION_KEY,Date.now()+"|"+String(data.settings.kasaPinHash).slice(0,16))}
+function kasaLocked(){if(!kasaHasPin())return false;try{if(localStorage.getItem(KASA_TRUST_KEY)===data.settings.kasaPinHash)return false}catch(e){}return !kasaSessionOpen()}
+function kasaTouchUnlock(){if(kasaHasPin()&&kasaSessionOpen())kasaOpenSession()}
+["pointerdown","keydown"].forEach(ev=>document.addEventListener(ev,kasaTouchUnlock,true));
 function kasaDecoyOn(){return kasaHasPin()&&!!data.settings.kasaDecoyOn}
 function kasaDecoyAmount(){let v=+data.settings.kasaDecoy;return isFinite(v)&&v>0?round2(v):10000}
 function kasaHidden(){return kasaLocked()&&kasaDecoyOn()} // ekranda sahte kasa
 function decoyKasa(k){let cash=kasaDecoyAmount();return Object.assign({},k,{kasa:cash,totalKasa:cash,cashFloat:cash,adjust:0,extraX:0,start:"",outflow:0,inflow:0,holdingC:0})}
-function lockKasa(){sessionStorage.removeItem("sw_expense_kasa_unlocked");try{localStorage.removeItem(KASA_TRUST_KEY)}catch(e){}closeModal();let gn=$("globalNotice");if(gn)gn.innerHTML="";renderAll();if(!kasaDecoyOn())notice("Kasa bilgileri kilitlendi.","info",2500)}
+function lockKasa(){sessionStorage.removeItem(KASA_SESSION_KEY);try{localStorage.removeItem(KASA_TRUST_KEY)}catch(e){}closeModal();let gn=$("globalNotice");if(gn)gn.innerHTML="";renderAll();if(!kasaDecoyOn())notice("Kasa bilgileri kilitlendi.","info",2500)}
 var _kasaWasOpen=false; // sure dolunca acik kalan ekran kendiliginden kilitli gorunume doner
 setInterval(()=>{if(!kasaHasPin())return;let open=!kasaLocked();if(_kasaWasOpen&&!open){if($("decoyOn")||$("cashFloatInput"))closeModal();renderAll()}_kasaWasOpen=open},20000);
 let _kasaTaps=[];
@@ -655,7 +662,7 @@ async function trySecretUnlock(){
   let el=$("kasaSecretInput");if(!el)return;let pin=el.value,trust=($("kasaTrust")||{}).checked;
   let h=pin?await hashPin(pin):"";closeModal();
   if(!h||h!==data.settings.kasaPinHash)return; // yanlis: sessizce kapanir, ipucu yok
-  sessionStorage.setItem("sw_expense_kasa_unlocked",String(Date.now()));if(trust){try{localStorage.setItem(KASA_TRUST_KEY,h)}catch(e){}}
+  kasaOpenSession();if(trust){try{localStorage.setItem(KASA_TRUST_KEY,h)}catch(e){}}
   renderAll();
 }
 function kasaSecretPanel(){
@@ -682,12 +689,12 @@ function unlockKasaPrompt(then){
   modal('<h2>🔒 Kasa bilgileri kilitli</h2><p class="hint">Toplam kasa, kasadaki nakit ve kasa hareketlerini görmek için şifre gir.</p><div class="grid grid-2" style="margin-top:8px"><div><label>Şifre</label><input id="kasaPinInput" type="password" autocomplete="off"></div><div style="display:flex;align-items:end"><button class="btn btn-primary" onclick="tryUnlockKasa()">Aç</button></div></div><p class="tiny" id="kasaPinErr" style="margin-top:6px"></p><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Vazgeç</button></div>');
   state._afterUnlock=then||null;let el=$("kasaPinInput");el.focus();el.addEventListener("keydown",ev=>{if(ev.key==="Enter")tryUnlockKasa()});
 }
-async function tryUnlockKasa(){let pin=$("kasaPinInput").value;if(!pin)return;let h=await hashPin(pin);if(h!==data.settings.kasaPinHash){$("kasaPinErr").textContent="Şifre yanlış.";$("kasaPinInput").value="";$("kasaPinInput").focus();return}sessionStorage.setItem("sw_expense_kasa_unlocked",String(Date.now()));let then=state._afterUnlock;state._afterUnlock=null;closeModal();renderAll();if(then)then()}
+async function tryUnlockKasa(){let pin=$("kasaPinInput").value;if(!pin)return;let h=await hashPin(pin);if(h!==data.settings.kasaPinHash){$("kasaPinErr").textContent="Şifre yanlış.";$("kasaPinInput").value="";$("kasaPinInput").focus();return}kasaOpenSession();let then=state._afterUnlock;state._afterUnlock=null;closeModal();renderAll();if(then)then()}
 async function setKasaPin(){
   let cur=($("pinCurrent")||{}).value||"",n1=$("pinNew").value,n2=$("pinNew2").value;
   if(kasaHasPin()&&(await hashPin(cur))!==data.settings.kasaPinHash)return alert("Mevcut şifre yanlış.");
   if(n1.length<4)return alert("Şifre en az 4 karakter olmalı.");if(n1!==n2)return alert("İki şifre aynı değil.");
-  let old=data.settings.kasaPinHash;data.settings.kasaPinHash=await hashPin(n1);touch(data.settings);sessionStorage.setItem("sw_expense_kasa_unlocked",String(Date.now()));try{if(old&&localStorage.getItem(KASA_TRUST_KEY)===old)localStorage.setItem(KASA_TRUST_KEY,data.settings.kasaPinHash)}catch(e){}log("kasa_pin_set",{});saveData();if($("decoyOn"))closeModal();renderAll();notice("Kasa şifresi kaydedildi. Diğer bilgisayarlara senkronla gider.","ok");
+  let old=data.settings.kasaPinHash;data.settings.kasaPinHash=await hashPin(n1);touch(data.settings);kasaOpenSession();try{if(old&&localStorage.getItem(KASA_TRUST_KEY)===old)localStorage.setItem(KASA_TRUST_KEY,data.settings.kasaPinHash)}catch(e){}log("kasa_pin_set",{});saveData();if($("decoyOn"))closeModal();renderAll();notice("Kasa şifresi kaydedildi. Diğer bilgisayarlara senkronla gider.","ok");
 }
 async function removeKasaPin(){let cur=($("pinCurrent")||{}).value||"";if((await hashPin(cur))!==data.settings.kasaPinHash)return alert("Mevcut şifre yanlış.");if(!confirm("Kasa şifresi kaldırılsın mı? Kutular herkese görünür olur."))return;delete data.settings.kasaPinHash;touch(data.settings);log("kasa_pin_removed",{});saveData();renderAll();notice("Kasa şifresi kaldırıldı.","warn")}
 
@@ -700,7 +707,7 @@ function renderDashboard(){
   let overdue=submitted.filter(f=>daysSince(f.submittedAt||f.createdAt)>=data.settings.overdueDays);
   let paidMonth=forms.filter(f=>f.status==="paid"&&String(f.paidAt||"").slice(0,7)===mk).reduce((s,f)=>s+formTotal(f),0);
   let html=syncStripe()+incomingCard()+legacyCard();
-  let locked=kasaLocked();kasaTouchUnlock();
+  let locked=kasaLocked();
   let hidden=locked&&kasaDecoyOn();if(hidden){k=decoyKasa(k);locked=false} // sahte kasa: ust satir (toplam kasa, kasa degisimi) yok, nakit sahte, kasa dugmeleri yok
   let monthAdj=(data.cashAdjustments||[]).filter(a=>!a.deleted&&a.type!=="start"&&String(a.date||"").slice(0,7)===mk).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   let monthDelta=round2(monthAdj.reduce((s,a)=>s+(+a.amount||0),0));
