@@ -79,7 +79,6 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 .actions{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
 #page-itinerary input::placeholder,#page-itinerary textarea::placeholder{color:#b0a898;font-style:italic;}
 </style>
-</style>
 </head>
 <body>
 <div class="topbar">
@@ -379,11 +378,464 @@ Paylaşımlı klasöre koyulacak tek dosyalık yedek — mail geçmişi, rehber,
 <span id="lastBackupInfo" style="font-size:11px;color:#6b7280;margin-left:auto"></span>
 </div>
 </div>
+
+<div class="card" id="macroKurulumRehberi" style="border:1px solid #dbeafe;background:#f8fbff">
+<h2 style="margin-top:0;color:#1e40af">Outlook Macro Kurulum Rehberi ve Kodları</h2>
+<div class="settings-info" style="margin-top:0">
+Bu bölüm, SmartWorker ZIP içindeki EML dosyalarını Outlook üzerinden otomatik göndermek için macro kurulumunu en baştan anlatır. Kodlar aşağıdaki ilgili alanların içine yerleştirilmiştir; ayrıca <b>Kodu Kopyala</b> butonlarıyla doğrudan kopyalayabilirsiniz. Kurulumdan sonra önce <b>TEST_MODE = True</b> ile deneme yapılmalıdır.
+</div>
+
+<details open style="margin-top:8px">
+<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#1e293b;padding:8px 0;user-select:none">1) Outlook’ta macro kullanımını açma</summary>
+<div style="font-size:12px;line-height:1.7;color:#374151;padding:6px 0 10px 0">
+<b>Outlook</b> uygulamasını açın. Sol üstten <b>File</b> menüsüne girin, ardından <b>Options</b> seçin. Açılan pencerede <b>Trust Center</b> bölümüne girin ve <b>Trust Center Settings...</b> butonuna basın. Sol menüden <b>Macro Settings</b> bölümüne geçin. Kurumsal politika izin veriyorsa <b>Enable VBA macros</b> veya en azından macro çalıştırmaya izin veren seçeneği seçin. İş yerinizde bu alan kapalıysa IT yetkisi gerekebilir. Değişiklikten sonra Outlook’u kapatıp tekrar açmak gerekebilir.
+</div>
+</details>
+
+<details style="margin-top:4px">
+<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#1e293b;padding:8px 0;user-select:none">2) VBA editörünü açma</summary>
+<div style="font-size:12px;line-height:1.7;color:#374151;padding:6px 0 10px 0">
+Outlook açıkken klavyeden <b>Alt + F11</b> tuşlarına basın. Bu işlem <b>Microsoft Visual Basic for Applications</b> ekranını açar. Sol tarafta genellikle <b>Project1 (VbaProject.OTM)</b> görünür. Eğer sol panel görünmüyorsa üst menüden <b>View &gt; Project Explorer</b> seçin.
+</div>
+</details>
+
+<details style="margin-top:4px">
+<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#1e293b;padding:8px 0;user-select:none">3) ThisOutlookSession kodunu yapıştırma</summary>
+<div style="font-size:12px;line-height:1.7;color:#374151;padding:6px 0 10px 0">
+Sol panelde <b>Microsoft Outlook Objects</b> klasörünü açın ve <b>ThisOutlookSession</b> üzerine çift tıklayın. İçeride eski SmartWorker kodu varsa tamamını silin. Aşağıdaki kodun tamamını, en üstteki <b>Option Explicit</b> satırı dahil olmak üzere buraya yapıştırın. Bu kod, tek tek açılan SmartWorker EML dosyalarında <b>Send On Behalf</b> ayarını otomatik uygular.
+<div style="margin-top:10px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+<span style="font-size:11px;font-weight:700;color:#334155">Kopyalanacak kod</span>
+<button type="button" onclick="navigator.clipboard.writeText(document.getElementById('macroCodeThisOutlookSession').value).then(function(){alert('Kod kopyalandı!')})" style="padding:5px 12px;background:#1e40af;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700">Kodu Kopyala</button>
+</div>
+<textarea id="macroCodeThisOutlookSession" readonly spellcheck="false" style="width:100%;height:280px;font-family:Consolas,'Cascadia Code',monospace;font-size:11px;line-height:1.45;border:1px solid #bfdbfe;border-radius:6px;background:#ffffff;color:#0f172a;padding:10px;white-space:pre;overflow:auto;resize:vertical">Option Explicit
+
+&#x27; SmartWorker - ThisOutlookSession
+&#x27; Görev: SmartWorker EML tek tek Outlook&#x27;ta açılırsa shared mailbox adına Send On Behalf zorlar.
+
+Private Const SHARED_MAILBOX As String = &quot;Butlerservices.Istanbul@raffles.com&quot;
+Private Const SW_MARKER As String = &quot;&lt;!--SW-MAIL--&gt;&quot;
+
+Private WithEvents oInspectors As Outlook.Inspectors
+
+Private Sub Application_Startup()
+    Set oInspectors = Application.Inspectors
+End Sub
+
+Private Sub Application_Quit()
+    Set oInspectors = Nothing
+End Sub
+
+Private Sub oInspectors_NewInspector(ByVal Inspector As Outlook.Inspector)
+    On Error GoTo SafeExit
+
+    If Not TypeOf Inspector.CurrentItem Is Outlook.MailItem Then Exit Sub
+
+    Dim oMail As Outlook.MailItem
+    Set oMail = Inspector.CurrentItem
+
+    If oMail.Sent Then Exit Sub
+
+    &#x27; Sadece SmartWorker EML&#x27;lerine müdahale et.
+    If InStr(1, oMail.HTMLBody &amp; &quot;&quot;, SW_MARKER, vbTextCompare) = 0 Then Exit Sub
+
+    &#x27; Send As değil, Send On Behalf için:
+    oMail.SentOnBehalfOfName = SHARED_MAILBOX
+    oMail.Save
+
+SafeExit:
+End Sub
+</textarea>
+</div>
+</div>
+</details>
+
+<details style="margin-top:4px">
+<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#1e293b;padding:8px 0;user-select:none">4) Module1 kodunu yapıştırma</summary>
+<div style="font-size:12px;line-height:1.7;color:#374151;padding:6px 0 10px 0">
+VBA editöründe üst menüden <b>Insert &gt; Module</b> seçin. Sol panelde <b>Modules</b> altında <b>Module1</b> oluşur. Eğer zaten Module1 varsa içine çift tıklayın ve eski kodu tamamen silin. Aşağıdaki kodun tamamını, yine <b>Option Explicit</b> dahil, Module1 içine yapıştırın. Bu macro, ZIP’ten çıkan EML klasörünü seçtirir, SmartWorker marker’ı olan mailleri işler, imzaları Outlook uyumlu hale getirir, PDF eklerini taşır ve <b>Butlerservices.Istanbul@raffles.com</b> adına Send On Behalf ile gönderir.
+<div style="margin-top:10px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+<span style="font-size:11px;font-weight:700;color:#334155">Kopyalanacak kod</span>
+<button type="button" onclick="navigator.clipboard.writeText(document.getElementById('macroCodeModule1').value).then(function(){alert('Kod kopyalandı!')})" style="padding:5px 12px;background:#1e40af;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700">Kodu Kopyala</button>
+</div>
+<textarea id="macroCodeModule1" readonly spellcheck="false" style="width:100%;height:520px;font-family:Consolas,'Cascadia Code',monospace;font-size:11px;line-height:1.45;border:1px solid #bfdbfe;border-radius:6px;background:#ffffff;color:#0f172a;padding:10px;white-space:pre;overflow:auto;resize:vertical">Option Explicit
+
+&#x27; SmartWorker - Module1
+&#x27; Görev: Seçilen klasördeki SmartWorker EML dosyalarını Outlook üzerinden toplu gönderir.
+&#x27; Not: HTML tarafında her EML içinde &lt;!--SW-MAIL--&gt; marker&#x27;ı bulunmalıdır.
+
+Private Const SHARED_MB As String = &quot;Butlerservices.Istanbul@raffles.com&quot;
+Private Const SW_MARKER As String = &quot;&lt;!--SW-MAIL--&gt;&quot;
+
+&#x27; *** TEST MODU ***
+&#x27; True yaparsan tüm mailler TEST_EMAIL adresine gider ve BCC/CC kapatılır.
+Private Const TEST_MODE As Boolean = False
+Private Const TEST_EMAIL As String = &quot;haktandurgun@gmail.com&quot;
+
+Private Const PR_ATTACH_CONTENT_ID As String = &quot;http://schemas.microsoft.com/mapi/proptag/0x3712001F&quot;
+
+Public Sub TopluGonder()
+    On Error GoTo FatalError
+
+    Dim shell As Object
+    Set shell = CreateObject(&quot;Shell.Application&quot;)
+
+    Dim fd As Object
+    Set fd = shell.BrowseForFolder(0, &quot;EML dosyalarinin oldugu klasoru sec:&quot;, 0)
+    If fd Is Nothing Then Exit Sub
+
+    Dim folderPath As String
+    folderPath = fd.Self.Path
+    If Right(folderPath, 1) &lt;&gt; &quot;\&quot; Then folderPath = folderPath &amp; &quot;\&quot;
+
+    Dim fso As Object
+    Set fso = CreateObject(&quot;Scripting.FileSystemObject&quot;)
+
+    If Not fso.FolderExists(folderPath) Then
+        MsgBox &quot;Klasor bulunamadi!&quot;, vbExclamation
+        Exit Sub
+    End If
+
+    If Not fso.FolderExists(folderPath &amp; &quot;Gonderildi\&quot;) Then
+        fso.CreateFolder folderPath &amp; &quot;Gonderildi\&quot;
+    End If
+
+    Dim folder As Object
+    Set folder = fso.GetFolder(folderPath)
+
+    Dim filesArr() As String
+    Dim cnt As Long
+    Dim f As Object
+
+    cnt = 0
+    For Each f In folder.Files
+        If LCase(fso.GetExtensionName(f.Name)) = &quot;eml&quot; Then
+            cnt = cnt + 1
+            ReDim Preserve filesArr(1 To cnt)
+            filesArr(cnt) = f.Path
+        End If
+    Next f
+
+    If cnt = 0 Then
+        MsgBox &quot;Bu klasorde EML dosyasi bulunamadi.&quot;, vbInformation
+        Exit Sub
+    End If
+
+    Dim modeText As String
+    If TEST_MODE Then
+        modeText = &quot;*** TEST MODU ***&quot; &amp; vbCrLf &amp; _
+                   &quot;Tum mailler sadece &quot; &amp; TEST_EMAIL &amp; &quot; adresine gidecek.&quot; &amp; vbCrLf &amp; _
+                   &quot;BCC ve CC kapatilacak.&quot; &amp; vbCrLf &amp; vbCrLf
+    End If
+
+    Dim ans As VbMsgBoxResult
+    ans = MsgBox(modeText &amp; cnt &amp; &quot; adet EML kontrol edilip gonderilecek.&quot; &amp; vbCrLf &amp; _
+                 &quot;Send On Behalf: &quot; &amp; SHARED_MB &amp; vbCrLf &amp; vbCrLf &amp; _
+                 &quot;Devam?&quot;, vbYesNo + vbQuestion, &quot;SmartWorker Toplu Gonder&quot;)
+
+    If ans &lt;&gt; vbYes Then Exit Sub
+
+    Dim sentCount As Long
+    Dim errCount As Long
+    Dim skippedCount As Long
+    Dim paCount As Long
+    Dim pdCount As Long
+    Dim errList As String
+
+    Dim i As Long
+    For i = 1 To cnt
+        On Error GoTo FileError
+
+        Dim cdoMsg As Object
+        Set cdoMsg = CreateObject(&quot;CDO.Message&quot;)
+
+        Dim stm As Object
+        Set stm = CreateObject(&quot;ADODB.Stream&quot;)
+        stm.Type = 1 &#x27; binary
+        stm.Open
+        stm.LoadFromFile filesArr(i)
+        cdoMsg.DataSource.OpenObject stm, &quot;_Stream&quot;
+        stm.Close
+
+        Dim html As String
+        html = cdoMsg.HTMLBody &amp; &quot;&quot;
+
+        &#x27; Güvenlik: Sadece SmartWorker marker&#x27;lı EML&#x27;leri gönder.
+        If InStr(1, html, SW_MARKER, vbTextCompare) = 0 Then
+            skippedCount = skippedCount + 1
+            errList = errList &amp; Dir(filesArr(i)) &amp; &quot;: SmartWorker marker bulunamadi, atlandi.&quot; &amp; vbCrLf
+            GoTo CleanNextFile
+        End If
+
+        Dim mailType As String
+        mailType = &quot;SW&quot;
+        If InStr(1, html, &quot;&lt;!--SW-PA--&gt;&quot;, vbTextCompare) &gt; 0 Then
+            mailType = &quot;PA&quot;
+        ElseIf InStr(1, html, &quot;&lt;!--SW-PD--&gt;&quot;, vbTextCompare) &gt; 0 Then
+            mailType = &quot;PD&quot;
+        End If
+
+        Dim olMail As Outlook.MailItem
+        Set olMail = Application.CreateItem(olMailItem)
+
+        &#x27; TEST_MODE açıkken sadece test adresine gönder; BCC/CC kesinlikle taşıma.
+        If TEST_MODE Then
+            olMail.To = TEST_EMAIL
+            olMail.CC = &quot;&quot;
+            olMail.BCC = &quot;&quot;
+        Else
+            olMail.To = cdoMsg.To &amp; &quot;&quot;
+
+            &#x27; Gerçek CC desteği lazımsa taşır. HTML tarafında CC yoksa zaten boş kalır.
+            If Len(Trim(cdoMsg.CC &amp; &quot;&quot;)) &gt; 0 Then olMail.CC = cdoMsg.CC &amp; &quot;&quot;
+
+            &#x27; BCC boşsa hiç eklenmez.
+            If Len(Trim(cdoMsg.BCC &amp; &quot;&quot;)) &gt; 0 Then olMail.BCC = cdoMsg.BCC &amp; &quot;&quot;
+        End If
+
+        olMail.Subject = cdoMsg.Subject &amp; &quot;&quot;
+
+        &#x27; HTML&#x27;deki data URI imza/banner görsellerini Outlook-safe CID inline attachment&#x27;a çevir.
+        ConvertDataURIsToCID html, olMail, fso
+        olMail.HTMLBody = html
+
+        &#x27; PDF ekleri kopyala.
+        CopyPdfAttachmentsFromCdoToOutlook cdoMsg, olMail, fso
+
+        &#x27; Send On Behalf ayarı.
+        olMail.SentOnBehalfOfName = SHARED_MB
+
+        &#x27; Gönder.
+        olMail.Send
+
+        sentCount = sentCount + 1
+        If mailType = &quot;PA&quot; Then paCount = paCount + 1
+        If mailType = &quot;PD&quot; Then pdCount = pdCount + 1
+
+        &#x27; Başarılıysa dosyayı Gonderildi klasörüne taşı.
+        Dim fn As String
+        Dim targetPath As String
+
+        fn = Dir(filesArr(i))
+        targetPath = folderPath &amp; &quot;Gonderildi\&quot; &amp; fn
+
+        If fso.FileExists(filesArr(i)) Then
+            If fso.FileExists(targetPath) Then
+                targetPath = folderPath &amp; &quot;Gonderildi\&quot; &amp; AddTimestampToFileName(fn)
+            End If
+            fso.MoveFile filesArr(i), targetPath
+        End If
+
+        GoTo CleanNextFile
+
+FileError:
+        errCount = errCount + 1
+        errList = errList &amp; Dir(filesArr(i)) &amp; &quot;: &quot; &amp; Err.Description &amp; vbCrLf
+        Err.Clear
+        On Error Resume Next
+        If Not olMail Is Nothing Then olMail.Close olDiscard
+        On Error GoTo 0
+
+CleanNextFile:
+        On Error Resume Next
+        Set cdoMsg = Nothing
+        Set stm = Nothing
+        Set olMail = Nothing
+        On Error GoTo 0
+    Next i
+
+    Dim report As String
+    report = &quot;Gonderilen toplam: &quot; &amp; sentCount &amp; vbCrLf &amp; _
+             &quot;Gonderilen PA: &quot; &amp; paCount &amp; vbCrLf &amp; _
+             &quot;Gonderilen PD: &quot; &amp; pdCount &amp; vbCrLf &amp; _
+             &quot;Atlanan: &quot; &amp; skippedCount &amp; vbCrLf &amp; _
+             &quot;Hata: &quot; &amp; errCount
+
+    If Len(errList) &gt; 0 Then
+        report = report &amp; vbCrLf &amp; vbCrLf &amp; &quot;Detay:&quot; &amp; vbCrLf &amp; errList
+    End If
+
+    MsgBox report, vbInformation, &quot;SmartWorker Toplu Gonder&quot;
+    Exit Sub
+
+FatalError:
+    MsgBox &quot;Beklenmeyen hata: &quot; &amp; Err.Description, vbCritical, &quot;SmartWorker Toplu Gonder&quot;
+End Sub
+
+Private Sub CopyPdfAttachmentsFromCdoToOutlook(ByVal cdoMsg As Object, ByVal olMail As Outlook.MailItem, ByVal fso As Object)
+    On Error GoTo SafeExit
+
+    Dim tmpDir As String
+    tmpDir = Environ(&quot;TEMP&quot;) &amp; &quot;\&quot;
+
+    Dim att As Object
+    For Each att In cdoMsg.Attachments
+        Dim attName As String
+        attName = att.FileName &amp; &quot;&quot;
+
+        If LCase(Right(attName, 4)) = &quot;.pdf&quot; Then
+            Dim safeName As String
+            safeName = MakeSafeFileName(attName)
+
+            Dim tmpFile As String
+            tmpFile = tmpDir &amp; Format(Now, &quot;yyyymmdd_hhnnss_&quot;) &amp; safeName
+
+            att.SaveToFile tmpFile
+            olMail.Attachments.Add tmpFile, olByValue
+
+            If fso.FileExists(tmpFile) Then fso.DeleteFile tmpFile, True
+        End If
+    Next att
+
+SafeExit:
+End Sub
+
+Private Sub ConvertDataURIsToCID(ByRef html As String, ByVal olMail As Outlook.MailItem, ByVal fso As Object)
+    Dim searchStr As String
+    searchStr = &quot;src=&quot;&quot;data:image/&quot;
+
+    Dim imgNum As Long
+    imgNum = 0
+
+    Dim pos As Long
+    pos = InStr(1, html, searchStr, vbTextCompare)
+
+    Do While pos &gt; 0
+        imgNum = imgNum + 1
+
+        Dim dataStart As Long
+        dataStart = pos + 5 &#x27; src=&quot;&#x27;den sonraki data başlangıcı
+
+        Dim dataEnd As Long
+        dataEnd = InStr(dataStart, html, &quot;&quot;&quot;&quot;)
+        If dataEnd = 0 Then Exit Do
+
+        Dim fullURI As String
+        fullURI = Mid(html, dataStart, dataEnd - dataStart)
+
+        Dim semi As Long
+        semi = InStr(1, fullURI, &quot;;base64,&quot;, vbTextCompare)
+        If semi = 0 Then GoTo SkipImg
+
+        Dim mimeType As String
+        mimeType = Mid(fullURI, 6, semi - 6) &#x27; &quot;data:&quot; sonrası
+
+        Dim b64 As String
+        b64 = Mid(fullURI, semi + 8)
+
+        Dim ext As String
+        If InStr(1, mimeType, &quot;png&quot;, vbTextCompare) &gt; 0 Then
+            ext = &quot;.png&quot;
+        ElseIf InStr(1, mimeType, &quot;gif&quot;, vbTextCompare) &gt; 0 Then
+            ext = &quot;.gif&quot;
+        ElseIf InStr(1, mimeType, &quot;webp&quot;, vbTextCompare) &gt; 0 Then
+            ext = &quot;.webp&quot;
+        Else
+            ext = &quot;.jpg&quot;
+        End If
+
+        Dim cidName As String
+        cidName = &quot;sw_img&quot; &amp; imgNum
+
+        Dim tmpPath As String
+        tmpPath = Environ(&quot;TEMP&quot;) &amp; &quot;\&quot; &amp; cidName &amp; &quot;_&quot; &amp; Format(Now, &quot;yyyymmddhhnnss&quot;) &amp; ext
+
+        SaveBase64ToFile b64, tmpPath
+
+        &#x27; HTML src değerini cid ile değiştir.
+        Dim beforePart As String
+        Dim afterPart As String
+        beforePart = Left(html, pos + 4)
+        afterPart = Mid(html, dataEnd)
+        html = beforePart &amp; &quot;cid:&quot; &amp; cidName &amp; afterPart
+
+        Dim olAtt As Outlook.Attachment
+        Set olAtt = olMail.Attachments.Add(tmpPath, olByValue, 0)
+
+        If Not olAtt Is Nothing Then
+            olAtt.PropertyAccessor.SetProperty PR_ATTACH_CONTENT_ID, cidName
+        End If
+
+        If fso.FileExists(tmpPath) Then fso.DeleteFile tmpPath, True
+
+SkipImg:
+        pos = InStr(pos + 20, html, searchStr, vbTextCompare)
+    Loop
+End Sub
+
+Private Sub SaveBase64ToFile(ByVal b64 As String, ByVal filePath As String)
+    Dim xml As Object
+    Set xml = CreateObject(&quot;MSXML2.DOMDocument&quot;)
+
+    Dim node As Object
+    Set node = xml.createElement(&quot;b64&quot;)
+    node.DataType = &quot;bin.base64&quot;
+    node.Text = b64
+
+    Dim stm As Object
+    Set stm = CreateObject(&quot;ADODB.Stream&quot;)
+    stm.Type = 1 &#x27; binary
+    stm.Open
+    stm.Write node.nodeTypedValue
+    stm.SaveToFile filePath, 2 &#x27; overwrite
+    stm.Close
+End Sub
+
+Private Function MakeSafeFileName(ByVal s As String) As String
+    Dim badChars As Variant
+    badChars = Array(&quot;\&quot;, &quot;/&quot;, &quot;:&quot;, &quot;*&quot;, &quot;?&quot;, &quot;&quot;&quot;&quot;, &quot;&lt;&quot;, &quot;&gt;&quot;, &quot;|&quot;)
+
+    Dim i As Long
+    For i = LBound(badChars) To UBound(badChars)
+        s = Replace(s, badChars(i), &quot;_&quot;)
+    Next i
+
+    MakeSafeFileName = s
+End Function
+
+Private Function AddTimestampToFileName(ByVal fileName As String) As String
+    Dim dotPos As Long
+    dotPos = InStrRev(fileName, &quot;.&quot;)
+
+    If dotPos &gt; 0 Then
+        AddTimestampToFileName = Left(fileName, dotPos - 1) &amp; &quot;_&quot; &amp; Format(Now, &quot;yyyymmdd_hhnnss&quot;) &amp; Mid(fileName, dotPos)
+    Else
+        AddTimestampToFileName = fileName &amp; &quot;_&quot; &amp; Format(Now, &quot;yyyymmdd_hhnnss&quot;)
+    End If
+End Function
+</textarea>
+</div>
+</div>
+</details>
+
+<details style="margin-top:4px">
+<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#1e293b;padding:8px 0;user-select:none">5) Test modunu ayarlama</summary>
+<div style="font-size:12px;line-height:1.7;color:#374151;padding:6px 0 10px 0">
+İlk denemede Module1 içinde şu satırı bulun: <code>Private Const TEST_MODE As Boolean = False</code>. Deneme için bunu <code>True</code> yapın. Bu modda tüm mailler sadece <b>TEST_EMAIL</b> adresine gider; <b>CC ve BCC kapatılır</b>. Test başarılı olduktan sonra aynı satırı tekrar <code>False</code> yapın. Test mail adresini değiştirmek için <code>Private Const TEST_EMAIL As String = "..."</code> satırını düzenleyebilirsiniz.
+</div>
+</details>
+
+<details style="margin-top:4px">
+<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#1e293b;padding:8px 0;user-select:none">6) Kaydetme, Outlook’u yeniden başlatma ve çalıştırma</summary>
+<div style="font-size:12px;line-height:1.7;color:#374151;padding:6px 0 10px 0">
+VBA editöründe <b>Ctrl + S</b> ile kaydedin. Sonra Outlook’u tamamen kapatıp tekrar açın. Toplu gönderim için Outlook açıkken <b>Alt + F8</b> tuşlarına basın, listeden <b>TopluGonder</b> seçin ve <b>Run</b> butonuna basın. Açılan klasör seçme ekranında SmartWorker’dan indirdiğiniz ZIP’i çıkardığınız klasörü seçin. Macro sadece <b>&lt;!--SW-MAIL--&gt;</b> marker’ı olan EML dosyalarını gönderir; diğer EML dosyalarını atlar.
+</div>
+</details>
+
+<details style="margin-top:4px">
+<summary style="cursor:pointer;font-size:13px;font-weight:700;color:#1e293b;padding:8px 0;user-select:none">7) İlk canlı kullanım öncesi kontrol listesi</summary>
+<div style="font-size:12px;line-height:1.7;color:#374151;padding:6px 0 4px 0">
+Önce SmartWorker içinde <b>Test PA EML</b> oluşturun. EML’i açıp imzanın göründüğünü ve PDF eklerinin geldiğini kontrol edin. Sonra ZIP indirip macro’yu <b>TEST_MODE = True</b> ile çalıştırın. Test mailinde alıcı sadece test adresi olmalı; CC/BCC olmamalı. İmza ve PDF ekleri doğruysa Module1 içinde <b>TEST_MODE = False</b> yapıp gerçek gönderime geçebilirsiniz.
+</div>
+</details>
+</div>
+
 <div class="card">
-<h2>Email Ayarlari</h2>
+<h2>Email Ayarları</h2>
 <div class="settings-segment">
 <div class="settings-header" onclick="toggleSettingsSection(this)">
-<span>&#9993; Post-Departure Sablonlari</span><span class="settings-arrow">&#9660;</span>
+<span>&#9993; Post-Departure Şablonları</span><span class="settings-arrow">&#9660;</span>
 </div>
 <div class="settings-body" style="display:none">
 <div class="settings-info">Post-Departure mail sablonlari MSG dosyalarindan yuklenmistir. Asagida Subject, BCC ve Web Note duzenlenir.</div>
@@ -421,7 +873,7 @@ Paylaşımlı klasöre koyulacak tek dosyalık yedek — mail geçmişi, rehber,
 
 <div class="settings-segment">
 <div class="settings-header" onclick="toggleSettingsSection(this)">
-<span>&#9993; Pre-Arrival Sablonlari</span><span class="settings-arrow">&#9660;</span>
+<span>&#9993; Pre-Arrival Şablonları</span><span class="settings-arrow">&#9660;</span>
 </div>
 <div class="settings-body" style="display:none">
 <div class="settings-info">Pre-Arrival mail sablonlari MSG dosyalarindan yuklenmistir (font, renk, imza birebir). Asagida sadece Subject, BCC ve Web Note duzenlenir.</div>
@@ -467,19 +919,19 @@ Paylaşımlı klasöre koyulacak tek dosyalık yedek — mail geçmişi, rehber,
 <div>
 <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Preference Form (EN)</label>
 <input type="file" id="pdfUpPrefEN" accept=".pdf" style="display:none" onchange="handlePdfUpload('pdfUpPrefEN','pref_form_en')">
-<button onclick="document.getElementById('pdfUpPrefEN').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yukle / Degistir</button>
+<button onclick="document.getElementById('pdfUpPrefEN').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yükle / Değiştir</button>
 <div id="pdfSt_pref_form_en" style="font-size:10px;margin-top:4px"></div>
 </div>
 <div>
 <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Preference Form (TR)</label>
 <input type="file" id="pdfUpPrefTR" accept=".pdf" style="display:none" onchange="handlePdfUpload('pdfUpPrefTR','pref_form_tr')">
-<button onclick="document.getElementById('pdfUpPrefTR').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yukle / Degistir</button>
+<button onclick="document.getElementById('pdfUpPrefTR').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yükle / Değiştir</button>
 <div id="pdfSt_pref_form_tr" style="font-size:10px;margin-top:4px"></div>
 </div>
 <div>
 <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Raffles Monthly</label>
 <input type="file" id="pdfUpMonthly" accept=".pdf" style="display:none" onchange="handlePdfUpload('pdfUpMonthly','monthly')">
-<button onclick="document.getElementById('pdfUpMonthly').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yukle / Degistir</button>
+<button onclick="document.getElementById('pdfUpMonthly').click()" style="width:100%;padding:8px;border:2px dashed #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:11px">&#128196; PDF Yükle / Değiştir</button>
 <div id="pdfSt_monthly" style="font-size:10px;margin-top:4px"></div>
 </div>
 </div>
@@ -515,18 +967,18 @@ Paylaşımlı klasöre koyulacak tek dosyalık yedek — mail geçmişi, rehber,
 <input id="setBannerLink" type="text" value="" onchange="saveBannerLink()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="https://www.raffles.com/istanbul/offers/...">
 </div>
 <div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px">
-<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">PD - Gonderen (From) Adresi</label>
-<div class="settings-info" style="margin:4px 0 8px">Post-Departure EML dosyalarindaki From adresi. Send As yetkiniz oldugu icin shared mailbox adresini girin — Outlook drafti bu adresten gonderilir.</div>
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">PD - Gönderen (From) Adresi</label>
+<div class="settings-info" style="margin:4px 0 8px">Post-Departure EML dosyalarindaki From adresi. Shared mailbox adresini girin. Send As yetkiniz yoksa alttaki Sender alanina kendi kurumsal adresinizi mutlaka yazin.</div>
 <input id="setPdFromAddress" type="email" value="" onchange="savePdFromAddress()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="ornek: Butlerservices.Istanbul@raffles.com">
 </div>
 <div style="margin-top:10px">
-<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">PA - Gonderen (From) Adresi</label>
-<div class="settings-info" style="margin:4px 0 8px">Pre-Arrival EML dosyalarindaki From adresi. Bos birakilirsa Outlook varsayilan hesabinizi kullanir.</div>
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">PA - Gönderen (From) Adresi</label>
+<div class="settings-info" style="margin:4px 0 8px">Pre-Arrival EML dosyalarindaki From adresi. Shared mailbox kullanacaksaniz alttaki Sender alanina kendi kurumsal adresinizi mutlaka yazin. Bos birakilirsa Outlook varsayilan hesabinizi kullanir.</div>
 <input id="setPaFromAddress" type="email" value="" onchange="savePaFromAddress()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="Bos = Outlook varsayilani kullanir">
 </div>
 <div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px">
-<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Sender (Kisisel Adresiniz) — On Behalf Of icin</label>
-<div class="settings-info" style="margin:4px 0 8px">Send As yetkiniz yoksa Send On Behalf Of kullanilir. Kendi kurumsal adresinizi yazin — EML'e "Sender" header'i olarak eklenir ve Outlook shared mailbox'tan sizin adiniza gonderir. Ornek: haktan.durgun@raffles.com</div>
+<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Sender (Kişisel Adresiniz) — On Behalf Of icin</label>
+<div class="settings-info" style="margin:4px 0 8px">Send As yetkiniz yoksa Send On Behalf Of kullanilir. Kendi kurumsal adresinizi yazin — EML'e "Sender" header'i olarak eklenir ve Outlook shared mailbox'tan sizin adiniza gönderir. Ornek: haktan.durgun@raffles.com</div>
 <input id="setSenderAddress" type="email" value="" onchange="saveSenderAddress()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" placeholder="ornek: adiniz.soyadiniz@raffles.com">
 </div>
 </div>
@@ -535,7 +987,7 @@ Paylaşımlı klasöre koyulacak tek dosyalık yedek — mail geçmişi, rehber,
 
 <div class="settings-segment">
 <div class="settings-header" onclick="toggleSettingsSection(this)">
-<span>Atilmadi Not Sablonlari</span><span class="settings-arrow">&#9660;</span>
+<span>Atılmadı Not Şablonları</span><span class="settings-arrow">&#9660;</span>
 </div>
 <div class="settings-body" style="display:none">
 <div class="settings-info">Atılmadı sebepleri ve not şablonları. Yeni sebep ekleyebilir, mevcut sebepleri düzenleyebilir veya kaldırabilirsiniz.<br><b>no_email</b> ve <b>incognito</b> sistem sebepleridir, kaldırılamaz.</div>
@@ -668,7 +1120,26 @@ var Store={get:function(k){try{var s=localStorage.getItem(k);return s?JSON.parse
 function getKW(cat){try{var s=localStorage.getItem("kw_"+cat);return s?JSON.parse(s):["Ahmet","Mehmet","Elif","Bekir","Selin"]}catch(e){return ["Ahmet","Mehmet","Elif","Bekir","Selin"]}}
 function dlFile(data,filename,mime){var b=new Blob([data],{type:mime||"text/html"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
 function fmtDateDMY(ds){var d=new Date(ds+"T00:00:00");return ("0"+d.getDate()).slice(-2)+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+d.getFullYear()}
-function createTemplateManager(prefix,defaults,domIds){var storageKey=prefix+"_templates";function load(){try{var s=localStorage.getItem(storageKey);if(s)return JSON.parse(s)}catch(e){}return null}function get(key){var saved=load();if(saved&&saved[key]!==undefined&&saved[key]!=="")return saved[key];return defaults[key]||""}function save(){var o={};domIds.forEach(function(pair){o[pair[0]]=document.getElementById(pair[1]).value});localStorage.setItem(storageKey,JSON.stringify(o))}function reset(){localStorage.removeItem(storageKey);populateUI()}function populateUI(){domIds.forEach(function(pair){document.getElementById(pair[1]).value=get(pair[0])})}return{load:load,get:get,save:save,reset:reset,populateUI:populateUI}}
+function arrayBufferToBase64(buffer){var bytes=new Uint8Array(buffer),binary="",chunkSize=0x8000;for(var i=0;i<bytes.length;i+=chunkSize){binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunkSize));}return btoa(binary)}
+function utf8ToBase64(str){return btoa(unescape(encodeURIComponent(String(str||""))))}
+function createTemplateManager(prefix,defaults,domIds){
+  var storageKey=prefix+"_templates";
+  function load(){try{var s=localStorage.getItem(storageKey);if(s)return JSON.parse(s)}catch(e){}return null}
+  function get(key){
+    var saved=load();
+    // Empty string is a valid saved setting (e.g. BCC intentionally cleared).
+    if(saved&&Object.prototype.hasOwnProperty.call(saved,key))return saved[key];
+    return defaults[key]||"";
+  }
+  function save(){
+    var o={};
+    domIds.forEach(function(pair){var el=document.getElementById(pair[1]);o[pair[0]]=el?(el.value||""):""});
+    localStorage.setItem(storageKey,JSON.stringify(o));
+  }
+  function reset(){localStorage.removeItem(storageKey);populateUI()}
+  function populateUI(){domIds.forEach(function(pair){document.getElementById(pair[1]).value=get(pair[0])})}
+  return{load:load,get:get,save:save,reset:reset,populateUI:populateUI}
+}
 function toggleSettingsSection(header){var body=header.nextElementSibling;if(body.style.display==="none"){body.style.display="block";header.classList.add("open")}else{body.style.display="none";header.classList.remove("open")}}
 
 // ===== NAVIGATION =====
@@ -689,26 +1160,31 @@ function loadFromAddresses(){
   if(se) se.value=getSenderAddress();
 }
 
-// Session bayraklı Sender kontrolü — uyarıyı oturum başına bir kez gösterir
-// Butler "Devam" derse bir daha sormaz; "Iptal" derse tekrar sorar (her tıklamada)
-var _senderWarnAcknowledged={pd:false,pa:false};
+// Sender kontrolü — Send As yetkisi yoksa Send On Behalf için Sender zorunludur.
 function checkSenderWarning(module){
   var fromAddr=module==="pd"?getPdFromAddress():getPaFromAddress();
   var senderAddr=getSenderAddress();
-  if(!fromAddr || senderAddr) return true; // ya From yok ya Sender var → sorun yok
-  if(_senderWarnAcknowledged[module]) return true; // oturumda onaylandı
+  if(!fromAddr) return true;
   var fromEmailOnly=fromAddr.toLowerCase().replace(/^.*<|>$/g,"").trim();
-  // Sadece shared mailbox gibi görünen adreslerde uyar
   var looksLikeShared=/butler|services|info|front|reservat|concierge/i.test(fromEmailOnly);
-  if(!looksLikeShared) return true; // kişisel hesap From → zaten Send As gerekmez
-  var ok=confirm(
-    "UYARI: From adresi ayarli ("+fromEmailOnly+") ama Sender (kisisel adresiniz) bos.\n\n"+
-    "Send As yetkiniz yoksa Outlook \"system admin\" hatasi verecektir.\n\n"+
-    "Cozum: Settings → \"Sender (Kisisel Adresiniz)\" alanina kendi kurumsal adresinizi yazin.\n\n"+
-    "Yine de devam etmek istiyor musunuz?"
-  );
-  if(ok) _senderWarnAcknowledged[module]=true;
-  return ok;
+  if(looksLikeShared&&!senderAddr){
+    alert(
+      "Send On Behalf için kişisel Sender adresiniz zorunlu.\n\n"+
+      "Ayarlar → Sender (Kişisel Adresiniz) alanına kendi kurumsal mailinizi yazın.\n\n"+
+      "Örnek: adiniz.soyadiniz@raffles.com"
+    );
+    return false;
+  }
+  return true;
+}
+
+function addSmartWorkerMarker(html,module){
+  var mod=String(module||"").toUpperCase();
+  var marker="<!--SW-MAIL-->"+(mod?"<!--SW-"+mod+"-->":"");
+  html=String(html||"");
+  if(html.indexOf("<!--SW-MAIL-->")>=0) return html;
+  if(/<\/body>/i.test(html)) return html.replace(/<\/body>/i,marker+"</body>");
+  return html+marker;
 }
 // Helper: replace CID refs with data URIs for in-page preview
 function previewCleanHtml(h){
@@ -1159,6 +1635,7 @@ function buildSingleEML(guest,module){
   html=html.replace(/cid:[0-9a-f][-0-9a-f]*/gi,'');
   var bannerLink=getBannerLink();
   html=html.replace(/href="https:\/\/www\.raffles\.com\/istanbul\/offers\/Explore-Istanbul\/"/g,'href="'+bannerLink+'"');
+  html=addSmartWorkerMarker(html,module);
   var store=getEmailPdfStore();
   var attachments=[];
   var inlineImages=[];
@@ -1177,6 +1654,11 @@ async function bulkDownloadEML(module){
   if(!withEmail.length){alert("Gönderilecek mail kalmadı!");return;}
   // Pre-flight: Shared mailbox From var ama Sender yok → Send On Behalf Of çalışmaz
   if(!checkSenderWarning(module)) return;
+  if(module==="pa"){
+    await ensureEmailPdfStoreLoaded();
+    await ensureInlineImageStoreLoaded();
+    if(!checkPaPdfAttachmentsBeforeSend(withEmail)) return;
+  }
   var zip=new JSZip();
   var count=0;
   for(var i=0;i<withEmail.length;i++){
@@ -1553,7 +2035,7 @@ function renderPdTable(){
     var sel=pdSelectedIdx===ri?"outline:2px solid #1a6b5c":"";
     h+='<tr style="'+bg+';'+sel+';cursor:pointer" onclick="pdSelectGuest('+ri+')">';
     h+='<td style="text-align:center;font-size:11px;color:#9ca3af">'+(vi+1)+'</td>';
-    h+='<td style="font-weight:700;text-align:center">'+g.room+(g.incognito?' <span title="INCOGNITO — dikkat!" style="color:#dc2626;cursor:help">⚠️</span>':'')+'</td>';
+    h+='<td style="font-weight:700;text-align:center">'+g.room+(g.incognito?' <span title="INCOGNITO — dikkat!" style="color:#dc2626;cursor:help">⚠</span>':'')+'</td>';
     h+='<td style="white-space:nowrap;font-size:12px">'+(g.incognito?'<span style="background:#fee2e2;color:#dc2626;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">INCOGNITO</span>':'');
     var recent=getRecentMail(g.surname,g.firstName,"pd");
     if(recent&&!wasMailSentToday(g.surname,g.firstName,"pd")){
@@ -2056,7 +2538,7 @@ function renderPaTable(){
     var sel=paSelectedIdx===ri?"outline:2px solid #1a6b5c":"";
     h+='<tr style="'+bg+';'+sel+';cursor:pointer" onclick="paSelectGuest('+ri+')">';
     h+='<td style="text-align:center;font-size:11px;color:#9ca3af">'+(vi+1)+'</td>';
-    h+='<td style="font-weight:700;text-align:center">'+esc(g.room)+(g.incognito?' <span title="INCOGNITO — dikkat!" style="color:#dc2626;cursor:help">⚠️</span>':'')+'</td>';
+    h+='<td style="font-weight:700;text-align:center">'+esc(g.room)+(g.incognito?' <span title="INCOGNITO — dikkat!" style="color:#dc2626;cursor:help">⚠</span>':'')+'</td>';
     h+='<td style="white-space:nowrap;font-size:12px">';
     if(g.incognito) h+='<span style="background:#fee2e2;color:#dc2626;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">INCOGNITO</span>';
     if((g.prevStays||0)>0) h+='<span style="background:#d1fae5;color:#065f46;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px" title="'+g.prevStays+' önceki konaklama">REPEAT</span>';
@@ -2202,11 +2684,13 @@ function paRefreshPreview(){
   }
 }
 
-function paDownloadEML(idx){
+async function paDownloadEML(idx){
   var g=paGuests[idx];
   if(!g.email)return alert("E-posta adresi girilmedi!");
   if(g.incognito&&!confirm("\u26a0\ufe0f Bu misafir INCOGNITO!\nYine de mail göndermek istiyor musunuz?"))return;
   if(!checkSenderWarning("pa")) return;
+  await ensureEmailPdfStoreLoaded();
+  if(!checkPaPdfAttachmentsBeforeSend([g])) return;
   var tplKey=selectTemplate(g);
   var subj=g.lang==="TR"?getPaTpl("tr_subj"):getPaTpl("en_subj");
   buildMailEML(g,tplKey,subj,getPaTpl("bcc"),"pa");
@@ -2307,16 +2791,24 @@ function lookupRehberEmail(surname,firstName){
   var contacts=getRehberContacts();
   var key=rehberKey(surname,firstName);
   if(contacts[key]&&contacts[key].email) return contacts[key].email;
-  // Soyad bazlı fallback — SADECE tam soyad eşleşmesi
-  // Eski kod "indexOf(sn)===0" kullanıyordu → "Martin" aranırken "Martiniere" ile eşleşiyordu (BUG)
+  // 2026-10-15: Sadece soyad eslesmesiyle mail doldurma KALDIRILDI.
+  // Eskiden ayni soyadli herhangi birinin maili yaziliyordu (yanlis kisiye mail riski).
+  // Simdi: soyad tam ayni VE ilk isim ayni olmali (ikinci ad farki tolere edilir:
+  // "Ahmet" ile "Ahmet Can" eslesir, "Ahmet" ile "Mehmet" eslesmez).
   var sn=normTR(surname).replace(/\s+/g,"");
-  if(!sn) return "";
+  var fn1=normTR(String(firstName||"").trim().split(/\s+/)[0]||"").replace(/[.]/g,"");
+  if(!sn||!fn1) return "";
+  var found={};
   for(var k in contacts){
-    // Key formatı: "soyad,isim" → virgülden önceki kısım tam olarak soyad olmalı
-    var keySurname=k.split(",")[0];
-    if(keySurname===sn && contacts[k].email) return contacts[k].email;
+    var c=contacts[k];
+    if(!c||!c.email) continue;
+    if(k.split(",")[0]!==sn) continue;
+    var cfn1=normTR(String(c.firstName||"").trim().split(/\s+/)[0]||"").replace(/[.]/g,"");
+    if(cfn1&&cfn1===fn1) found[c.email.toLowerCase()]=c.email;
   }
-  return "";
+  var emails=Object.keys(found);
+  // Ayni ad+soyad icin birden fazla farkli mail varsa hangisi bilinemez: bos birak.
+  return emails.length===1?found[emails[0]]:"";
 }
 
 function lookupRehberPhone(surname,firstName){
@@ -2426,13 +2918,118 @@ function isChannelEmail(email){
 async function handleOSRPdf(file){
   if(!file)return;
   var stEl=document.getElementById("rehberStats");
-  stEl.innerHTML='<span style="color:#d97706">Okunuyor...</span>';
-  // Load existing contacts for merge (cumulative)
+  if(stEl) stEl.innerHTML='<span style="color:#d97706">Okunuyor...</span>';
+
   var existingContacts=getRehberContacts();
+
+  function assembleEmail(parts){
+    if(!parts||!parts.length)return "";
+    var raw=parts.join("").replace(/\s+/g,"").toLowerCase();
+    raw=raw.replace(/[\u0000-\u001f\u007f-\u009f]/g,"");
+    var m=raw.match(/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i);
+    return m?m[0]:"";
+  }
+
+  function osrNormText(s){
+    return String(s||"").replace(/\s+/g," ").trim();
+  }
+
+  function osrAppendNamePart(base,part){
+    base=osrNormText(base); part=osrNormText(part);
+    if(!part)return base;
+    if(!base)return part;
+    if(base.slice(-1)===" " || part.charAt(0)===" ")return osrNormText(base+part);
+    return osrNormText(base+" "+part);
+  }
+
+  function osrIsGenericName(sn,fn){
+    var s=(sn||"").toLowerCase().trim();
+    var f=(fn||"").toLowerCase().trim();
+    var full=(s+" "+f).replace(/\s+/g," ").trim();
+    if(!s)return true;
+    if(s==="spare"||s==="hold"||s==="tba"||s==="segment")return true;
+    if(s==="valued"||s==="valued guest")return true;
+    if(s==="guest"&&(f==="valued"||f==="dear"||f==="guest"))return true;
+    if(s==="no"&&(f==="name"||f==="no name"))return true;
+    if(full.indexOf("hold hold")>=0)return true;
+    if(full.indexOf("valued guest")>=0 || full.indexOf("guest valued")>=0)return true;
+    return false;
+  }
+
+  function osrLooksLikePmOrSystemName(nameText){
+    var n=osrNormText(nameText);
+    if(!n)return false;
+    if(/^9\d{3}(\s|$)/.test(n))return true; // 9301, 9500 vb. PM / POS folio
+    if(/^\d{4}\b/.test(n))return true;
+    if(/^(segment|full name|arrival|departure|country|nationality|email|phone|resv\.? status)$/i.test(n))return true;
+    if(/^(pos|eft|fb point|raffles spa|lost posting)/i.test(n))return true;
+    return false;
+  }
+
+  function osrHasHardRowColumns(line,colBounds){
+    var hasDate=false, hasStatus=false, hasCountry=false;
+    for(var i=0;i<line.items.length;i++){
+      var it=line.items[i], assignedCol="";
+      for(var ck in colBounds){
+        if(it.x>=colBounds[ck].left && it.x<colBounds[ck].right){assignedCol=ck;break;}
+      }
+      if((assignedCol==="arr"||assignedCol==="dep") && /\d{2}[-\/]\d{2}[-\/]\d{2,4}/.test(it.t))hasDate=true;
+      if(assignedCol==="nat" && /^[A-Z]{2,3}$/.test(String(it.t||"").trim()))hasCountry=true;
+      if(/^(CHECKED|CHECKED OUT|CHECKED IN|DUE OUT|NO SHOW|CANCELLED|RESERVED)/i.test(String(it.t||"")))hasStatus=true;
+    }
+    return hasDate||hasStatus||hasCountry;
+  }
+
+  function flushOsrRow(row,newContacts,stats){
+    if(!row || !row.name || row.name.length<3)return;
+    var parts=row.name.split(",").map(function(s){return osrNormText(s)});
+    if(parts.length<2)return;
+
+    var sn=parts[0];
+    var fn=parts.slice(1).join(" ");
+    sn=osrNormText(sn); fn=osrNormText(fn);
+    if(!sn||!fn)return;
+
+    var isPm=/^9\d{3}(\s|$)/.test(sn)||/^9\d{3}(\s|$)/.test(fn)||osrLooksLikePmOrSystemName(sn);
+    if(isPm){stats.pmSkipped++;console.log("[OSR SKIP PM]",sn+", "+fn);return;}
+    if(osrIsGenericName(sn,fn)){stats.genericSkipped++;return;}
+
+    var key=rehberKey(sn,fn);
+    if(!newContacts[key])newContacts[key]={};
+
+    var em=assembleEmail(row._emailParts);
+    console.log("[OSR DEBUG] FLUSH:",sn+", "+fn,"| parts:",JSON.stringify(row._emailParts),"| result:",em);
+    if(em){
+      if(isChannelEmail(em)){
+        stats.channelSkipped++;
+        console.log("[OSR SKIP EMAIL] Kanal maili (Booking/Expedia/OTA) rehbere eklenmedi:",em,"for",sn+", "+fn);
+      }else{
+        newContacts[key].email=em;
+        stats.emailFound++;
+      }
+    }
+
+    if(row.phone){
+      newContacts[key].phone=osrNormText(row.phone);
+      var pp=splitPhone(row.phone);
+      newContacts[key].phoneCC=pp.cc;
+      newContacts[key].phoneNum=pp.num;
+      stats.phoneFound++;
+    }
+    if(row.nat)newContacts[key].nationality=row.nat;
+    if(row.arr)newContacts[key].arrDate=row.arr;
+    if(row.dep)newContacts[key].depDate=row.dep;
+    newContacts[key].surname=sn;
+    newContacts[key].firstName=fn;
+    newContacts[key].updatedAt=localISO(new Date());
+    stats.rowsSaved++;
+  }
+
   try{
     var buf=await file.arrayBuffer();
     var doc=await pdfjsLib.getDocument({data:buf}).promise;
     var allItems=[];
+
     for(var p=1;p<=doc.numPages;p++){
       var page=await doc.getPage(p);
       var content=await page.getTextContent();
@@ -2442,12 +3039,13 @@ async function handleOSRPdf(file){
         allItems.push({t:it.str.trim(),x:Math.round(it.transform[4]),yb:it.transform[5],pg:p});
       }
     }
+
     allItems.sort(function(a,b){
       if(a.pg!==b.pg)return a.pg-b.pg;
       if(Math.abs(a.yb-b.yb)>3)return b.yb-a.yb;
       return a.x-b.x;
     });
-    // Group into lines
+
     var lines=[];var curLine=null;
     for(var i=0;i<allItems.length;i++){
       var it=allItems[i];
@@ -2456,210 +3054,159 @@ async function handleOSRPdf(file){
       }
       curLine.items.push(it);
     }
-    // Helper: assemble email from fragments, validate
-    function assembleEmail(parts){
-      if(!parts||!parts.length)return "";
-      var raw=parts.join("").replace(/\s+/g,"").toLowerCase();
-      var m=raw.match(/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i);
-      return m?m[0]:"";
-    }
-    // OSR format: Name | Arrival | Departure | Country | Nationality | Email | Phone | Status
-    // Detect columns from header row
-    var colMap={};var headerFound=false;var newContacts={};var curRow=null;
-    var colBounds={}; // {colName: {left, right}} — strict boundaries
+
+    var colMap={};var colBounds={};var headerFound=false;
+    var newContacts={};var curRow=null;
+    var stats={rowsSaved:0,emailFound:0,phoneFound:0,pmSkipped:0,channelSkipped:0,genericSkipped:0,systemRowsSkipped:0};
+
     for(var li=0;li<lines.length;li++){
-      var txt=lines[li].items.map(function(it){return it.t}).join(" ");
+      var line=lines[li];
+      var txt=line.items.map(function(it){return it.t}).join(" ");
+
       if(txt.indexOf("Full Name")>=0 || txt.indexOf("Guest Name")>=0 || (txt.indexOf("Name")>=0 && txt.indexOf("Email")>=0)){
-        // Map column X positions
-        for(var j=0;j<lines[li].items.length;j++){
-          var it=lines[li].items[j];
-          var tl=it.t.toLowerCase();
-          if(tl.indexOf("name")>=0 && !colMap.name) colMap.name=it.x;
-          if(tl.indexOf("email")>=0 || tl.indexOf("e-mail")>=0) colMap.email=it.x;
-          if(tl.indexOf("phone")>=0 || tl.indexOf("tel")>=0) colMap.phone=it.x;
-          if(tl==="country" || tl==="nationality" || tl==="nat") colMap.nat=it.x;
-          if(tl.indexOf("arrival")>=0 || tl==="arr") colMap.arr=it.x;
-          if(tl.indexOf("departure")>=0 || tl==="dep") colMap.dep=it.x;
+        // Yeni sayfa header'ı geldiğinde, önce önceki sayfanın açık satırını kapat.
+        if(headerFound && curRow){flushOsrRow(curRow,newContacts,stats);curRow=null;}
+
+        colMap={};colBounds={};
+        for(var j=0;j<line.items.length;j++){
+          var hi=line.items[j];
+          var tl=String(hi.t||"").toLowerCase().trim();
+          if((tl.indexOf("full name")>=0 || tl.indexOf("guest name")>=0 || tl==="name") && !colMap.name)colMap.name=hi.x;
+          if(tl.indexOf("email")>=0 || tl.indexOf("e-mail")>=0)colMap.email=hi.x;
+          if(tl.indexOf("phone")>=0 || tl.indexOf("tel")>=0)colMap.phone=hi.x;
+          if(tl==="country")colMap.country=hi.x;
+          if(tl==="nationality" || tl==="nat")colMap.nat=hi.x;
+          if(tl.indexOf("arrival")>=0 || tl==="arr")colMap.arr=hi.x;
+          if(tl.indexOf("departure")>=0 || tl==="dep")colMap.dep=hi.x;
         }
-        // Build strict column boundaries from sorted X positions
+
+        // Eğer country ve nationality ayrı geldiyse sadece nationality saklanacak ama boundary doğru kalsın diye country de tutulur.
         var colArr=[];
-        for(var ck in colMap) colArr.push({name:ck,x:colMap[ck]});
+        for(var ck in colMap)colArr.push({name:ck,x:colMap[ck]});
         colArr.sort(function(a,b){return a.x-b.x});
-        for(var ci=0;ci<colArr.length;ci++){
-          var leftB=(ci>0)? (colArr[ci-1].x+colArr[ci].x)/2 : 0;
-          var rightB=(ci<colArr.length-1)? (colArr[ci].x+colArr[ci+1].x)/2 : 9999;
-          colBounds[colArr[ci].name]={left:leftB,right:rightB};
+        for(var bi=0;bi<colArr.length;bi++){
+          var leftB=(bi>0)?(colArr[bi-1].x+colArr[bi].x)/2:0;
+          var rightB=(bi<colArr.length-1)?(colArr[bi].x+colArr[bi+1].x)/2:9999;
+          colBounds[colArr[bi].name]={left:leftB,right:rightB};
         }
         console.log("[OSR DEBUG] colMap:",JSON.stringify(colMap));
         console.log("[OSR DEBUG] colBounds:",JSON.stringify(colBounds));
         headerFound=true;
         continue;
       }
-      if(!headerFound)continue;
-      // Skip non-data lines
-      if(txt.indexOf("Page ")>=0 || txt.indexOf("Total:")>=0 || txt.indexOf("Filter:")>=0) continue;
-      if(lines[li].items.length<1)continue;
 
-      // Determine if this line starts a new data row or is a continuation
-      var hasNameWithComma=false;
-      for(var j=0;j<lines[li].items.length;j++){
-        var it=lines[li].items[j];
-        if(colBounds.name && it.x>=colBounds.name.left && it.x<colBounds.name.right && it.t.indexOf(",")>=0){
-          hasNameWithComma=true; break;
+      if(!headerFound)continue;
+      if(txt.indexOf("Page ")>=0 || txt.indexOf("Total:")>=0 || txt.indexOf("Filter")>=0 || txt.indexOf("OSR - Guest Profile Check")>=0)continue;
+      if(!line.items.length)continue;
+
+      var namePieces=[];
+      for(var j=0;j<line.items.length;j++){
+        var nit=line.items[j];
+        if(colBounds.name && nit.x>=colBounds.name.left && nit.x<colBounds.name.right){
+          namePieces.push(nit.t);
         }
       }
-      var isNewRow=hasNameWithComma;
+      var nameText=osrNormText(namePieces.join(" "));
+      var hasCommaName=nameText.indexOf(",")>=0;
+      var hardRow=osrHasHardRowColumns(line,colBounds);
+      var systemName=osrLooksLikePmOrSystemName(nameText);
 
-      if(isNewRow){
-        // Flush previous curRow
-        if(curRow && curRow.name && curRow.name.length>=3){
-          var parts=curRow.name.split(",").map(function(s){return s.trim()});
-          if(parts.length>=2){
-            var sn=parts[0], fn=parts[1];
-            var snl=sn.toLowerCase(),fl=(sn+" "+fn).toLowerCase();
-            // PM ID kontrolü: 9xxx ile başlayan 4 haneli numaralar PM folyolarıdır, misafir değil
-            var isPm=/^9\d{3}(\s|$)/.test(sn)||/^9\d{3}(\s|$)/.test(fn);
-            if(isPm){console.log("[OSR SKIP PM]",sn+", "+fn);}
-            else if(snl==="spare"||snl==="hold"||snl==="valued"||snl==="valued guest"||snl==="tba"||fl.indexOf("hold hold")>=0||fl.indexOf("valued guest")>=0){/* skip */}
-            else{
-            var key=rehberKey(sn,fn);
-            if(!newContacts[key]) newContacts[key]={};
-            var _em=assembleEmail(curRow._emailParts);
-            console.log("[OSR DEBUG] FLUSH:",sn+","+fn,"| parts:",JSON.stringify(curRow._emailParts),"| result:",_em);
-            if(_em){
-              if(isChannelEmail(_em)){
-                console.log("[OSR SKIP EMAIL] Kanal maili (Booking/Expedia/OTA) rehbere eklenmedi:",_em,"for",sn+","+fn);
-              } else {
-                newContacts[key].email=_em;
-              }
-            }
-            if(curRow.phone){
-              newContacts[key].phone=curRow.phone;
-              var _pp=splitPhone(curRow.phone);
-              newContacts[key].phoneCC=_pp.cc;
-              newContacts[key].phoneNum=_pp.num;
-            }
-            if(curRow.nat) newContacts[key].nationality=curRow.nat;
-            if(curRow.arr) newContacts[key].arrDate=curRow.arr;
-            if(curRow.dep) newContacts[key].depDate=curRow.dep;
-            newContacts[key].surname=sn;
-            newContacts[key].firstName=fn;
-            newContacts[key].updatedAt=localISO(new Date());
-          }}
-        }
+      // Virgülsüz ama tarih/status/country taşıyan satırlar ayrı OSR satırıdır; misafir değildir.
+      // Önceki misafirin email/name alanını kirletmemesi için mevcut satırı flush edip bu satırı atlıyoruz.
+      if(nameText && !hasCommaName && (hardRow || systemName)){
+        if(curRow){flushOsrRow(curRow,newContacts,stats);curRow=null;}
+        stats.systemRowsSkipped++;
+        if(systemName||/^9\d{3}/.test(nameText)){stats.pmSkipped++;console.log("[OSR SKIP PM]",nameText);}
+        continue;
+      }
+
+      if(hasCommaName){
+        if(curRow){flushOsrRow(curRow,newContacts,stats);}
         curRow={name:"",_emailParts:[],phone:"",nat:"",arr:"",dep:""};
       }
 
       if(!curRow)continue;
 
-      // Assign items using strict column boundaries (midpoints between adjacent headers)
-      for(var j=0;j<lines[li].items.length;j++){
-        var it=lines[li].items[j];
+      for(var j=0;j<line.items.length;j++){
+        var cell=line.items[j];
         var assignedCol="";
         for(var ck in colBounds){
-          if(it.x>=colBounds[ck].left && it.x<colBounds[ck].right){
-            assignedCol=ck; break;
-          }
+          if(cell.x>=colBounds[ck].left && cell.x<colBounds[ck].right){assignedCol=ck;break;}
         }
-        // Debug: log items that look email-related or fall outside bounds
-        if(it.t.indexOf("@")>=0 || /\.(com|net|org|co|io|tr|uk|de|fr)/.test(it.t)){
-          console.log("[OSR DEBUG] EMAIL-ITEM x="+it.x.toFixed(1)+" text='"+it.t+"' -> col="+assignedCol);
+        if(cell.t.indexOf("@")>=0 || /\.(com|net|org|co|io|tr|uk|de|fr|gov|qa|ae|ru|ch)/i.test(cell.t)){
+          console.log("[OSR DEBUG] EMAIL-ITEM x="+cell.x+" text='"+cell.t+"' -> col="+assignedCol);
         }
-        if(!assignedCol && it.t.length>1){
-          console.log("[OSR DEBUG] UNASSIGNED x="+it.x.toFixed(1)+" text='"+it.t+"'");
+
+        if(!assignedCol)continue;
+
+        if(assignedCol==="name"){
+          var nt=osrNormText(cell.t);
+          if(!nt)continue;
+          if(/^(To|Arrival|Departure|Date|Resv|Status|CHECKED|CHECK|OUT|IN|DUE|RESERVED|NO.?SHOW|CANCEL|Confirmation|Conf|Block|Source|Market|Rate|Pay|Folio|Balance|Credit|Deposit|Package|Routing|VIP|Membership|Member|Level|Type|Segment|Origin|Channel|Agent|Company)$/i.test(nt))continue;
+          if(/[=]/.test(nt))continue;
+          if(osrLooksLikePmOrSystemName(nt))continue;
+          curRow.name=osrAppendNamePart(curRow.name,nt);
         }
-        if(assignedCol){
-          if(assignedCol==="name"){
-            if(/^(To|Arrival|Departure|Date|Resv|Status|CHECKED|CHECK|OUT|IN|DUE|RESERVED|NO.?SHOW|CANCEL|Confirmation|Conf|Block|Source|Market|Rate|Pay|Folio|Balance|Credit|Deposit|Package|Routing|VIP|Membership|Member|Level|Type|Segment|Origin|Channel|Agent|Company)/i.test(it.t)){}
-            else if(/[=]/.test(it.t)){}
-            else{
-              if(curRow.name && curRow.name.indexOf(",")>=0 && /[0-9=]/.test(it.t)){}
-              else curRow.name=(curRow.name||"")+it.t;
-            }
-          }
-          else if(assignedCol==="email"){
-            curRow._emailParts=(curRow._emailParts||[]);
-            curRow._emailParts.push(it.t);
-          }
-          else if(assignedCol==="phone" && /[0-9+]/.test(it.t)) curRow.phone=(curRow.phone?curRow.phone+" ":"")+it.t;
-          else if(assignedCol==="nat") curRow.nat=it.t;
-          else if(assignedCol==="arr" && /\d/.test(it.t)) curRow.arr=it.t;
-          else if(assignedCol==="dep" && /\d/.test(it.t)) curRow.dep=it.t;
+        else if(assignedCol==="email"){
+          curRow._emailParts.push(cell.t);
         }
-      }
-    }
-    // Flush final curRow after loop ends
-    if(curRow && curRow.name && curRow.name.length>=3){
-      var parts=curRow.name.split(",").map(function(s){return s.trim()});
-      if(parts.length>=2){
-        var sn=parts[0], fn=parts[1];
-        var snl=sn.toLowerCase(),fl=(sn+" "+fn).toLowerCase();
-        // PM ID kontrolü: 9xxx ile başlayan 4 haneli numaralar PM folyolarıdır
-        var isPmFinal=/^9\d{3}(\s|$)/.test(sn)||/^9\d{3}(\s|$)/.test(fn);
-        if(isPmFinal){console.log("[OSR SKIP PM]",sn+", "+fn);}
-        else if(!(snl==="spare"||snl==="hold"||snl==="valued"||snl==="valued guest"||snl==="tba"||fl.indexOf("hold hold")>=0||fl.indexOf("valued guest")>=0)){
-        var key=rehberKey(sn,fn);
-        if(!newContacts[key]) newContacts[key]={};
-        var _em2=assembleEmail(curRow._emailParts);
-        console.log("[OSR DEBUG] FLUSH-FINAL:",sn+","+fn,"| parts:",JSON.stringify(curRow._emailParts),"| result:",_em2);
-        if(_em2){
-          if(isChannelEmail(_em2)){
-            console.log("[OSR SKIP EMAIL] Kanal maili (Booking/Expedia/OTA) rehbere eklenmedi:",_em2,"for",sn+","+fn);
-          } else {
-            newContacts[key].email=_em2;
-          }
+        else if(assignedCol==="phone" && /[0-9+]/.test(cell.t)){
+          curRow.phone=osrNormText((curRow.phone?curRow.phone+" ":"")+cell.t);
         }
-        if(curRow.phone){
-          newContacts[key].phone=curRow.phone;
-          var _pp2=splitPhone(curRow.phone);
-          newContacts[key].phoneCC=_pp2.cc;
-          newContacts[key].phoneNum=_pp2.num;
+        else if(assignedCol==="nat"){
+          curRow.nat=cell.t;
         }
-        if(curRow.nat) newContacts[key].nationality=curRow.nat;
-        if(curRow.arr) newContacts[key].arrDate=curRow.arr;
-        if(curRow.dep) newContacts[key].depDate=curRow.dep;
-        newContacts[key].surname=sn;
-        newContacts[key].firstName=fn;
-        newContacts[key].updatedAt=localISO(new Date());
+        else if(assignedCol==="country"){
+          // Country ayrı tutulmuyor; nationality varsa onu tercih ediyoruz.
+        }
+        else if(assignedCol==="arr" && /\d/.test(cell.t)){
+          curRow.arr=cell.t;
+        }
+        else if(assignedCol==="dep" && /\d/.test(cell.t)){
+          curRow.dep=cell.t;
         }
       }
     }
-    // Merge newContacts into existing (cumulative)
+
+    if(curRow)flushOsrRow(curRow,newContacts,stats);
+
     for(var mk in newContacts){
-      if(!existingContacts[mk]) existingContacts[mk]={};
+      if(!existingContacts[mk])existingContacts[mk]={};
       var nc=newContacts[mk], ec=existingContacts[mk];
-      if(nc.email) ec.email=nc.email;
+      if(nc.email)ec.email=nc.email;
       if(nc.phone){
         ec.phone=nc.phone;
         ec.phoneCC=nc.phoneCC||"";
         ec.phoneNum=nc.phoneNum||"";
       }
-      if(nc.nationality) ec.nationality=nc.nationality;
-      if(nc.arrDate) ec.arrDate=nc.arrDate;
-      if(nc.depDate) ec.depDate=nc.depDate;
-      if(nc.surname) ec.surname=nc.surname;
-      if(nc.firstName) ec.firstName=nc.firstName;
+      if(nc.nationality)ec.nationality=nc.nationality;
+      if(nc.arrDate)ec.arrDate=nc.arrDate;
+      if(nc.depDate)ec.depDate=nc.depDate;
+      if(nc.surname)ec.surname=nc.surname;
+      if(nc.firstName)ec.firstName=nc.firstName;
       ec.updatedAt=nc.updatedAt||localISO(new Date());
     }
+
     saveRehberContacts(existingContacts);
+    window._swLastOsrParseStats=stats;
     var cnt=Object.keys(existingContacts).length;
     var newCnt=Object.keys(newContacts).length;
-    stEl.innerHTML='<span style="color:#059669">&#10003; '+newCnt+' kişi güncellendi — toplam '+cnt+' kişi rehberde</span>';
+    if(stEl)stEl.innerHTML='<span style="color:#059669">&#10003; '+newCnt+' kişi güncellendi — toplam '+cnt+' kişi rehberde</span>';
     renderRehber();
-    // Auto-update open PD/PA tables if they have guests loaded
+
     if(pdGuests.length>0){
       for(var i=0;i<pdGuests.length;i++){
-        if(!pdGuests[i].email) pdGuests[i].email=lookupRehberEmail(pdGuests[i].surname,pdGuests[i].firstName);
+        if(!pdGuests[i].email)pdGuests[i].email=lookupRehberEmail(pdGuests[i].surname,pdGuests[i].firstName);
       }
     }
     if(typeof paGuests!=="undefined" && paGuests.length>0){
       for(var i=0;i<paGuests.length;i++){
-        if(!paGuests[i].email) paGuests[i].email=lookupRehberEmail(paGuests[i].surname,paGuests[i].firstName);
+        if(!paGuests[i].email)paGuests[i].email=lookupRehberEmail(paGuests[i].surname,paGuests[i].firstName);
       }
     }
   }catch(err){
     console.error("OSR parse error:",err);
-    stEl.innerHTML='<span style="color:#dc2626">Hata: '+esc(err.message)+'</span>';
+    if(stEl)stEl.innerHTML='<span style="color:#dc2626">Hata: '+esc(err.message)+'</span>';
   }
 }
 
@@ -3173,6 +3720,7 @@ function renderKutuphane(){
   for(var k=0;k<keys.length;k++){
     var gKey=keys[k];
     var entries=h[gKey];
+    var c=contacts[gKey]||null;
     var parts=gKey.split(",");
     // Try to get original names from records or rehber
     var _origSn="",_origFn="";
@@ -3187,8 +3735,7 @@ function renderKutuphane(){
       displayName=(parts[0]||"").charAt(0).toUpperCase()+(parts[0]||"").slice(1)+" "+(parts[1]||"").charAt(0).toUpperCase()+(parts[1]||"").slice(1);
     }
     displayName=displayName.trim();
-    if(search && gKey.indexOf(search)<0) continue;
-    var c=contacts[gKey]||null;
+    if(search && gKey.indexOf(search)<0 && normTR(displayName).replace(/\s+/g,"").indexOf(search)<0) continue;
     if(!guestMap[gKey]) guestMap[gKey]={name:displayName,key:gKey,email:c?c.email:"",phone:c?c.phone:"",pdCount:0,paCount:0,pdSkipCount:0,paSkipCount:0,lastDate:"",records:[]};
     var gm=guestMap[gKey];
     for(var e=0;e<entries.length;e++){
@@ -3463,7 +4010,7 @@ async function kutDownloadSelectedZip(){
             "Tarih: "+r.date+"\n"+
             "Tur: "+(r.type==="pd"?"Post-Departure":"Pre-Arrival")+"\n"+
             "Butler: "+r.butler+"\n"+
-            "Durum: "+(r.skip?"Atilmadi":"Gonderildi")+"\n"+
+            "Durum: "+(r.skip?"Atilmadi":"Gönderildi")+"\n"+
             "Not: "+(r.note||"-")+"\n";
     var fname=r.name.replace(/\s+/g,"_")+"_"+r.date+"_"+r.type+".txt";
     zip.file(fname,txt);
@@ -3482,10 +4029,16 @@ function exportKutuphaneExcel(){
     var gKey=keys[k];
     var entries=h[gKey];
     var parts=gKey.split(",");
-    var name=(parts[0]||"")+" "+(parts[1]||"");
     var c=contacts[gKey]||{};
     for(var e=0;e<entries.length;e++){
       var r=entries[e];
+      var sn=(r._sn||c.surname||parts[0]||"");
+      var fn=(r._fn||c.firstName||parts[1]||"");
+      if(typeof swCleanMailNamePart==="function"){
+        sn=swCleanMailNamePart(sn);
+        fn=swCleanMailNamePart(fn);
+      }
+      var name=(sn+" "+fn).trim();
       rows.push([name,r.email||c.email||"",r.phone||c.phone||"",r.date,r.type==="pd"?"Post-Departure":"Pre-Arrival",r.butler||"?",r.skip?"Atılmadı":"Gönderildi",r.note||r.reason||""]);
     }
   }
@@ -3717,7 +4270,7 @@ function tplClose(){
 function tplSave(){
   if(!tplEditKey){alert("Şablon seçilmedi.");return}
   var html=document.getElementById("tplEditArea").value;
-  var b64=btoa(unescape(encodeURIComponent(html)));
+  var b64=utf8ToBase64(html);
   EMAIL_TEMPLATES[tplEditKey]=b64;
   var overrides={};
   try{var s=localStorage.getItem("email_tpl_overrides");if(s)overrides=JSON.parse(s)}catch(e){}
@@ -3777,7 +4330,7 @@ function tplUploadFile(){
   var reader=new FileReader();
   reader.onload=function(e){
     var html=e.target.result;
-    var b64=btoa(unescape(encodeURIComponent(html)));
+    var b64=utf8ToBase64(html);
     EMAIL_TEMPLATES[key]=b64;
     var overrides={};
     try{var s=localStorage.getItem("email_tpl_overrides");if(s)overrides=JSON.parse(s)}catch(e2){}
@@ -4048,7 +4601,7 @@ function saveTemplateEdit(module){
   var key=sel.value;
   if(!key){alert("Once bir sablon seciniz.");return}
   var html=area.value;
-  var b64=btoa(unescape(encodeURIComponent(html)));
+  var b64=utf8ToBase64(html);
   EMAIL_TEMPLATES[key]=b64;
   // Save overrides to localStorage
   var overrides={};
@@ -4151,6 +4704,9 @@ function selectTemplate(guest){
 }
 
 function generateEML(to,bcc,subject,htmlBody,attachments,inlineImages,fromAddr,module){
+  to=(to||"").trim();
+  bcc=(bcc||"").trim();
+  htmlBody=addSmartWorkerMarker(htmlBody,module);
   var boundaryMixed="----=_SW_mixed_"+Date.now();
   var boundaryRelated="----=_SW_related_"+Date.now();
   var hasInline=inlineImages&&inlineImages.length>0;
@@ -4191,7 +4747,7 @@ function generateEML(to,bcc,subject,htmlBody,attachments,inlineImages,fromAddr,m
   }
   eml+="To: "+to+"\r\n";
   if(bcc)eml+="Bcc: "+bcc+"\r\n";
-  eml+="Subject: =?UTF-8?B?"+btoa(unescape(encodeURIComponent(subject)))+"?=\r\n";
+  eml+="Subject: =?UTF-8?B?"+utf8ToBase64(subject)+"?=\r\n";
   eml+="X-Mailer: SmartWorker\r\n";
   if(module) eml+="X-SW-Module: "+module+"\r\n";
   eml+="X-Unsent: 1\r\n";
@@ -4200,7 +4756,7 @@ function generateEML(to,bcc,subject,htmlBody,attachments,inlineImages,fromAddr,m
   function writeHtmlBody(){
     eml+="Content-Type: text/html; charset=utf-8\r\n";
     eml+="Content-Transfer-Encoding: base64\r\n\r\n";
-    var b=btoa(unescape(encodeURIComponent(htmlBody)));
+    var b=utf8ToBase64(htmlBody);
     for(var i=0;i<b.length;i+=76) eml+=b.substring(i,i+76)+"\r\n";
     eml+="\r\n";
   }
@@ -4301,7 +4857,7 @@ function buildMailEML(guest,templateKey,subject,bcc,module){
     if(store.monthly)attachments.push({name:store.monthly.name,data:store.monthly.data});
   }
   // --- SmartWorker module marker (macro detection) ---
-  if(module==="pd") html=html.replace(/<\/body>/i,'<!--SW-PD--></body>');
+  html=addSmartWorkerMarker(html,module);
   var fromAddr=module==="pd"?getPdFromAddress():getPaFromAddress();
   var eml=generateEML(guest.email||"",bcc,subject,html,attachments,inlineImages,fromAddr,module);
   var fn=module+"_"+safeFn(guest.editSurname||guest.surname||guest.lastName||"guest")+"_"+(guest.room||"")+".eml";
@@ -4309,6 +4865,860 @@ function buildMailEML(guest,templateKey,subject,bcc,module){
 }
 
 
+
+/* ===== SmartWorker FIX OVERRIDES =====
+   2026-04-29: PDF storage migrated to IndexedDB + safer upload/pre-flight.
+   Existing localStorage email_pdfs records are migrated automatically on first load.
+*/
+var SW_DB_NAME="SmartWorkerKM";
+var SW_DB_VERSION=2;
+var SW_PDF_STORE="email_pdfs";
+var SW_IMAGE_STORE="email_images";
+var _emailPdfStoreCache=null;
+var _emailPdfLoadPromise=null;
+var _emailImageStoreCache=null;
+var _emailImageLoadPromise=null;
+
+function swOpenDb(){
+  return new Promise(function(resolve,reject){
+    if(!window.indexedDB){reject(new Error("IndexedDB desteklenmiyor."));return;}
+    var req=indexedDB.open(SW_DB_NAME,SW_DB_VERSION);
+    req.onupgradeneeded=function(e){
+      var db=e.target.result;
+      if(!db.objectStoreNames.contains(SW_PDF_STORE)) db.createObjectStore(SW_PDF_STORE,{keyPath:"key"});
+      if(!db.objectStoreNames.contains(SW_IMAGE_STORE)) db.createObjectStore(SW_IMAGE_STORE,{keyPath:"key"});
+    };
+    req.onsuccess=function(){resolve(req.result)};
+    req.onerror=function(){reject(req.error||new Error("IndexedDB acilamadi."))};
+  });
+}
+
+function getEmailPdfStore(){
+  if(_emailPdfStoreCache) return _emailPdfStoreCache;
+  try{
+    var legacy=localStorage.getItem("email_pdfs");
+    if(legacy){_emailPdfStoreCache=JSON.parse(legacy);return _emailPdfStoreCache;}
+  }catch(e){}
+  _emailPdfStoreCache={};
+  return _emailPdfStoreCache;
+}
+
+async function ensureEmailPdfStoreLoaded(){
+  if(_emailPdfStoreCache&&_emailPdfStoreCache.__loadedFromIDB) return _emailPdfStoreCache;
+  if(_emailPdfLoadPromise) return _emailPdfLoadPromise;
+  _emailPdfLoadPromise=(async function(){
+    var obj={};
+    try{
+      var db=await swOpenDb();
+      var tx=db.transaction(SW_PDF_STORE,"readonly");
+      var os=tx.objectStore(SW_PDF_STORE);
+      var all=await new Promise(function(resolve,reject){
+        var req=os.getAll();
+        req.onsuccess=function(){resolve(req.result||[])};
+        req.onerror=function(){reject(req.error||new Error("IndexedDB okuma hatasi"))};
+      });
+      all.forEach(function(row){
+        if(row&&row.key) obj[row.key]={name:row.name,data:row.data,updatedAt:row.updatedAt||""};
+      });
+      db.close();
+
+      // One-time migration from old localStorage storage
+      if(Object.keys(obj).length===0){
+        try{
+          var legacy=localStorage.getItem("email_pdfs");
+          if(legacy){
+            var old=JSON.parse(legacy);
+            for(var k in old){
+              if(old[k]&&old[k].data){
+                obj[k]={name:old[k].name||k+".pdf",data:old[k].data,updatedAt:old[k].updatedAt||new Date().toISOString()};
+                await setEmailPdfAsync(k,obj[k].name,obj[k].data,true);
+              }
+            }
+            localStorage.removeItem("email_pdfs");
+          }
+        }catch(e){}
+      }
+    }catch(err){
+      console.warn("PDF IndexedDB load failed; using fallback cache/localStorage:",err);
+      try{var s=localStorage.getItem("email_pdfs");if(s)obj=JSON.parse(s);}catch(e){}
+    }
+    obj.__loadedFromIDB=true;
+    _emailPdfStoreCache=obj;
+    return _emailPdfStoreCache;
+  })();
+  return _emailPdfLoadPromise;
+}
+
+async function setEmailPdfAsync(key,filename,b64,silent){
+  if(!_emailPdfStoreCache) _emailPdfStoreCache={};
+  _emailPdfStoreCache[key]={name:filename,data:b64,updatedAt:new Date().toISOString()};
+  try{
+    var db=await swOpenDb();
+    var tx=db.transaction(SW_PDF_STORE,"readwrite");
+    tx.objectStore(SW_PDF_STORE).put({key:key,name:filename,data:b64,updatedAt:new Date().toISOString()});
+    await new Promise(function(resolve,reject){tx.oncomplete=resolve;tx.onerror=function(){reject(tx.error||new Error("IndexedDB yazma hatasi"))}});
+    db.close();
+    try{localStorage.removeItem("email_pdfs")}catch(e){}
+  }catch(err){
+    console.warn("PDF IndexedDB save failed:",err);
+    try{localStorage.setItem("email_pdfs",JSON.stringify(_emailPdfStoreCache));}
+    catch(e){if(!silent)alert("PDF kaydedilemedi. Dosya çok büyük olabilir veya tarayıcı depolaması kapalı olabilir.");}
+  }
+}
+
+function setEmailPdf(key,filename,b64){
+  setEmailPdfAsync(key,filename,b64).then(function(){renderPdfStatus();});
+}
+
+async function deleteEmailPdfAsync(key){
+  if(!_emailPdfStoreCache) _emailPdfStoreCache={};
+  delete _emailPdfStoreCache[key];
+  try{
+    var db=await swOpenDb();
+    var tx=db.transaction(SW_PDF_STORE,"readwrite");
+    tx.objectStore(SW_PDF_STORE).delete(key);
+    await new Promise(function(resolve,reject){tx.oncomplete=resolve;tx.onerror=function(){reject(tx.error||new Error("IndexedDB silme hatasi"))}});
+    db.close();
+  }catch(err){console.warn("PDF IndexedDB delete failed:",err)}
+  try{localStorage.removeItem("email_pdfs")}catch(e){}
+}
+
+function deleteEmailPdf(key){
+  deleteEmailPdfAsync(key).then(function(){renderPdfStatus();});
+}
+function removeEmailPdf(key){deleteEmailPdf(key)}
+
+async function handlePdfUpload(inputId,storageKey){
+  var input=document.getElementById(inputId);
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  if(file.type&&file.type!=="application/pdf"&&!/\.pdf$/i.test(file.name)){
+    alert("Lütfen PDF dosyası seçin.");
+    return;
+  }
+  var statusEl=document.getElementById("pdfSt_"+storageKey);
+  if(statusEl)statusEl.innerHTML='<span style="color:#d97706">Yükleniyor...</span>';
+  var reader=new FileReader();
+  reader.onload=async function(e){
+    try{
+      var b64=arrayBufferToBase64(e.target.result);
+      await setEmailPdfAsync(storageKey,file.name,b64);
+      renderPdfStatus();
+      alert(file.name+" yüklendi. Bu değişiklik sadece bundan sonra oluşturulan EML/ZIP dosyalarına uygulanır.");
+    }catch(err){
+      if(statusEl)statusEl.innerHTML='<span style="color:#dc2626">Yüklenemedi</span>';
+      alert("PDF yüklenemedi: "+err.message);
+    }
+  };
+  reader.onerror=function(){alert("PDF okunamadı.")};
+  reader.readAsArrayBuffer(file);
+}
+
+async function renderPdfStatus(){
+  await ensureEmailPdfStoreLoaded();
+  var store=getEmailPdfStore();
+  var keys=["pref_form_en","pref_form_tr","monthly"];
+  for(var i=0;i<keys.length;i++){
+    var el=document.getElementById("pdfSt_"+keys[i]);
+    if(!el)continue;
+    if(store[keys[i]]){
+      el.innerHTML='<span style="color:#059669">&#10003; '+esc(store[keys[i]].name)+'</span> <button onclick="if(confirm(\'Bu PDF silinecek. Emin misiniz?\'))deleteEmailPdf(\''+keys[i]+'\')" style="font-size:9px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;border-radius:3px;cursor:pointer;padding:1px 4px">Sil</button>';
+    }else{
+      el.innerHTML='<span style="color:#dc2626">Yuklenmedi</span>';
+    }
+  }
+}
+
+function handleImageUpload(inputId,storageKey){
+  var input=document.getElementById(inputId);
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var mime=file.type||"image/png";
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var b64=arrayBufferToBase64(e.target.result);
+      setInlineImage(storageKey,file.name,b64,mime);
+    }catch(err){alert("Görsel okunamadı: "+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function checkPaPdfAttachmentsBeforeSend(guests){
+  var store=getEmailPdfStore();
+  guests=guests||[];
+  var needsEN=false,needsTR=false;
+  for(var i=0;i<guests.length;i++){
+    if((guests[i].lang||"EN")==="TR") needsTR=true;
+    else needsEN=true;
+  }
+  if(!needsEN&&!needsTR) needsEN=true;
+  var missing=[];
+  if(needsEN&&!store.pref_form_en) missing.push("Preference Form EN");
+  if(needsTR&&!store.pref_form_tr) missing.push("Preference Form TR");
+  if(!store.monthly) missing.push("Raffles Monthly");
+  if(!missing.length) return true;
+  return confirm("PA PDF eklerinde eksik dosya var:\n\n"+missing.join("\n")+"\n\nEksik PDF'lerle devam etmek istiyor musunuz?");
+}
+
+
+/* ===== SmartWorker IMAGE STORAGE FIX =====
+   Signature and banner images were previously stored in localStorage.
+   Large signatures/banners can exceed localStorage quota, so images now use IndexedDB.
+   Existing localStorage email_images records are migrated automatically on first load.
+*/
+function getInlineImageStore(){
+  if(_emailImageStoreCache) return _emailImageStoreCache;
+  try{
+    var legacy=localStorage.getItem("email_images");
+    if(legacy){_emailImageStoreCache=JSON.parse(legacy);return _emailImageStoreCache;}
+  }catch(e){}
+  _emailImageStoreCache={};
+  return _emailImageStoreCache;
+}
+
+async function ensureInlineImageStoreLoaded(){
+  if(_emailImageStoreCache&&_emailImageStoreCache.__loadedFromIDB) return _emailImageStoreCache;
+  if(_emailImageLoadPromise) return _emailImageLoadPromise;
+  _emailImageLoadPromise=(async function(){
+    var obj={};
+    try{
+      var db=await swOpenDb();
+      var tx=db.transaction(SW_IMAGE_STORE,"readonly");
+      var os=tx.objectStore(SW_IMAGE_STORE);
+      var all=await new Promise(function(resolve,reject){
+        var req=os.getAll();
+        req.onsuccess=function(){resolve(req.result||[])};
+        req.onerror=function(){reject(req.error||new Error("IndexedDB gorsel okuma hatasi"))};
+      });
+      all.forEach(function(row){
+        if(row&&row.key) obj[row.key]={name:row.name,data:row.data,mime:row.mime||"image/png",updatedAt:row.updatedAt||""};
+      });
+      db.close();
+
+      // One-time migration from old localStorage storage
+      if(Object.keys(obj).length===0){
+        try{
+          var legacy=localStorage.getItem("email_images");
+          if(legacy){
+            var old=JSON.parse(legacy);
+            for(var k in old){
+              if(old[k]&&old[k].data){
+                obj[k]={name:old[k].name||k+".png",data:old[k].data,mime:old[k].mime||"image/png",updatedAt:old[k].updatedAt||new Date().toISOString()};
+                await setInlineImageAsync(k,obj[k].name,obj[k].data,obj[k].mime,true);
+              }
+            }
+            localStorage.removeItem("email_images");
+          }
+        }catch(e){}
+      }
+    }catch(err){
+      console.warn("Image IndexedDB load failed; using fallback cache/localStorage:",err);
+      try{var s=localStorage.getItem("email_images");if(s)obj=JSON.parse(s);}catch(e){}
+    }
+    obj.__loadedFromIDB=true;
+    _emailImageStoreCache=obj;
+    return _emailImageStoreCache;
+  })();
+  return _emailImageLoadPromise;
+}
+
+async function setInlineImageAsync(key,filename,b64,mimeType,silent){
+  if(!_emailImageStoreCache) _emailImageStoreCache={};
+  if(!filename){
+    delete _emailImageStoreCache[key];
+  }else{
+    _emailImageStoreCache[key]={name:filename,data:b64,mime:mimeType||"image/png",updatedAt:new Date().toISOString()};
+  }
+  try{
+    var db=await swOpenDb();
+    var tx=db.transaction(SW_IMAGE_STORE,"readwrite");
+    if(!filename) tx.objectStore(SW_IMAGE_STORE).delete(key);
+    else tx.objectStore(SW_IMAGE_STORE).put({key:key,name:filename,data:b64,mime:mimeType||"image/png",updatedAt:new Date().toISOString()});
+    await new Promise(function(resolve,reject){tx.oncomplete=resolve;tx.onerror=function(){reject(tx.error||new Error("IndexedDB gorsel yazma hatasi"))}});
+    db.close();
+    try{localStorage.removeItem("email_images")}catch(e){}
+  }catch(err){
+    console.warn("Image IndexedDB save failed:",err);
+    try{localStorage.setItem("email_images",JSON.stringify(_emailImageStoreCache));}
+    catch(e){if(!silent)alert("Görsel kaydedilemedi. Dosya çok büyük olabilir veya tarayıcı depolaması kapalı olabilir.");}
+  }
+}
+
+function setInlineImage(key,filename,b64,mimeType){
+  setInlineImageAsync(key,filename,b64,mimeType).then(function(){renderImageStatus();});
+}
+
+async function clearInlineImagesAsync(){
+  _emailImageStoreCache={__loadedFromIDB:true};
+  try{
+    var db=await swOpenDb();
+    var tx=db.transaction(SW_IMAGE_STORE,"readwrite");
+    tx.objectStore(SW_IMAGE_STORE).clear();
+    await new Promise(function(resolve,reject){tx.oncomplete=resolve;tx.onerror=function(){reject(tx.error||new Error("IndexedDB gorsel temizleme hatasi"))}});
+    db.close();
+  }catch(err){console.warn("Image IndexedDB clear failed:",err)}
+  try{localStorage.removeItem("email_images")}catch(e){}
+}
+function clearInlineImages(){clearInlineImagesAsync().then(function(){renderImageStatus();});}
+
+/* ===== IMAGE UPLOAD NORMALIZER (2026-09-21) =====
+   Sorun: 3375px genisliginde ham bir PNG banner Outlook masaustunde gorunup Outlook Web'de kirik cikti.
+   Cozum: yuklenen her gorsel once tarayicida acilir (acilamiyorsa reddedilir), banner 1034px genislige
+   kucultulur (mailde 517px gosterilir, 2x net durur) ve temiz PNG/JPEG olarak yeniden kaydedilir.
+   GIF'ler animasyon bozulmasin diye oldugu gibi saklanir; sadece acilabilirlik kontrolu yapilir.
+*/
+var SW_IMG_MAX_W={banner_image:1034,sig_image:0}; // 0 = kucultme yok
+
+function swFmtBytesPlain(bytes){
+  if(bytes>1024*1024)return (bytes/1024/1024).toFixed(1)+" MB";
+  if(bytes>1024)return Math.round(bytes/1024)+" KB";
+  return bytes+" B";
+}
+
+function swNormalizeImageFile(file,maxW){
+  return new Promise(function(resolve,reject){
+    var url=URL.createObjectURL(file);
+    var img=new Image();
+    img.onerror=function(){
+      URL.revokeObjectURL(url);
+      reject(new Error("Bu dosya tarayıcıda açılamıyor, yani mailde de görünmez. Lütfen PNG veya JPG olarak kaydedip tekrar deneyin."));
+    };
+    img.onload=function(){
+      try{
+        var ow=img.naturalWidth,oh=img.naturalHeight;
+        if(!ow||!oh)throw new Error("Görsel boyutu okunamadı.");
+        if(file.type==="image/gif"){
+          // Animasyonu korumak icin GIF'e dokunma; ham baytlari sakla.
+          var fr=new FileReader();
+          fr.onload=function(ev){
+            URL.revokeObjectURL(url);
+            resolve({b64:arrayBufferToBase64(ev.target.result),mime:"image/gif",ext:".gif",w:ow,h:oh,origW:ow,origH:oh,untouched:true});
+          };
+          fr.onerror=function(){URL.revokeObjectURL(url);reject(new Error("Görsel okunamadı."));};
+          fr.readAsArrayBuffer(file);
+          return;
+        }
+        var tw=(maxW&&ow>maxW)?maxW:ow;
+        var th=Math.max(1,Math.round(oh*tw/ow));
+        // Kademeli yariya indirme: tek adimda buyuk kucultme ince cizgileri bozar.
+        var src=img,cw=ow,ch=oh;
+        while(cw/2>tw){
+          var nw=Math.round(cw/2),nh=Math.max(1,Math.round(ch/2));
+          var step=document.createElement("canvas");step.width=nw;step.height=nh;
+          var sctx=step.getContext("2d");
+          sctx.imageSmoothingEnabled=true;sctx.imageSmoothingQuality="high";
+          sctx.drawImage(src,0,0,nw,nh);
+          src=step;cw=nw;ch=nh;
+        }
+        var c=document.createElement("canvas");c.width=tw;c.height=th;
+        var ctx=c.getContext("2d");
+        ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+        ctx.drawImage(src,0,0,tw,th);
+        var isJpeg=(file.type==="image/jpeg"||file.type==="image/jpg");
+        var outMime=isJpeg?"image/jpeg":"image/png";
+        var dataUrl=isJpeg?c.toDataURL("image/jpeg",0.92):c.toDataURL("image/png");
+        var comma=dataUrl.indexOf(",");
+        if(dataUrl.indexOf("data:"+outMime)!==0||comma<0)throw new Error("Görsel dönüştürülemedi.");
+        URL.revokeObjectURL(url);
+        resolve({b64:dataUrl.slice(comma+1),mime:outMime,ext:isJpeg?".jpg":".png",w:tw,h:th,origW:ow,origH:oh,untouched:false});
+      }catch(err){
+        URL.revokeObjectURL(url);
+        reject(err);
+      }
+    };
+    img.src=url;
+  });
+}
+
+function handleImageUpload(inputId,storageKey){
+  var input=document.getElementById(inputId);
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  // Ayni dosya tekrar secilirse onchange yeniden tetiklensin.
+  try{input.value=""}catch(e){}
+  if(file.type&&file.type.indexOf("image/")!==0){
+    alert("Lütfen görsel dosyası seçin.");
+    return;
+  }
+  var statusEl=document.getElementById("imgSt_"+storageKey);
+  if(statusEl)statusEl.innerHTML='<span style="color:#d97706">Yükleniyor...</span>';
+  var maxW=SW_IMG_MAX_W[storageKey]||0;
+  swNormalizeImageFile(file,maxW).then(async function(r){
+    var base=String(file.name||storageKey).replace(/\.[^.]*$/,"")||storageKey;
+    var outName=base+r.ext;
+    await setInlineImageAsync(storageKey,outName,r.b64,r.mime);
+    await renderImageStatus();
+    var pad=(r.b64.slice(-2)==="==")?2:(r.b64.slice(-1)==="=")?1:0;
+    var outBytes=Math.floor(r.b64.length*3/4)-pad;
+    var detail=(r.origW!==r.w||r.origH!==r.h)
+      ?r.origW+"x"+r.origH+" → "+r.w+"x"+r.h+" küçültüldü"
+      :r.w+"x"+r.h;
+    alert(outName+" kaydedildi ("+detail+", "+swFmtBytesPlain(file.size)+" → "+swFmtBytesPlain(outBytes)+"). Bu değişiklik sadece bundan sonra oluşturulan EML/ZIP dosyalarına uygulanır.");
+  }).catch(async function(err){
+    try{await renderImageStatus()}catch(e){}
+    alert("Görsel kaydedilemedi: "+(err&&err.message?err.message:err));
+  });
+}
+
+async function renderImageStatus(){
+  await ensureInlineImageStoreLoaded();
+  var store=getInlineImageStore();
+  ["sig_image","banner_image"].forEach(function(key){
+    var el=document.getElementById("imgSt_"+key);
+    var preview=document.getElementById("imgPreview_"+key);
+    if(!el)return;
+    if(store[key]&&store[key].data){
+      var extra=store[key].updatedAt?' · '+(typeof swLocalDateTime==="function"?swLocalDateTime(store[key].updatedAt):store[key].updatedAt):'';
+      var size=store[key].data&&typeof swFmtBytesFromB64==="function"?' · '+swFmtBytesFromB64(store[key].data):'';
+      el.innerHTML='<span style="color:#059669">&#10003; '+esc(store[key].name||"Yüklü")+'</span><span style="color:#64748b">'+extra+size+'</span> <button onclick="if(confirm(\'Bu gorseli silmek istediginize emin misiniz?\'))setInlineImage(\''+key+'\',null)" style="font-size:9px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;border-radius:3px;cursor:pointer;padding:1px 4px">Sil</button>';
+      if(preview)preview.innerHTML='<img src="data:'+esc(store[key].mime||"image/png")+';base64,'+store[key].data+'" style="max-width:200px;max-height:80px;border:1px solid #e5e7eb;border-radius:4px">';
+    }else{
+      el.innerHTML='<span style="color:#dc2626">Yuklenmedi</span>';
+      if(preview)preview.innerHTML='';
+    }
+  });
+  try{if(typeof renderActiveAssetSnapshot==="function")renderActiveAssetSnapshot();}catch(e){}
+}
+
+// Warm up IndexedDB after page load, so Settings and PA ZIP are ready faster.
+ensureEmailPdfStoreLoaded().then(function(){try{renderPdfStatus()}catch(e){}});
+ensureInlineImageStoreLoaded().then(function(){try{renderImageStatus()}catch(e){}});
+
+</script>
+<script>
+
+/* ===== SmartWorker SYSTEM + FEATURE ADDITIONS =====
+   Added on top of fixed version:
+   - PA arrival window filter
+   - Active PDF/signature snapshot
+   - Monthly PDF month compatibility check
+   - Template selection reason display
+   - OSR import quality summary
+   - Test PA EML generator
+*/
+(function(){
+  function swEl(id){return document.getElementById(id)}
+  function swDateObj(iso){return iso?new Date(iso+"T00:00:00"):null}
+  function swMonthName(m){var a=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];return a[m]||""}
+  function swFmtBytesFromB64(b64){
+    if(!b64)return "";
+    var bytes=Math.round((String(b64).length*3)/4);
+    if(bytes>1024*1024)return (bytes/1024/1024).toFixed(1)+" MB";
+    if(bytes>1024)return Math.round(bytes/1024)+" KB";
+    return bytes+" B";
+  }
+  function swLocalDateTime(iso){
+    if(!iso)return "—";
+    try{return new Date(iso).toLocaleString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}catch(e){return iso}
+  }
+  // renderImageStatus bu IIFE'nin disinda; yardimcilari global yap ki tarih/boyut duzgun gorunsun.
+  window.swFmtBytesFromB64=swFmtBytesFromB64;
+  window.swLocalDateTime=swLocalDateTime;
+
+  window.swEnhanceUI=function(){
+    // PA arrival window control
+    var paDate=swEl("paDate");
+    if(paDate && !swEl("paWindow")){
+      var wrap=document.createElement("div");
+      wrap.style.cssText="display:flex;align-items:center;gap:6px";
+      wrap.innerHTML='<label style="font-weight:600;font-size:12px">Aralık:</label><select id="paWindow" onchange="paApplyFilter()" style="font-size:12px;padding:4px 8px"><option value="single">Tek gün</option><option value="3">Bugün + 3 gün</option><option value="5">Bugün + 5 gün</option><option value="weekend">Hafta sonu</option></select>';
+      var parent=paDate.parentNode;
+      if(parent&&parent.parentNode)parent.parentNode.insertBefore(wrap,parent.nextSibling);
+    }
+
+    // Active snapshot in Settings
+    var settingsTitle=document.querySelector("#page-settings .card h2");
+    var emailSettingsTitle=[].slice.call(document.querySelectorAll("#page-settings .card h2")).filter(function(h){return h.textContent.indexOf("Email")>=0})[0];
+    if(emailSettingsTitle && !swEl("swActiveAssetSnapshot")){
+      var box=document.createElement("div");
+      box.id="swActiveAssetSnapshot";
+      box.style.cssText="margin:0 0 14px 0;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;color:#334155";
+      emailSettingsTitle.parentNode.insertBefore(box,emailSettingsTitle.nextSibling);
+    }
+
+    // Test PA EML button under PDF settings section if possible
+    if(!swEl("swTestPaBtn")){
+      var pdfSection=[].slice.call(document.querySelectorAll(".settings-header span:first-child")).filter(function(s){return s.textContent.indexOf("PDF")>=0})[0];
+      if(pdfSection){
+        var body=pdfSection.closest(".settings-header").nextElementSibling;
+        if(body){
+          var div=document.createElement("div");
+          div.style.cssText="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap";
+          div.innerHTML='<button id="swTestPaBtn" onclick="swCreateTestPaEML()" style="padding:7px 14px;background:#1e293b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700">Test PA EML Oluştur</button><span style="font-size:10px;color:#64748b">PDF/imza değişikliğinden sonra örnek EML indirip Outlook’ta kontrol etmek için.</span>';
+          body.appendChild(div);
+        }
+      }
+    }
+    renderActiveAssetSnapshot();
+  };
+
+  function getPaDateWindow(){
+    var base=swEl("paDate")?swEl("paDate").value:"";
+    var mode=swEl("paWindow")?swEl("paWindow").value:"single";
+    var start=swDateObj(base)||new Date();
+    start=new Date(start.getFullYear(),start.getMonth(),start.getDate());
+    var end=new Date(start);
+    if(mode==="3") end.setDate(start.getDate()+3);
+    else if(mode==="5") end.setDate(start.getDate()+5);
+    else if(mode==="weekend"){
+      var d=start.getDay();
+      var add=(6-d+7)%7;
+      start.setDate(start.getDate()+add);
+      end=new Date(start);end.setDate(start.getDate()+1);
+    }
+    return {mode:mode,start:start,end:end,startISO:localISO(start),endISO:localISO(end)};
+  }
+  window.getPaDateWindow=getPaDateWindow;
+
+  // Override PA filter to support arrival windows
+  window.paApplyFilter=function(){
+    if(!paRawParsed.length) return;
+    var win=getPaDateWindow();
+    paGuests=[]; window.paGuests=paGuests;
+    for(var i=0;i<paRawParsed.length;i++){
+      var g=paRawParsed[i];
+      if(!g.arrDate) continue;
+      var ad=parseDDMMYY(g.arrDate);
+      if(!ad) continue;
+      var gd=new Date(ad.getFullYear(),ad.getMonth(),ad.getDate());
+      if(gd<win.start || gd>win.end) continue;
+      var _paEmail=lookupRehberEmail(g.surname,g.firstName);
+      var _paInco=!!g.incognito;
+      paGuests.push({
+        room:g.room,firstName:g.firstName,surname:g.surname,
+        editSurname:g.editSurname,title:g.title,lang:g.lang,
+        email:_paEmail,
+        mailSent:false,
+        skipReason:_paInco?"incognito":(!_paEmail?"no_email":""),
+        incognito:_paInco,
+        nights:g.nights,arrDate:g.arrDate,depDate:g.depDate,
+        prevStays:g.prevStays||0,chl:g.chl||0,
+        travelAgent:g.travelAgent||"",company:g.company||"",
+        resComments:g.resComments||"",webNotes:g.webNotes||"",
+        specials:g.specials||"",srcCode:g.srcCode||"",
+        confNo:g.confNo||""
+      });
+    }
+    renderPaTable();
+    var st=swEl("paStatus");
+    var label=win.startISO===win.endISO?win.startISO:(win.startISO+" → "+win.endISO);
+    if(paGuests.length){
+      st.innerHTML='<span style="color:#059669">&#10003; '+paGuests.length+' misafir ('+label+') — toplam '+paRawParsed.length+' kayıt</span>';
+    }else{
+      st.innerHTML='<span style="color:#dc2626">Bu aralık için misafir bulunamadı'+(paRawParsed.length?' (PDF\'de '+paRawParsed.length+' kayıt var)':'')+'</span>';
+    }
+  };
+
+  function parseMonthFromAssetName(name){
+    name=String(name||"").toLowerCase();
+    var months=[
+      [0,/\b(jan|january|ocak|01)\b/],[1,/\b(feb|february|şubat|subat|02)\b/],[2,/\b(mar|march|mart|03)\b/],
+      [3,/\b(apr|april|nisan|04)\b/],[4,/\b(may|mayıs|mayis|05)\b/],[5,/\b(jun|june|haziran|06)\b/],
+      [6,/\b(jul|july|temmuz|07)\b/],[7,/\b(aug|august|ağustos|agustos|08)\b/],[8,/\b(sep|sept|september|eylül|eylul|09)\b/],
+      [9,/\b(oct|october|ekim|10)\b/],[10,/\b(nov|november|kasım|kasim|11)\b/],[11,/\b(dec|december|aralık|aralik|12)\b/]
+    ];
+    for(var i=0;i<months.length;i++){if(months[i][1].test(name))return months[i][0];}
+    return null;
+  }
+  window.swGetMonthlyCompatibility=function(arrIso){
+    var store=getEmailPdfStore();
+    var monthly=store.monthly;
+    if(!monthly)return {level:"missing",text:"Raffles Monthly yüklenmedi."};
+    var arr=swDateObj(arrIso);
+    if(!arr)return {level:"unknown",text:"Arrival tarihi okunamadı."};
+    var m=parseMonthFromAssetName(monthly.name);
+    var source="dosya adı";
+    if(m===null && monthly.updatedAt){m=new Date(monthly.updatedAt).getMonth();source="yükleme tarihi";}
+    if(m===null)return {level:"unknown",text:"Monthly PDF ayı dosya adından anlaşılamadı: "+monthly.name};
+    if(m===arr.getMonth())return {level:"ok",text:"Monthly PDF ay uyumu OK ("+swMonthName(m)+")."};
+    return {level:"warn",text:"Arrival "+swMonthName(arr.getMonth())+"; Monthly PDF "+swMonthName(m)+" gibi görünüyor ("+source+")."};
+  };
+
+  window.explainTemplateSelection=function(guest){
+    var lang=guest.lang||"EN";
+    var isRepeat=(guest.type||"NEW")==="REPEAT"||(parseInt(guest.prevStays,10)||0)>0;
+    var ta=((guest.travelAgent||"")+(guest.company||"")+(guest.companyRaw||"")).toLowerCase();
+    var isBooking=ta.indexOf("booking")>=0;
+    var notes=((guest.resComments||"")+" "+(guest.webNotes||"")+" "+(guest.specials||"")).toLowerCase();
+    var isCeleb=/birthday|honeymoon|anniversary|wedding|celebration|cake|balloon/.test(notes);
+    var key=selectTemplate(guest);
+    var labels={pa_en_first:"Pre-Arrival EN (First)",pa_en_repeat:"Pre-Arrival EN (Repeat)",pa_tr_first:"Pre-Arrival TR (First)",pa_tr_repeat:"Pre-Arrival TR (Repeat)",bk_en_first:"Booking.com EN (First)",bk_en_repeat:"Booking.com EN (Repeat)",bk_tr_first:"Booking.com TR (First)",bk_tr_repeat:"Booking.com TR (Repeat)",so_en:"Special Occasion EN",so_tr:"Special Occasion TR"};
+    var reason=[];
+    if(guest.tplOverride)reason.push("Manuel seçildi");
+    else{
+      if(isCeleb)reason.push("Special occasion sinyali");
+      if(isBooking)reason.push("Booking.com kaynak/kanal sinyali");
+      if(isRepeat)reason.push("Repeat guest / previous stay");
+      if(!reason.length)reason.push("Standart first-stay PA");
+      reason.push("Dil: "+lang);
+    }
+    return {key:key,label:labels[key]||key,reason:reason.join(" + ")};
+  };
+
+  function renderPreviewFeatureBox(){
+    if(paSelectedIdx<0||paSelectedIdx>=paGuests.length)return;
+    var body=swEl("paPreviewBody");
+    if(!body)return;
+    var g=paGuests[paSelectedIdx];
+    var info=explainTemplateSelection(g);
+    var arrIso="";
+    var ad=parseDDMMYY(g.arrDate||"");
+    if(ad)arrIso=localISO(ad);
+    var comp=swGetMonthlyCompatibility(arrIso || (swEl("paDate")?swEl("paDate").value:""));
+    var compColor=comp.level==="ok"?"#059669":(comp.level==="warn"?"#b45309":"#dc2626");
+    var compBg=comp.level==="ok"?"#ecfdf5":(comp.level==="warn"?"#fffbeb":"#fef2f2");
+    var html='<div id="swPaFeatureBox" style="margin-bottom:10px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;color:#334155">'+
+      '<div style="font-weight:700;color:#1e293b;margin-bottom:4px">SmartWorker PA Kontrol</div>'+
+      '<div><b>Template:</b> '+esc(info.label)+'</div>'+
+      '<div><b>Seçilme sebebi:</b> '+esc(info.reason)+'</div>'+
+      '<div style="margin-top:5px;padding:5px 8px;background:'+compBg+';border-radius:5px;color:'+compColor+'"><b>Monthly:</b> '+esc(comp.text)+'</div>'+
+      '</div>';
+    var old=swEl("swPaFeatureBox"); if(old)old.remove();
+    body.insertAdjacentHTML("afterbegin",html);
+  }
+
+  var _swOrigPaRefreshPreview=window.paRefreshPreview;
+  window.paRefreshPreview=function(){
+    _swOrigPaRefreshPreview.apply(this,arguments);
+    renderPreviewFeatureBox();
+  };
+
+  window.renderActiveAssetSnapshot=function(){
+    var el=swEl("swActiveAssetSnapshot");
+    if(!el)return;
+    var pdf=getEmailPdfStore();
+    var img=getInlineImageStore();
+    function row(label,item,type){
+      if(!item)return '<div><b>'+label+':</b> <span style="color:#dc2626">Yüklenmedi</span></div>';
+      var extra=item.updatedAt?' · '+swLocalDateTime(item.updatedAt):'';
+      var size=item.data?' · '+swFmtBytesFromB64(item.data):'';
+      return '<div><b>'+label+':</b> <span style="color:#059669">'+esc(item.name||"Yüklü")+'</span><span style="color:#64748b">'+extra+size+'</span></div>';
+    }
+    var monthly=pdf.monthly?swGetMonthlyCompatibility(swEl("paDate")?swEl("paDate").value:localISO(new Date())):null;
+    el.innerHTML='<div style="font-weight:700;color:#1e293b;margin-bottom:6px">Aktif PA Paketi / Gönderim Ayarları</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 14px">'+
+      '<div>'+row("Preference Form EN",pdf.pref_form_en)+row("Preference Form TR",pdf.pref_form_tr)+row("Raffles Monthly",pdf.monthly)+(monthly?'<div style="font-size:10px;color:'+(monthly.level==="ok"?'#059669':monthly.level==="warn"?'#b45309':'#dc2626')+'"><b>Monthly kontrol:</b> '+esc(monthly.text)+'</div>':'')+'</div>'+ 
+      '<div>'+row("İmza / Logo",img.sig_image)+row("Banner",img.banner_image)+'<div><b>PD From:</b> '+esc(getPdFromAddress()||"Outlook varsayılanı")+'</div><div><b>PA From:</b> '+esc(getPaFromAddress()||"Outlook varsayılanı")+'</div><div><b>Sender:</b> '+(getSenderAddress()?'<span style="color:#059669">'+esc(getSenderAddress())+'</span>':'<span style="color:#dc2626">Boş</span>')+'</div></div>'+ 
+      '</div><div style="margin-top:6px;color:#64748b">Not: PDF veya imza değişiklikleri yalnızca bundan sonra oluşturulan EML/ZIP dosyalarına uygulanır.</div>';
+  };
+
+  // Wrap status renderers to update snapshot
+  if(window.renderPdfStatus){
+    var _swBaseRenderPdfStatus=window.renderPdfStatus;
+    window.renderPdfStatus=async function(){var r=await _swBaseRenderPdfStatus.apply(this,arguments);renderActiveAssetSnapshot();return r;};
+  }
+  if(window.renderImageStatus){
+    var _swBaseRenderImageStatus=window.renderImageStatus;
+    window.renderImageStatus=function(){var r=_swBaseRenderImageStatus.apply(this,arguments);renderActiveAssetSnapshot();return r;};
+  }
+
+  // Strengthen PA PDF pre-flight with month compatibility warning
+  var _swBaseCheckPaPdf=window.checkPaPdfAttachmentsBeforeSend;
+  window.checkPaPdfAttachmentsBeforeSend=function(guests){
+    var ok=_swBaseCheckPaPdf.apply(this,arguments);
+    if(!ok)return false;
+    guests=guests||[];
+    var arrIso="";
+    if(guests.length&&guests[0].arrDate){var ad=parseDDMMYY(guests[0].arrDate);if(ad)arrIso=localISO(ad);}
+    if(!arrIso && swEl("paDate"))arrIso=swEl("paDate").value;
+    var comp=swGetMonthlyCompatibility(arrIso);
+    if(comp.level==="warn"||comp.level==="unknown"){
+      return confirm(comp.text+"\n\nYine de devam etmek istiyor musunuz?");
+    }
+    return true;
+  };
+
+  // OSR import quality summary wrapper
+  if(window.handleOSRPdf){
+    var _swOrigHandleOSRPdf=window.handleOSRPdf;
+    window.handleOSRPdf=async function(file){
+      var before=getRehberContacts();
+      var beforeJson={};
+      Object.keys(before).forEach(function(k){beforeJson[k]=JSON.stringify(before[k]||{})});
+      var channelSkipped=0,pmSkipped=0;
+      var oldLog=console.log;
+      console.log=function(){
+        try{
+          var first=String(arguments[0]||"");
+          if(first.indexOf("[OSR SKIP EMAIL]")>=0)channelSkipped++;
+          if(first.indexOf("[OSR SKIP PM]")>=0)pmSkipped++;
+        }catch(e){}
+        oldLog.apply(console,arguments);
+      };
+      try{await _swOrigHandleOSRPdf.apply(this,arguments);}finally{console.log=oldLog;}
+      var after=getRehberContacts();
+      var keys=Object.keys(after);
+      var added=0,changed=0,email=0,phone=0;
+      keys.forEach(function(k){
+        var was=beforeJson[k];
+        var now=JSON.stringify(after[k]||{});
+        if(!was)added++;
+        if(!was||was!==now){changed++; if(after[k].email)email++; if(after[k].phone||after[k].phoneNum)phone++;}
+      });
+      var box=swEl("swOsrSummary");
+      if(!box){
+        box=document.createElement("div");box.id="swOsrSummary";box.style.cssText="margin:10px 0;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;color:#334155";
+        var info=document.querySelector("#page-rehber .settings-info");
+        if(info&&info.parentNode)info.parentNode.insertBefore(box,info.nextSibling);
+      }
+      box.innerHTML='<b>OSR Import Kalite Özeti</b><br>'+
+        'Toplam rehber: '+keys.length+' · Yeni kayıt: '+added+' · Güncellenen/değişen: '+changed+'<br>'+
+        'Bu importta email bulunan: '+email+' · Telefon bulunan: '+phone+' · Kanal emaili atlanan: '+channelSkipped+' · PM folio atlanan: '+pmSkipped;
+    };
+  }
+
+  window.swCreateTestPaEML=async function(){
+    await ensureEmailPdfStoreLoaded();
+    await ensureInlineImageStoreLoaded();
+    var g={room:"TEST",firstName:"Test",surname:"Guest",editSurname:"Guest",title:"Mr.",lang:"EN",email:"smartworker.test@example.invalid",nights:2,arrDate:"",depDate:"",prevStays:0,chl:0,travelAgent:"",company:"",resComments:"",webNotes:"",specials:""};
+    if(!checkSenderWarning("pa"))return;
+    if(!checkPaPdfAttachmentsBeforeSend([g]))return;
+    var tplKey=selectTemplate(g);
+    var subj="[TEST] "+(g.lang==="TR"?getPaTpl("tr_subj"):getPaTpl("en_subj"));
+    var html=getTemplateHtml(tplKey);
+    if(!html){alert("Test için PA şablonu bulunamadı.");return;}
+    html=injectName(html,g.title,g.editSurname);
+    var imgStore=getInlineImageStore();
+    if(!imgStore.sig_image||!imgStore.sig_image.data) imgStore.sig_image=DEFAULT_SIG_IMAGE;
+    if(!imgStore.banner_image||!imgStore.banner_image.data) imgStore.banner_image=DEFAULT_BANNER_IMAGE;
+    if(imgStore.sig_image) html=html.replace(/src="cid:[^"]*"/,'src="data:'+imgStore.sig_image.mime+';base64,'+imgStore.sig_image.data+'"');
+    if(imgStore.banner_image) html=html.replace(/src="cid:[^"]*"/,'src="data:'+imgStore.banner_image.mime+';base64,'+imgStore.banner_image.data+'"');
+    html=html.replace(/src="cid:[^"]*"/g,'src=""');
+    html=html.replace(/cid:[0-9a-f][-0-9a-f]*/gi,'');
+    html=html.replace(/href="https:\/\/www\.raffles\.com\/istanbul\/offers\/Explore-Istanbul\/"/g,'href="'+getBannerLink()+'"');
+    html=addSmartWorkerMarker(html,"pa");
+    var store=getEmailPdfStore();
+    var attachments=[];
+    if(store.pref_form_en)attachments.push({name:store.pref_form_en.name,data:store.pref_form_en.data});
+    if(store.monthly)attachments.push({name:store.monthly.name,data:store.monthly.data});
+    var eml=generateEML(g.email,getPaTpl("bcc"),subj,html,attachments,[],getPaFromAddress(),"pa");
+    downloadEML("TEST_PA_EML_DO_NOT_SEND.eml",eml);
+  };
+
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",swEnhanceUI);
+  else swEnhanceUI();
+  ensureEmailPdfStoreLoaded().then(function(){renderActiveAssetSnapshot();});
+})();
+
+</script>
+<script>
+/* ===== SmartWorker Attachment Filename Cleanup =====
+   Outgoing PA PDF attachment names are cleaned for guest-facing emails.
+   Stored/uploaded filenames may include timestamp prefixes for traceability;
+   EML attachments now use clean names.
+*/
+(function(){
+  function swStripUploadTimestamp(name){
+    name=String(name||"").split(/[\\/]/).pop();
+    name=name.replace(/^\d{8}[_-]\d{4,8}[_-]+/,"");
+    name=name.replace(/^\d{8}[_-]+/,"");
+    name=name.replace(/^\d{6}[_-]\d{4,8}[_-]+/,"");
+    name=name.replace(/[_]+/g,"_");
+    return name.trim()||"attachment.pdf";
+  }
+  window.swCleanPdfAttachmentName=function(storageKey,item){
+    var original=swStripUploadTimestamp(item&&item.name);
+    if(storageKey==="pref_form_en") return "Raffles Istanbul Preference Form EN.pdf";
+    if(storageKey==="pref_form_tr") return "Raffles Istanbul Preference Form TR.pdf";
+    if(storageKey==="monthly") return original || "Raffles Monthly.pdf";
+    return original;
+  };
+  window.swPdfAttachment=function(storageKey,item){
+    if(!item||!item.data)return null;
+    return {name:swCleanPdfAttachmentName(storageKey,item),data:item.data};
+  };
+
+  function swPrepareMailHtml(html,guest,module){
+    html=injectName(html,guest.title,guest.editSurname||guest.surname||guest.lastName);
+    var imgStore=getInlineImageStore();
+    if(!imgStore.sig_image||!imgStore.sig_image.data) imgStore.sig_image=DEFAULT_SIG_IMAGE;
+    if(!imgStore.banner_image||!imgStore.banner_image.data) imgStore.banner_image=DEFAULT_BANNER_IMAGE;
+    if(imgStore.sig_image) html=html.replace(/src="cid:[^"]*"/,'src="data:'+imgStore.sig_image.mime+';base64,'+imgStore.sig_image.data+'"');
+    if(imgStore.banner_image) html=html.replace(/src="cid:[^"]*"/,'src="data:'+imgStore.banner_image.mime+';base64,'+imgStore.banner_image.data+'"');
+    html=html.replace(/src="cid:[^"]*"/g,'src=""');
+    html=html.replace(/cid:[0-9a-f][-0-9a-f]*/gi,'');
+    html=html.replace(/href="https:\/\/www\.raffles\.com\/istanbul\/offers\/Explore-Istanbul\/"/g,'href="'+getBannerLink()+'"');
+    return addSmartWorkerMarker(html,module);
+  }
+
+  function swBuildPaAttachmentsForGuest(guest){
+    var store=getEmailPdfStore();
+    var attachments=[];
+    var lang=(guest.lang||"EN");
+    var pfKey=lang==="TR"?"pref_form_tr":"pref_form_en";
+    var pf=swPdfAttachment(pfKey,store[pfKey]);
+    var monthly=swPdfAttachment("monthly",store.monthly);
+    if(pf)attachments.push(pf);
+    if(monthly)attachments.push(monthly);
+    return attachments;
+  }
+  window.swBuildPaAttachmentsForGuest=swBuildPaAttachmentsForGuest;
+
+  window.buildSingleEML=function(guest,module){
+    var tplKey,subj,bcc;
+    if(module==="pd"){
+      tplKey=guest.lang==="TR"?"pd_tr":"pd_en";
+      subj=guest.lang==="TR"?getPdTpl("tr_subj"):getPdTpl("en_subj");
+      bcc=getPdTpl("bcc");
+    }else{
+      tplKey=selectTemplate(guest);
+      subj=guest.lang==="TR"?getPaTpl("tr_subj"):getPaTpl("en_subj");
+      bcc=getPaTpl("bcc");
+    }
+    var html=getTemplateHtml(tplKey);
+    if(!html)return null;
+    html=swPrepareMailHtml(html,guest,module);
+    var attachments=(module==="pa")?swBuildPaAttachmentsForGuest(guest):[];
+    return generateEML(guest.email||"",bcc,subj,html,attachments,[],(module==="pd"?getPdFromAddress():getPaFromAddress()),module);
+  };
+
+  window.buildMailEML=function(guest,templateKey,subject,bcc,module){
+    var html=getTemplateHtml(templateKey);
+    if(!html){alert("Sablon bulunamadi: "+templateKey);return;}
+    html=swPrepareMailHtml(html,guest,module);
+    var attachments=(module==="pa")?swBuildPaAttachmentsForGuest(guest):[];
+    var fromAddr=module==="pd"?getPdFromAddress():getPaFromAddress();
+    var eml=generateEML(guest.email||"",bcc,subject,html,attachments,[],fromAddr,module);
+    var fn=module+"_"+safeFn(guest.editSurname||guest.surname||guest.lastName||"guest")+"_"+(guest.room||"")+".eml";
+    downloadEML(fn,eml);
+  };
+
+  if(window.swCreateTestPaEML){
+    window.swCreateTestPaEML=async function(){
+      await ensureEmailPdfStoreLoaded();
+      await ensureInlineImageStoreLoaded();
+      var g={room:"TEST",firstName:"Test",surname:"Guest",editSurname:"Guest",title:"Mr.",lang:"EN",email:"smartworker.test@example.invalid",nights:2,arrDate:"",depDate:"",prevStays:0,chl:0,travelAgent:"",company:"",resComments:"",webNotes:"",specials:""};
+      if(!checkSenderWarning("pa"))return;
+      if(!checkPaPdfAttachmentsBeforeSend([g]))return;
+      var tplKey=selectTemplate(g);
+      var subj="[TEST] "+(g.lang==="TR"?getPaTpl("tr_subj"):getPaTpl("en_subj"));
+      var html=getTemplateHtml(tplKey);
+      if(!html){alert("Test için PA şablonu bulunamadı.");return;}
+      html=swPrepareMailHtml(html,g,"pa");
+      var eml=generateEML(g.email,getPaTpl("bcc"),subj,html,swBuildPaAttachmentsForGuest(g),[],getPaFromAddress(),"pa");
+      downloadEML("TEST_PA_EML_DO_NOT_SEND.eml",eml);
+    };
+  }
+
+  if(window.renderPdfStatus){
+    var _swCleanBaseRenderPdfStatus=window.renderPdfStatus;
+    window.renderPdfStatus=async function(){
+      var r=await _swCleanBaseRenderPdfStatus.apply(this,arguments);
+      try{
+        var store=getEmailPdfStore();
+        ["pref_form_en","pref_form_tr","monthly"].forEach(function(k){
+          var el=document.getElementById("pdfSt_"+k);
+          if(el&&store[k]){
+            el.innerHTML += ' <span style="color:#64748b">→ Ek adı: '+esc(swCleanPdfAttachmentName(k,store[k]))+'</span>';
+          }
+        });
+        if(typeof renderActiveAssetSnapshot==="function")renderActiveAssetSnapshot();
+      }catch(e){}
+      return r;
+    };
+  }
+})();
 </script>
 
 <!-- ===== ELLE KAYIT EKLEME MODAL ===== -->
@@ -4369,5 +5779,99 @@ function buildMailEML(guest,templateKey,subject,bcc,module){
 </div>
 </div>
 
+
+
+<script>
+/* ===== MAIL HISTORY PARSER REPAIR v8 =====
+   OSR parser'daki eski PM/POS/Segment bulaşmaları mail kayıtlarına geçmişse temizler.
+   Ayrıca bundan sonra oluşturulan mail history key'lerini temiz isimle üretir. */
+(function(){
+  function _norm(s){return String(s||"").replace(/\uFFFE/g," ").replace(/[\u0000-\u001f\u007f-\u009f]/g," ").replace(/\s+/g," ").trim();}
+  window.swCleanMailNamePart=function(part){
+    var s=_norm(part);
+    if(!s)return "";
+    s=s.replace(/([a-zçğıöşü])([A-ZÇĞİÖŞÜ])/g,"$1 $2");
+    s=s.replace(/\s+/g," ").trim();
+    var patterns=[
+      /\b9\d{3}\b/i,/\bRaffles\s+Spa\b/i,/\bLost\s+Posting\b/i,/\bPOS\b/i,
+      /\bVisa\b/i,/\bMaster(?:\s*card)?\b/i,/\bAmerican\s+Express\b/i,/\bExpress\b/i,
+      /\bDiners?\b/i,/\bDiscover\b/i,/\bJCB\b/i,/\bEFT\b/i,/\bCredit\s+Card\b/i,
+      /\bGift\s+Card\b/i,/\bPOINT\b/i,/\bOdenmez\b/i,/\bIndirim\b/i,/\bSegment\b/i,
+      /\bFull\s+Name\b/i,/\bArrival\b/i,/\bDeparture\b/i,/\bCountry\b/i,/\bNationality\b/i,/\bResv\.?\s*Status\b/i
+    ];
+    var cut=-1;
+    for(var i=0;i<patterns.length;i++){
+      var m=s.match(patterns[i]);
+      if(m && (cut<0 || m.index<cut))cut=m.index;
+    }
+    if(cut>=0)s=s.slice(0,cut);
+    s=s.replace(/[,:;]+$/g,"").replace(/\s+/g," ").trim();
+    return s;
+  };
+  function swIsBadHistoryName(sn,fn){
+    var full=_norm((sn||"")+" "+(fn||""));
+    if(!full)return true;
+    if(/^9\d{3}(\s|$)/.test(full))return true;
+    if(/^(segment|full name|arrival|departure|country|nationality|email|phone|resv\.? status)$/i.test(full))return true;
+    if(/^(hold hold|valued guest guest|guest valued|guest dear|no name no name|no name|test test|parking parking)$/i.test(full))return true;
+    if(/\b(raffles spa|lost posting|pos cash|pos visa|pos mastercard|pos american|credit card|gift card|odenmez|indirim)\b/i.test(full))return true;
+    return false;
+  }
+  function swCleanHistoryEmail(e){
+    e=String(e||"").replace(/\uFFFE/g,"").replace(/\s+/g,"").toLowerCase();
+    var m=e.match(/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i);
+    return m?m[0]:"";
+  }
+  function swReadRawMailHistory(){try{var s=localStorage.getItem("mail_history");return s?JSON.parse(s):{}}catch(e){return{}}}
+  function swWriteRawMailHistory(h){localStorage.setItem("mail_history",JSON.stringify(h||{}));}
+  function swMakeHistoryKey(sn,fn){return normTR(String(sn||"")+","+String(fn||"")).replace(/\s+/g,"").replace(/[.]/g,"");}
+  window.swRepairMailHistoryStorage=function(force){
+    var ver=localStorage.getItem("km_mail_history_repaired_v8")||"";
+    if(ver==="1" && !force)return 0;
+    var h=swReadRawMailHistory();
+    var contacts={};
+    try{contacts=getRehberContacts?getRehberContacts():{};}catch(e){}
+    var out={}, changed=0, skipped=0;
+    Object.keys(h).forEach(function(oldKey){
+      var entries=Array.isArray(h[oldKey])?h[oldKey]:[];
+      var c=contacts[oldKey]||{};
+      var parts=String(oldKey).split(",");
+      entries.forEach(function(r){
+        if(!r||typeof r!=="object")return;
+        var sn=r._sn||c.surname||parts[0]||"";
+        var fn=r._fn||c.firstName||parts[1]||"";
+        var cleanSn=swCleanMailNamePart(sn);
+        var cleanFn=swCleanMailNamePart(fn);
+        if((!cleanFn || cleanFn===cleanSn) && parts.length>1){
+          cleanSn=swCleanMailNamePart(parts[0]);
+          cleanFn=swCleanMailNamePart(parts.slice(1).join(" "));
+        }
+        if(swIsBadHistoryName(cleanSn,cleanFn)){skipped++;changed++;return;}
+        var nr=Object.assign({},r);
+        if(nr.email)nr.email=swCleanHistoryEmail(nr.email)||nr.email;
+        if(cleanSn!==r._sn || cleanFn!==r._fn){nr._sn=cleanSn;nr._fn=cleanFn;changed++;}
+        var nk=swMakeHistoryKey(cleanSn,cleanFn);
+        if(!out[nk])out[nk]=[];
+        var dup=out[nk].some(function(x){
+          return x.date===nr.date && x.type===nr.type && (!!x.skip)===(!!nr.skip) && (x.reason||"")===(nr.reason||"") && (x.butler||"")===(nr.butler||"");
+        });
+        if(!dup)out[nk].push(nr); else changed++;
+        if(nk!==oldKey)changed++;
+      });
+    });
+    if(changed){swWriteRawMailHistory(out);}
+    localStorage.setItem("km_mail_history_repaired_v8","1");
+    if(changed)console.log("[SmartWorker] Mail history repaired:",changed,"changes/skips:",skipped);
+    return changed;
+  };
+  window.mailHistoryKey=function(surname,firstName){return swMakeHistoryKey(swCleanMailNamePart(surname),swCleanMailNamePart(firstName));};
+  var _baseRecordMail=window.recordMail;
+  if(_baseRecordMail){window.recordMail=function(surname,firstName,type,butler,extra){return _baseRecordMail.call(this,swCleanMailNamePart(surname),swCleanMailNamePart(firstName),type,butler,extra);};}
+  var _baseRecordSkip=window.recordSkip;
+  if(_baseRecordSkip){window.recordSkip=function(surname,firstName,type,reason,butler,extra){return _baseRecordSkip.call(this,swCleanMailNamePart(surname),swCleanMailNamePart(firstName),type,reason,butler,extra);};}
+  window.getMailHistory=function(){swRepairMailHistoryStorage(false);return swReadRawMailHistory();};
+  try{swRepairMailHistoryStorage(false);}catch(e){console.error("Mail history repair error",e);}
+})();
+</script>
 </body>
 </html>
