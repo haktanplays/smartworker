@@ -933,6 +933,21 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 
+<!-- ===== KURULUM SIHIRBAZI (2026-10-29) ===== -->
+<div id="setupBanner" style="display:none;background:#fef3c7;border-bottom:1px solid #fbbf24;color:#92400e;font-size:12px;padding:7px 14px;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap"></div>
+<div id="setupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:520;align-items:center;justify-content:center" onclick="if(event.target===this)closeSetupModal()">
+<div style="background:#fff;border-radius:14px;padding:22px 24px;max-width:560px;width:94%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.25)">
+<h3 style="font-size:17px;color:#1e293b;margin-bottom:4px">SmartWorker Kurulumu</h3>
+<p style="font-size:12px;color:#6b7280;line-height:1.6;margin-bottom:12px">Bir kez ortak klasörü seçmen yeter: senkron dosyaları, <b>Yedekler</b> klasörü ve günlük otomatik yedek kendiliğinden kurulur. Yeni bir bilgisayarda aynı klasörü seçince tüm veriler oradan gelir.</p>
+<div id="setupList"></div>
+<input type="file" id="swRestoreInput" accept=".json,application/json" style="display:none" onchange="swRestoreFile(this.files[0]);this.value=''">
+<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb">
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" style="font-size:11px" onclick="document.getElementById('swRestoreInput').click()">Yedekten geri yükle</button><button class="btn" style="font-size:11px;color:#6b7280" onclick="closeSetupModal();openSyncModal()">Gelişmiş</button></div>
+<div style="display:flex;gap:8px"><button class="btn" style="font-size:12px" onclick="swSetupSnooze()">Daha sonra</button><button class="btn btn-primary" style="font-size:12px" onclick="closeSetupModal()">Kapat</button></div>
+</div>
+</div>
+</div>
+
 <!-- ===== LETTERS PAGE ===== -->
 <div class="page active" id="page-letters">
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
@@ -1651,6 +1666,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <h2 style="margin:0">Ayarlar</h2>
 <p class="hint" style="margin:6px 0 0">Her bolum ilgili module aittir. Degisiklikler localStorage'a kaydedilir. Basliga tiklayarak ac/kapa.</p>
 </div>
+<div id="setupPanel" style="padding:14px 18px;border-bottom:1px solid #e5e7eb"></div>
 
 <!-- Traces Board ayar bolumu 2026-08-16'da kaldirildi (kw_equip/amenity/deco/action verileri localStorage'da duruyor, zarar yok). -->
 
@@ -2523,7 +2539,7 @@ async function syncCreateNew(){
 function closeSyncModal(){var m=document.getElementById("syncModal");if(m)m.style.display="none"}
 function syncBtnClick(){
   if(!syncSupported()){alert("Bu tarayici ortak dosya senkronunu desteklemiyor. Edge veya Chrome kullanin.");return}
-  if(!_syncHandle&&!_pyDirHandle){var m=document.getElementById("syncModal");if(m)m.style.display="flex";return}
+  if(!_syncHandle&&!_pyDirHandle){openSetupModal();return} // 2026-10-29: kurulum sihirbazi (eski modal "Gelismis" altinda)
   (async function(){
     if(_syncHandle)await syncNow(false);
     if(_pyDirHandle)await pySyncNow(false);
@@ -2544,8 +2560,8 @@ function updateSyncUI(state,msg){
   var dot=function(c){return '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+c+';margin-right:4px;vertical-align:1px"></span>'};
   if(state==="busy"){btn.innerHTML=dot("#fbbf24")+"Senkron...";return}
   if(state==="error"){btn.innerHTML=dot("#ef4444")+"Senkronla";st.textContent="hata";btn.title=msg||"";return}
-  if(state==="need-perm"){btn.innerHTML=dot("#fbbf24")+"Senkronla";st.textContent="izin icin tikla";return}
-  if(!_syncHandle&&!_pyDirHandle){btn.innerHTML=dot("#9ca3af")+"Sync Kur";st.textContent="";btn.title="Ortak hafiza senkronu kur";return}
+  if(state==="need-perm"){btn.innerHTML=dot("#fbbf24")+"Senkronla";st.textContent="izin icin tikla";if(typeof swSetupRefresh==="function")setTimeout(swSetupRefresh,0);return}
+  if(!_syncHandle&&!_pyDirHandle){btn.innerHTML=dot("#9ca3af")+"Kurulum";st.textContent="";btn.title="Ortak klasör, senkron ve otomatik yedek kurulumu";return}
   var gl=null,pl=null;
   try{gl=JSON.parse(localStorage.getItem("sw_sync_last")||"null")}catch(e){}
   try{pl=JSON.parse(localStorage.getItem("sw_py_sync_last")||"null")}catch(e){}
@@ -2581,6 +2597,190 @@ function initSync(){
       }).catch(function(){updateSyncUI("need-perm")});
     }else{pySyncNow(true)}
   });
+}
+
+// ===== KURULUM SIHIRBAZI (2026-10-29): ortak klasor + kalici depolama + gunluk otomatik yedek =====
+// Haktan: "kurulumunu kendisi yapmali, dosya yedek lokasyonu vs hepsini kendisi ayarlamali".
+// Tarayici guvenligi geregi klasoru kullanici BIR KEZ secer (showDirectoryPicker); gerisi otomatik:
+//  - klasor tutamaci IndexedDB'de saklanir (pyDir); PY, BDI, issue, misafir hafizasi ve ayar senkron dosyalari buraya yazilir
+//  - mektup/misafir gecmisi dosyasi (smartworker_sync.json) secili degilse ayni klasorde olusturulur
+//  - "Yedekler" alt klasorune her gun tam yedek: son 14 gun + her ayin 1'i (12 ay) tutulur, eskiler silinir
+//  - navigator.storage.persist(): tarayici yer daralinca IndexedDB'yi kendiliginden silmesin
+//  - sonraki acilislarda izin istenirse ustte tek tikla bant; ilk acilista kurulum yoksa sihirbaz kendisi acilir
+//  - Expense istenirse ayni klasorun "Expense" alt klasorune baglanir (ayni origin: Expense'in tutamac deposuna yazilir)
+var SW_BACKUP_DIR="Yedekler",SW_BACKUP_KEEP_DAYS=14,SW_BACKUP_RE=/^smartworker_yedek_(\d{4}-\d{2}-\d{2})\.json$/;
+var _swBackupBusy=false,_swRefreshT=null;
+function swPerm(h,ask){
+  if(!h)return Promise.resolve("none");
+  if(typeof h.queryPermission!=="function")return Promise.resolve("granted");
+  return h.queryPermission({mode:"readwrite"}).then(function(p){return (p!=="granted"&&ask)?h.requestPermission({mode:"readwrite"}):p}).catch(function(){return "prompt"});
+}
+function swAddDays(ymd,n){var d=new Date(ymd+"T12:00:00");d.setDate(d.getDate()+n);return bdiYmd(d)}
+function swBackupLast(){try{return JSON.parse(localStorage.getItem("sw_backup_last")||"null")}catch(e){return null}}
+function swSetupSnoozed(){return localStorage.getItem("sw_setup_snooze")===getToday()}
+function swSetupSnooze(){localStorage.setItem("sw_setup_snooze",getToday());closeSetupModal()}
+function openSetupModal(){var m=document.getElementById("setupModal");if(m)m.style.display="flex";swSetupRefresh()}
+function closeSetupModal(){var m=document.getElementById("setupModal");if(m)m.style.display="none"}
+function swSetupTryPersist(){
+  if(!(navigator.storage&&navigator.storage.persist))return Promise.resolve(null);
+  return navigator.storage.persisted().then(function(ok){return ok||navigator.storage.persist()}).then(function(ok){swSetupRefresh();return ok}).catch(function(){return null});
+}
+// Mektup gecmisi dosyasi: secili degilse ortak klasorde olusturulur. Klasorun icindeyse klasorden yeniden alinir
+// (yeni tutamac klasorun iznini tasir; ayrica izin istenmez).
+async function swEnsureGuestFile(dir){
+  try{
+    if(_syncHandle){
+      var path=null;try{path=await dir.resolve(_syncHandle)}catch(e){}
+      if(path&&path.length===1){_syncHandle=await dir.getFileHandle(path[0]);await _syncPutHandle(_syncHandle)}
+      return !!path;
+    }
+    _syncHandle=await dir.getFileHandle("smartworker_sync.json",{create:true});
+    await _syncPutHandle(_syncHandle);
+    return true;
+  }catch(e){console.warn("Mektup gecmisi dosyasi ayarlanamadi:",e);return false}
+}
+function swExpIdb(){return new Promise(function(res,rej){var r=indexedDB.open("sw_expense_sync",1);r.onupgradeneeded=function(){r.result.createObjectStore("handles")};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
+function swExpGet(){return swExpIdb().then(function(db){return new Promise(function(res){var rq=db.transaction("handles","readonly").objectStore("handles").get("dir");rq.onsuccess=function(){res(rq.result||null)};rq.onerror=function(){res(null)}})}).catch(function(){return null})}
+async function swConnectExpense(){
+  var dir=_pyDirHandle;if(!dir)return openSetupModal();
+  if((await swPerm(dir,true))!=="granted")return;
+  try{
+    var sub=await dir.getDirectoryHandle("Expense",{create:true}),db=await swExpIdb();
+    await new Promise(function(res,rej){var tx=db.transaction("handles","readwrite");tx.objectStore("handles").put(sub,"dir");tx.oncomplete=res;tx.onerror=function(){rej(tx.error)}});
+    bdiToast("Expense, "+dir.name+"/Expense klasörüne bağlandı. Expense'i açınca kendisi senkronlar.");
+  }catch(e){alert("Expense bağlanamadı: "+((e&&e.message)||e))}
+  swSetupRefresh();
+}
+async function swSetupPickFolder(){
+  if(typeof window.showDirectoryPicker!=="function")return alert("Bu tarayıcı klasör seçmeyi desteklemiyor. SmartWorker'ı Edge (ya da Chrome) ile açın.");
+  var h;
+  try{h=await window.showDirectoryPicker({id:"smartworker",mode:"readwrite"})}catch(e){if(e&&e.name!=="AbortError")alert("Klasör seçilemedi: "+e.message);return}
+  _pyDirHandle=h;await _pyDirPut(h).catch(function(){});
+  swSetupTryPersist();
+  try{await h.getDirectoryHandle(SW_BACKUP_DIR,{create:true})}catch(e){}
+  await swEnsureGuestFile(h);
+  try{if(_syncHandle)await syncNow(true)}catch(e){}
+  await pySyncNow(false);
+  await swBackupNow(true);
+  swSetupRefresh();
+  var pl=null;try{pl=JSON.parse(localStorage.getItem("sw_py_sync_last")||"null")}catch(e){}
+  var got=pl?(pl.got||0)+(pl.gotB||0)+(pl.gotS||0)+(pl.gotP||0):0;
+  bdiToast("Kurulum tamam: "+h.name+" bağlandı"+(got?", diğer bilgisayarlardan "+got+" kayıt geldi":"")+". Senkron ve günlük yedek çalışıyor.");
+}
+// Sonraki acilislar: tarayici izni yeniden sorarsa tek tik (kullanici hareketi sart)
+async function swSetupGrant(){
+  var h=_pyDirHandle||await _pyDirGet();
+  if(!h)return openSetupModal();
+  _pyDirHandle=h;
+  if((await swPerm(h,true))!=="granted"){swSetupRefresh();return}
+  await swEnsureGuestFile(h);
+  try{if(_syncHandle&&(await swPerm(_syncHandle))==="granted")await syncNow(true)}catch(e){}
+  await pySyncNow(false);
+  await swBackupNow(true);
+  swSetupRefresh();
+}
+async function swPruneBackups(bd,today){
+  var keepFrom=swAddDays(today,-(SW_BACKUP_KEEP_DAYS-1)),monthFrom=swAddDays(today,-365),del=[];
+  for await (var e of bd.values()){var m=e.kind==="file"&&SW_BACKUP_RE.exec(e.name);if(!m)continue;var d=m[1];if(!(d>=keepFrom||(d.slice(8)==="01"&&d>=monthFrom)))del.push(e.name)}
+  for(var i=0;i<del.length;i++){try{await bd.removeEntry(del[i])}catch(x){}}
+  return del.length;
+}
+// Tam yedek: BDI deposu (IndexedDB) + misafir hafizasi + bu tarayicidaki tum localStorage (Expense, Minibar, KM dahil).
+// isAuto: gunde bir kez; izin yoksa sessizce atlanir.
+async function swBackupNow(isAuto){
+  if(_swBackupBusy)return;
+  var dir=_pyDirHandle;if(!dir){if(!isAuto)openSetupModal();return}
+  var today=getToday(),last=swBackupLast();
+  if(isAuto&&last&&last.day===today)return;
+  if((await swPerm(dir,!isAuto))!=="granted"){swSetupRefresh();return}
+  _swBackupBusy=true;
+  try{
+    await BdiKV.ready();
+    var bdi={};BdiKV.keys().forEach(function(k){bdi[k]=BdiKV.get(k)});
+    var ls={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);ls[k]=localStorage.getItem(k)}
+    var gm=null;try{await bdiGMLoad();gm=bdiGMExportObj()}catch(e){}
+    var payload=JSON.stringify({version:1,app:"SmartWorker",kind:"full-backup",created:new Date().toISOString(),day:today,bdi:bdi,guestMemory:gm,localStorage:ls});
+    var bd=await dir.getDirectoryHandle(SW_BACKUP_DIR,{create:true}),name="smartworker_yedek_"+today+".json";
+    var fh=await bd.getFileHandle(name,{create:true}),w=await fh.createWritable();await w.write(payload);await w.close();
+    localStorage.setItem("sw_backup_last",JSON.stringify({t:Date.now(),day:today,name:name,kb:Math.round(payload.length/1024)}));
+    localStorage.removeItem("sw_backup_err");
+    await swPruneBackups(bd,today);
+    if(!isAuto)bdiToast("Yedek alındı: "+dir.name+"/"+SW_BACKUP_DIR+"/"+name);
+  }catch(e){
+    console.warn("Yedek alinamadi:",e);localStorage.setItem("sw_backup_err",String((e&&e.message)||e));
+    if(!isAuto)alert("Yedek alınamadı: "+((e&&e.message)||e));
+  }
+  _swBackupBusy=false;swSetupRefresh();
+}
+// Geri yukleme BIRLESTIRIR, hicbir seyi silmez: BDI kayitlari id bazli (BDI yedek ice aktarma yolu), misafir hafizasi
+// olay birlesimi, diger localStorage anahtarlari sadece bu bilgisayarda YOKSA yazilir.
+async function swRestoreFile(file){
+  if(!file)return;
+  var o;try{o=JSON.parse(await file.text())}catch(e){return alert("Dosya okunamadı: "+e.message)}
+  if(!o||o.kind!=="full-backup")return alert("Bu dosya bir SmartWorker tam yedeği değil (Yedekler klasöründeki smartworker_yedek_....json dosyalarından birini seç).");
+  var bk=Object.keys(o.bdi||{}),lk=Object.keys(o.localStorage||{}).filter(function(k){return k.indexOf("bdi_")!==0&&k.indexOf("sw_backup")!==0&&k!=="sw_setup_snooze"}),gn=((o.guestMemory&&o.guestMemory.events)||[]).length;
+  var missing=lk.filter(function(k){return localStorage.getItem(k)===null});
+  if(!confirm("Yedek tarihi: "+bdiFmtD(o.day||"")+"\n\nButler Did It anahtarı: "+bk.length+"\nMisafir hafızası olayı: "+gn+"\nDiğer kayıt: "+lk.length+" (bu bilgisayarda olmayan: "+missing.length+")\n\nGeri yükleme BİRLEŞTİRİR: mevcut kayıtlar silinmez ve değiştirilmez, sadece eksikler eklenir. Devam edilsin mi?"))return;
+  var data={};bk.forEach(function(k){data[k]=o.bdi[k]});
+  if(bk.length)importBdiBackup([new File([JSON.stringify({version:"BDI_BACKUP_v1",data:data})],"geri-yukleme.json")]);
+  var gmGot=0;try{if(o.guestMemory)gmGot=await bdiGMMergeObj(o.guestMemory)}catch(e){console.warn(e)}
+  missing.forEach(function(k){try{localStorage.setItem(k,o.localStorage[k])}catch(e){}});
+  closeSetupModal();
+  bdiToast("Geri yükleme tamam: BDI kayıtları birleştirildi, "+gmGot+" misafir hafızası kaydı ve "+missing.length+" eksik ayar/kayıt eklendi.");
+  if(missing.length)setTimeout(function(){if(confirm("Ayarların tamamen yüklenmesi için sayfa yenilensin mi?"))location.reload()},400);
+}
+async function swSetupState(){
+  var s={fs:typeof window.showDirectoryPicker==="function",kv:BdiKV.mode(),migrated:BdiKV.info.migrated,persisted:null,folder:null,perm:"none",guest:null,expense:null,backup:swBackupLast(),backupErr:localStorage.getItem("sw_backup_err")||"",sync:null};
+  try{if(navigator.storage&&navigator.storage.persisted)s.persisted=await navigator.storage.persisted()}catch(e){}
+  var h=_pyDirHandle||await _pyDirGet();
+  if(h){s.folder=h.name;s.perm=await swPerm(h)}
+  if(_syncHandle){s.guest={name:_syncHandle.name,inFolder:false};if(h&&s.perm==="granted"){try{var pth=await h.resolve(_syncHandle);s.guest.inFolder=!!(pth&&pth.length)}catch(e){}}}
+  var eh=await swExpGet();if(eh)s.expense=eh.name;
+  try{s.sync=JSON.parse(localStorage.getItem("sw_py_sync_last")||"null")}catch(e){}
+  return s;
+}
+function swSetupHtml(s){
+  var row=function(st,title,detail,btn){var c={ok:["#059669","&#10003;"],warn:["#b45309","!"],bad:["#dc2626","&#10007;"],off:["#9ca3af","&middot;"]}[st];
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:'+c[0]+';color:#fff;font-weight:800;font-size:12px;display:inline-flex;align-items:center;justify-content:center">'+c[1]+'</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:#1e293b">'+title+'</div><div style="font-size:11px;color:#6b7280;line-height:1.5">'+detail+'</div></div>'+(btn||'')+'</div>'};
+  var b=function(label,fn,primary){return '<button class="btn'+(primary?' btn-primary':'')+'" style="font-size:11px;white-space:nowrap;align-self:center" onclick="'+fn+'">'+label+'</button>'};
+  var granted=s.folder&&s.perm==="granted",h='';
+  h+=s.fs?row("ok","Tarayıcı","Edge/Chrome: ortak klasör ve otomatik yedek destekleniyor."):row("bad","Tarayıcı","Bu tarayıcı ortak klasörü desteklemiyor. SmartWorker'ı <b>Edge</b> ile aç; aksi halde veriler sadece bu bilgisayarda kalır.");
+  h+=s.kv==="idb"?row("ok","Butler Did It veri deposu","Kayıtlar IndexedDB'de (5 MB sınırı yok)"+(s.migrated?"; ilk açılışta "+s.migrated+" anahtar taşındı.":".")):row("warn","Butler Did It veri deposu","IndexedDB açılamadı; kayıtlar localStorage'da (5 MB sınırı). "+esc(BdiKV.info.error||""));
+  h+=s.persisted===true?row("ok","Kalıcı depolama","Tarayıcı bu verileri yer daralsa da kendiliğinden silmez."):s.persisted===false?row("warn","Kalıcı depolama","Tarayıcı disk dolunca verileri silebilir. İzin iste; tarayıcı vermezse ortak klasördeki günlük yedek seni korur.",b("İzin iste","swSetupTryPersist()")):row("off","Kalıcı depolama","Bu tarayıcıda bilgi alınamadı.");
+  if(!s.folder)h+=row("bad","Ortak klasör","Seçilmedi. Diğer bilgisayarlarla paylaşılan klasörü (ör. ağ sürücüsündeki SmartWorker klasörü) bir kez seç.",s.fs?b("Klasörü seç","swSetupPickFolder()",1):"");
+  else if(!granted)h+=row("warn","Ortak klasör","<b>"+esc(s.folder)+"</b> seçili; tarayıcı bu açılışta tekrar izin istiyor.",b("Erişim ver","swSetupGrant()",1));
+  else h+=row("ok","Ortak klasör","<b>"+esc(s.folder)+"</b> · PY, Butler Did It, issue, misafir hafızası ve ayarlar buraya senkronlanıyor"+(s.sync&&s.sync.t?" · son senkron "+bdiFmtTs(s.sync.t):"")+".",b("Değiştir","swSetupPickFolder()"));
+  if(s.guest)h+=row(s.guest.inFolder?"ok":"warn","Mektup / misafir geçmişi",esc(s.guest.name)+(s.guest.inFolder?" (ortak klasörde)":" (ortak klasörün dışında, ayrı dosya)"));
+  else h+=row("off","Mektup / misafir geçmişi","Klasör seçilince ortak klasörde kendiliğinden oluşturulur.");
+  if(s.backup)h+=row(s.backupErr?"warn":"ok","Otomatik yedek","Son yedek: <b>"+bdiFmtTs(s.backup.t)+"</b> · "+esc(SW_BACKUP_DIR+"/"+s.backup.name)+" · "+s.backup.kb+" KB · her gün; son "+SW_BACKUP_KEEP_DAYS+" gün + aylık yedekler saklanır"+(s.backupErr?'<br><span style="color:#b45309">Son deneme hatası: '+esc(s.backupErr)+'</span>':'')+".",granted?b("Şimdi yedekle","swBackupNow(false)"):"");
+  else h+=row(granted?"warn":"off","Otomatik yedek",granted?"Henüz yedek yok.":"Ortak klasör bağlanınca her gün "+esc(SW_BACKUP_DIR)+" klasörüne tam yedek alınır.",granted?b("Şimdi yedekle","swBackupNow(false)",1):"");
+  h+=s.expense?row("ok","Expense","Expense kendi senkron klasörünü kullanıyor: <b>"+esc(s.expense)+"</b>."):row("off","Expense","Expense için klasör seçilmedi. İstersen aynı ortak klasörün <b>Expense</b> alt klasörüne bağlanır.",granted?b("Expense'i bağla","swConnectExpense()"):"");
+  return h;
+}
+function swSetupRefresh(){
+  clearTimeout(_swRefreshT);
+  _swRefreshT=setTimeout(function(){
+    swSetupState().then(function(s){
+      var html=swSetupHtml(s);
+      var a=document.getElementById("setupList");if(a)a.innerHTML=html;
+      var p=document.getElementById("setupPanel");if(p)p.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px"><h3 style="margin:0;font-size:14px;color:#1e293b">Kurulum &amp; Yedek</h3><button class="btn" style="font-size:11px" onclick="document.getElementById(\'swRestoreInput\').click()">Yedekten geri yükle</button></div>'+html;
+      var bn=document.getElementById("setupBanner");if(!bn)return;
+      if(s.folder&&s.perm!=="granted"&&s.fs){bn.innerHTML='<span>&#128274; Ortak klasör (<b>'+esc(s.folder)+'</b>) için tarayıcı bu açılışta izin istiyor. Senkron ve günlük yedek bekliyor.</span><button class="btn btn-primary" style="font-size:11px;padding:3px 12px" onclick="swSetupGrant()">Erişim ver</button>';bn.style.display="flex"}
+      else if(!s.folder&&s.fs){bn.innerHTML='<span>SmartWorker kurulumu tamamlanmadı: ortak klasör ve otomatik yedek kapalı.</span><button class="btn btn-primary" style="font-size:11px;padding:3px 12px" onclick="openSetupModal()">Kur</button>';bn.style.display="flex"}
+      else bn.style.display="none";
+    }).catch(function(e){console.warn("Kurulum durumu okunamadi:",e)});
+  },50);
+}
+async function swSetupBoot(){
+  swSetupTryPersist();
+  var h=_pyDirHandle||await _pyDirGet();
+  if(!h){if(typeof window.showDirectoryPicker==="function"&&!swSetupSnoozed())setTimeout(openSetupModal,900);swSetupRefresh();return}
+  swSetupRefresh();
+  // initSync izin varsa pySyncNow(true) baslatti: bitmesini bekle, sonra gunun yedegi
+  var t0=Date.now();
+  while((_pySyncBusy||!_pyDirHandle)&&Date.now()-t0<60000)await new Promise(function(r){setTimeout(r,500)});
+  if((await swPerm(h))==="granted")await swBackupNow(true);
+  setInterval(function(){swBackupNow(true)},3600000); // sayfa gunlerce acik kalirsa da her gun yedek
 }
 
 // ===== PY LIBRARY SYNC (tek KLASORE json + foto zip) =====
@@ -7588,6 +7788,25 @@ function importBdiBackup(files){
             if(Array.isArray(incArr)&&Array.isArray(curArr)){incArr.forEach(function(v){if(curArr.indexOf(v)<0)curArr.push(v)});BdiKV.set(key,JSON.stringify(curArr))}
             continue;
           }
+          // BDI v2 anahtarlari (2026-10-29): issue'lar id + olay birlesimi (senkronla ayni kural), issue mezar taslari kume,
+          // kat planlari tarih bazli yeni-u, PM oda mezar taslari en yeni zaman. Eskiden gunluk log yoluna dusup
+          // ilk issue disindaki hepsi "tekrar" sayiliyor, kat planlari hic alinmiyordu.
+          if(key===BDI_ISSUES_KEY||key===BDI_ISSUE_TOMBS||key==="bdi_floors_v1"||key==="bdi_pm_tombs"){
+            var incV=typeof data[key]==="string"?JSON.parse(data[key]):data[key];
+            if(key===BDI_ISSUES_KEY&&Array.isArray(incV)){
+              var itb={};bdiGetIssueTombs().forEach(function(t){itb[t]=1});
+              var imap={};bdiGetIssues().forEach(function(x){if(x&&x.id)imap[x.id]=x});
+              incV.forEach(function(x){if(!x||!x.id||itb[x.id])return;if(!imap[x.id])totalNew++;else totalSkipped++;imap[x.id]=bdiMergeIssue(imap[x.id],x)});
+              BdiKV.set(key,JSON.stringify(Object.keys(imap).map(function(k){return imap[k]}).sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)})));
+            }else if(key===BDI_ISSUE_TOMBS&&Array.isArray(incV)){
+              var ctb=bdiGetIssueTombs();incV.forEach(function(t){if(ctb.indexOf(t)<0)ctb.push(t)});BdiKV.set(key,JSON.stringify(ctb));
+            }else if(key==="bdi_floors_v1"&&incV&&typeof incV==="object"){
+              var cfl=bdiGetFloors();for(var fdt in incV){var fa=cfl[fdt],fb=incV[fdt];cfl[fdt]=!fa?fb:((fb&&(fb.u||0)>(fa.u||0))?fb:fa)}BdiKV.set(key,JSON.stringify(cfl));
+            }else if(key==="bdi_pm_tombs"&&incV&&typeof incV==="object"){
+              var cpt=bdiGetPmTombs();for(var prm in incV)cpt[prm]=Math.max(cpt[prm]||0,+incV[prm]||0);BdiKV.set(key,JSON.stringify(cpt));
+            }
+            continue;
+          }
           if(key==="bdi_pm_rooms"){
             var existingPm=[]; try{existingPm=JSON.parse(BdiKV.get(key)||"[]")}catch(ex){}
             var incomingPm=typeof data[key]==="string"?JSON.parse(data[key]):data[key];
@@ -7643,6 +7862,8 @@ function importBdiBackup(files){
         renderStorageDashboard();
         loadBdiLogs();renderBdiLog();
         renderPmRooms();applyPmRooms();
+        if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();
+        try{bdiGMSchedule();if(typeof bdiRefreshDerived==="function")bdiRefreshDerived()}catch(e){}
       }
     };
     reader.readAsText(file);
@@ -13115,6 +13336,17 @@ window.computeWatchMatches = computeWatchMatches;
 window.refreshRadarWatch = refreshRadarWatch;
 window.getWatchlist = getWatchlist;
 initSync();
+// Kurulum sihirbazi (2026-10-29)
+window.openSetupModal = openSetupModal;
+window.closeSetupModal = closeSetupModal;
+window.swSetupPickFolder = swSetupPickFolder;
+window.swSetupGrant = swSetupGrant;
+window.swSetupTryPersist = swSetupTryPersist;
+window.swSetupSnooze = swSetupSnooze;
+window.swBackupNow = swBackupNow;
+window.swConnectExpense = swConnectExpense;
+window.swRestoreFile = swRestoreFile;
+swSetupBoot();
 window.removeKW = removeKW;
 window.removePmRoom = removePmRoom;
 window.removeRadarKW = removeRadarKW;
