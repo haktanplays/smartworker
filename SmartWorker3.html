@@ -2747,14 +2747,12 @@ async function swEnsureGuestFile(dir){
 }
 function swExpIdb(){return new Promise(function(res,rej){var r=indexedDB.open("sw_expense_sync",1);r.onupgradeneeded=function(){r.result.createObjectStore("handles")};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
 function swExpGet(){return swExpIdb().then(function(db){return new Promise(function(res){var rq=db.transaction("handles","readonly").objectStore("handles").get("dir");rq.onsuccess=function(){res(rq.result||null)};rq.onerror=function(){res(null)}})}).catch(function(){return null})}
+// Expense ayri kurulum istemez (2026-10-29): ayni tarayicida bu ortak klasoru kendisi bulur ve "Expense" alt klasorunu kullanir.
+// Expense'te eskiden ayrica secilmis bir klasor varsa o oncelikli; bu buton o ayri baglantiyi kaldirir, Expense ortak klasore doner.
+function swExpDel(){return swExpIdb().then(function(db){return new Promise(function(res){var tx=db.transaction("handles","readwrite");tx.objectStore("handles").delete("dir");tx.oncomplete=res;tx.onerror=function(){res()}})}).catch(function(){})}
 async function swConnectExpense(){
-  var dir=_pyDirHandle;if(!dir)return openSetupModal();
-  if((await swPerm(dir,true))!=="granted")return;
-  try{
-    var sub=await dir.getDirectoryHandle("Expense",{create:true}),db=await swExpIdb();
-    await new Promise(function(res,rej){var tx=db.transaction("handles","readwrite");tx.objectStore("handles").put(sub,"dir");tx.oncomplete=res;tx.onerror=function(){rej(tx.error)}});
-    swToast("Expense, "+dir.name+"/Expense klasörüne bağlandı. Expense'i açınca kendisi senkronlar.");
-  }catch(e){alert("Expense bağlanamadı: "+((e&&e.message)||e))}
+  await swExpDel();
+  swToast("Expense artık ortak klasörü kullanıyor ("+(_pyDirHandle?_pyDirHandle.name+"/Expense":"Expense")+"). Expense'i açınca kendisi senkronlar.");
   swSetupRefresh();
 }
 async function swSetupPickFolder(){
@@ -2825,7 +2823,7 @@ async function swRestoreFile(file){
   if(!file)return;
   var o;try{o=JSON.parse(await file.text())}catch(e){return alert("Dosya okunamadı: "+e.message)}
   if(!o||o.kind!=="full-backup")return alert("Bu dosya bir SmartWorker tam yedeği değil (Yedekler klasöründeki smartworker_yedek_....json dosyalarından birini seç).");
-  var bk=Object.keys(o.bdi||{}),lk=Object.keys(o.localStorage||{}).filter(function(k){return k.indexOf("bdi_")!==0&&k.indexOf("sw_backup")!==0&&k!=="sw_setup_snooze"}),gn=((o.guestMemory&&o.guestMemory.events)||[]).length;
+  var bk=Object.keys(o.bdi||{}),lk=Object.keys(o.localStorage||{}).filter(function(k){return k.indexOf("bdi_")!==0&&k.indexOf("sw_backup")!==0&&k!=="sw_setup_snooze"&&k.indexOf("sw_device_")!==0&&k!=="sw_expense_pending"}),gn=((o.guestMemory&&o.guestMemory.events)||[]).length;
   var missing=lk.filter(function(k){return localStorage.getItem(k)===null});
   if(!confirm("Yedek tarihi: "+bdiFmtD(o.day||"")+"\n\nButler Did It anahtarı: "+bk.length+"\nMisafir hafızası olayı: "+gn+"\nDiğer kayıt: "+lk.length+" (bu bilgisayarda olmayan: "+missing.length+")\n\nGeri yükleme BİRLEŞTİRİR: mevcut kayıtlar silinmez ve değiştirilmez, sadece eksikler eklenir. Devam edilsin mi?"))return;
   var data={};bk.forEach(function(k){data[k]=o.bdi[k]});
@@ -2842,7 +2840,9 @@ async function swSetupState(){
   var h=_pyDirHandle||await _pyDirGet();
   if(h){s.folder=h.name;s.perm=await swPerm(h)}
   if(_syncHandle){s.guest={name:_syncHandle.name,inFolder:false};if(h&&s.perm==="granted"){try{var pth=await h.resolve(_syncHandle);s.guest.inFolder=!!(pth&&pth.length)}catch(e){}}}
-  var eh=await swExpGet();if(eh)s.expense=eh.name;
+  var eh=await swExpGet();
+  if(eh&&h&&s.perm==="granted"){try{var sub=await h.getDirectoryHandle("Expense");if(await sub.isSameEntry(eh)){await swExpDel();eh=null}}catch(e){}} // eski "Expense'i bagla" kaydi = ortak/Expense: ayri baglanti gereksiz
+  if(eh)s.expense=eh.name;
   try{s.sync=JSON.parse(localStorage.getItem("sw_py_sync_last")||"null")}catch(e){}
   return s;
 }
@@ -2862,7 +2862,7 @@ function swSetupHtml(s){
   if(s.backup)h+=row(s.backupErr?"warn":"ok","Otomatik yedek","Son yedek: <b>"+bdiFmtTs(s.backup.t)+"</b> · "+esc(SW_BACKUP_DIR+"/"+s.backup.name)+" · "+s.backup.kb+" KB · her gün; son "+SW_BACKUP_KEEP_DAYS+" gün + aylık yedekler saklanır"+(s.backupErr?'<br><span style="color:#b45309">Son deneme hatası: '+esc(s.backupErr)+'</span>':'')+".",granted?b("Şimdi yedekle","swBackupNow(false)"):"");
   else h+=row(granted?"warn":"off","Otomatik yedek",granted?"Henüz yedek yok.":"Ortak klasör bağlanınca her gün "+esc(SW_BACKUP_DIR)+" klasörüne tam yedek alınır.",granted?b("Şimdi yedekle","swBackupNow(false)",1):"");
   h+=granted?row("ok","iPad Butler Rehberi","Sabah rehberi <b>"+esc(s.folder+"/"+BGD_DIR)+"</b> altına yazılır; butlerların dönüşleri <b>"+esc(BGD_DIR+"/"+BGD_IN)+"</b> klasöründen kendiliğinden alınır (Butler Did It › Brifing › iPad rehberi)."):row("off","iPad Butler Rehberi","Ortak klasör bağlanınca Rehber ve Rehber/Gelen klasörleri kendiliğinden kurulur.");
-  h+=s.expense?row("ok","Expense","Expense kendi senkron klasörünü kullanıyor: <b>"+esc(s.expense)+"</b>."):row("off","Expense","Expense için klasör seçilmedi. İstersen aynı ortak klasörün <b>Expense</b> alt klasörüne bağlanır.",granted?b("Expense'i bağla","swConnectExpense()"):"");
+  h+=s.expense?row("warn","Expense","Expense ayrı bir klasöre bağlı: <b>"+esc(s.expense)+"</b>. Diğer bilgisayarlarla aynı klasörü kullanması için ortak klasöre geçir.",granted?b("Ortak klasöre geçir","swConnectExpense()",1):""):row(granted?"ok":"off","Expense",granted?"Ayrı kurulum yok: Expense bu tarayıcıda açılınca ortak klasörün <b>Expense</b> alt klasörünü kendiliğinden kullanır.":"Ortak klasör bağlanınca Expense de onu kendiliğinden kullanır.");
   return h;
 }
 function swSetupRefresh(){
@@ -2887,7 +2887,7 @@ async function swSetupBoot(){
   // initSync izin varsa pySyncNow(true) baslatti: bitmesini bekle, sonra gunun yedegi
   var t0=Date.now();
   while((_pySyncBusy||!_pyDirHandle)&&Date.now()-t0<60000)await new Promise(function(r){setTimeout(r,500)});
-  if((await swPerm(h))==="granted"){await swBackupNow(true);await bgdScanFolder(true)}
+  if((await swPerm(h))==="granted"){if(!_syncHandle)await swEnsureGuestFile(h);await swBackupNow(true);await bgdScanFolder(true)} // klasor Expense'ten secildiyse mektup dosyasi burada kurulur
   setInterval(function(){swBackupNow(true)},3600000); // sayfa gunlerce acik kalirsa da her gun yedek
   setInterval(function(){bgdScanFolder(true)},600000); // iPad rehberi donusleri (Rehber/Gelen), izin sormadan
 }
