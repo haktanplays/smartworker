@@ -1324,7 +1324,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
     <div class="upload-area bd-drop bd-drop-sm" id="vacDropZone" onclick="document.getElementById('vacPdfInput').click()">
       <b>VAC PDF'ini bırak ya da seç</b>
       <span>Oda numarası yazınca misafir adı otomatik gelir</span>
-      <input type="file" id="vacPdfInput" accept=".pdf" style="display:none" onchange="handleVacPDF(this.files[0])">
+      <input type="file" id="vacPdfInput" accept=".pdf" style="display:none" onchange="handleVacPDF(this.files[0]);this.value=''">
     </div>
     <div id="vacPdfStatus" class="bd-status"></div>
     <div id="bdiVacConfidence" class="bd-confidence" style="display:none"></div>
@@ -1391,7 +1391,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
     </div>
   </div>
   <label class="bd-drop" id="bdiIssueDrop">
-    <input type="file" id="bdiIssueFile" accept=".xlsx,.xls" style="display:none" onchange="bdiIssueImportFile(this.files[0])">
+    <input type="file" id="bdiIssueFile" accept=".xlsx,.xls" style="display:none" onchange="bdiIssueImportFile(this.files[0]);this.value=''">
     <b>Issue Excel'ini bırak ya da seç</b>
     <span>Room #, Guest Name, Concern Details. Sadece yeni issue'lar eklenir; uzayan metinler güncellenir, yazılmış olan ezilmez.</span>
   </label>
@@ -1446,7 +1446,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
     <button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="clearGuestSearch()">Temizle</button>
     <span id="guestSearchCount" class="bd-sub"></span>
   </div>
-  <div class="bd-gm-bar"><span id="bdiGMStatus"></span><span class="bd-toolbar"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiGMDownload()">Yedeği indir</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="document.getElementById('bdiGMRestoreInput').click()">Yedekten birleştir</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiGMRestoreSnapshot()">Yerel yedekler</button><input type="file" id="bdiGMRestoreInput" accept=".json" style="display:none" onchange="bdiGMRestoreFile(this.files[0])"></span></div>
+  <div class="bd-gm-bar"><span id="bdiGMStatus"></span><span class="bd-toolbar"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiGMDownload()">Yedeği indir</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="document.getElementById('bdiGMRestoreInput').click()">Yedekten birleştir</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiGMRestoreSnapshot()">Yerel yedekler</button><input type="file" id="bdiGMRestoreInput" accept=".json" style="display:none" onchange="bdiGMRestoreFile(this.files[0]);this.value=''"></span></div>
   <p class="bd-empty" id="bdiGuestHintText">Misafir listesi yükleniyor...</p>
   <div id="bdiGuestProfiles"></div>
 </div>
@@ -1465,7 +1465,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
     </div>
   </div>
   <label class="bd-drop" id="bdiAliceDrop">
-    <input type="file" id="bdiAliceFile" accept=".xlsx,.xls" style="display:none" onchange="bdiAliceImportFile(this.files[0])">
+    <input type="file" id="bdiAliceFile" accept=".xlsx,.xls" style="display:none" onchange="bdiAliceImportFile(this.files[0]);this.value=''">
     <b>Alice "Ticket List w/ Internal Notes" raporunu bırak ya da seç</b>
     <span>Günlük ya da haftalık export. Aynı ticket iki kez gelirse tekrar sayılmaz; her tamamlanan misafir ticket'ı misafir hafızasına işlenir.</span>
   </label>
@@ -1498,7 +1498,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <div class="bd-toolbar">
     <button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="exportBdiBackup()">Yedekle (JSON)</button>
     <button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="document.getElementById('bdiImportInput').click()">İçeri aktar</button>
-    <input type="file" id="bdiImportInput" accept=".json" multiple style="display:none" onchange="importBdiBackup(this.files)">
+    <input type="file" id="bdiImportInput" accept=".json" multiple style="display:none" onchange="importBdiBackup(Array.from(this.files));this.value=''">
   </div>
   <!-- "Arsivle (3+ ay)" 2026-10-23 kaldirildi: mezar tassiz silip sync'le geri diriliyordu ve arsivlenen aylar raporlarda okunmuyordu. autoArchiveBdi() sokum deseni geregi simdilik dosyada (UI'den erisilemez); dogru arsiv BDI plani Faz 4. -->
   <div id="bdiImportStatus" class="bd-status"></div>
@@ -1973,7 +1973,7 @@ function setKW(cat,arr){ Store.set("kw_"+cat,arr) }
 
 // ===== UTILS =====
 function getTomorrow(){var d=new Date();d.setDate(d.getDate()+1);return d.toISOString().split("T")[0]}
-function getToday(){return new Date().toISOString().split("T")[0]}
+function getToday(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)} // yerel gun: toISOString UTC verir, Istanbul'da 00:00-02:59 arasi bir onceki gun cikiyordu (2026-10-29)
 function fmtDate(ds,lang){var d=new Date(ds+"T00:00:00");return d.getDate()+" "+(lang==="TR"?TR_M:EN_M)[d.getMonth()]+" "+d.getFullYear()}
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1).toLowerCase():""}
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
@@ -2762,19 +2762,23 @@ async function _bdiSyncFile(dir){
   }
   if(wOut.length!==((remote.watch)||[]).length)fileChanged=true;
 
-  // PM odalar: oda no bazli birlesim (local kayit oncelikli)
+  // PM odalar: oda no bazli birlesim. Silinen oda mezar tasiyla (oda -> silinme ani) elenir; silinmeden SONRA
+  // eklenen/guncellenen kayit (u daha yeni) gecerlidir. Ayni oda iki makinede degistiyse yeni olan kazanir (2026-10-29).
   var pmLoc=[];try{pmLoc=JSON.parse(localStorage.getItem("bdi_pm_rooms")||"[]")}catch(e){}
-  var pmMap={},pi;
-  ((remote.pm)||[]).forEach(function(p){if(p&&p.room)pmMap[String(p.room)]=p});
-  var pmBefore=Object.keys(pmMap).length;
-  pmLoc.forEach(function(p){if(p&&p.room)pmMap[String(p.room)]=p});
+  var pmT=bdiGetPmTombs(),pmT0=JSON.stringify(pmT),rk;
+  for(rk in (remote.pmTombs||{}))pmT[rk]=Math.max(pmT[rk]||0,+remote.pmTombs[rk]||0);
+  if(JSON.stringify(pmT)!==pmT0)localStorage.setItem("bdi_pm_tombs",JSON.stringify(pmT));
+  var pmAlive=function(p){return p&&p.room&&!(pmT[String(p.room)]&&(p.u||0)<=pmT[String(p.room)])};
+  var pmMap={};
+  ((remote.pm)||[]).forEach(function(p){if(pmAlive(p))pmMap[String(p.room)]=p});
+  pmLoc.forEach(function(p){if(!pmAlive(p))return;var k=String(p.room),r=pmMap[k];if(!r||(p.u||0)>=(r.u||0))pmMap[k]=p});
   var pmOut=Object.keys(pmMap).map(function(k){return pmMap[k]});
-  if(pmOut.length!==pmLoc.length){localStorage.setItem("bdi_pm_rooms",JSON.stringify(pmOut))}
-  if(pmOut.length!==((remote.pm)||[]).length)fileChanged=true;
+  if(JSON.stringify(pmOut)!==JSON.stringify(pmLoc)){localStorage.setItem("bdi_pm_rooms",JSON.stringify(pmOut));try{renderPmRooms();rebuildVacRooms()}catch(e){}}
+  if(JSON.stringify(pmOut)!==JSON.stringify((remote.pm)||[])||JSON.stringify(pmT)!==JSON.stringify(remote.pmTombs||{}))fileChanged=true;
   if((remote.tombs||[]).length!==tombArr.length)fileChanged=true;
   if(fileChanged){
     var w=await fh.createWritable();
-    await w.write(JSON.stringify({version:1,app:"SmartWorker",updated:new Date().toISOString(),bdi:outBdi,pm:pmOut,watch:wOut,tombs:tombArr}));
+    await w.write(JSON.stringify({version:1,app:"SmartWorker",updated:new Date().toISOString(),bdi:outBdi,pm:pmOut,pmTombs:pmT,watch:wOut,tombs:tombArr}));
     await w.close();
   }
   return res;
@@ -5866,7 +5870,7 @@ function showVacGuest(){
   }
   // Alert cross-reference
   if(room){
-    var _alrt=getAlertForRoom(room);
+    var _alrt=getAlertForRoomOn(room,(document.getElementById("bdiDate")||{}).value);
     if(_alrt){
       var _rLabels=(_alrt.reasons||[]).map(function(r){return r.label||r}).join(", ");
       hint.innerHTML+=' <span style="padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd">\u26a0 '+esc(_rLabels)+'</span>';
@@ -5978,8 +5982,8 @@ function addPmRoom(){
   if(!guest){alert("Misafir adi girin.");return}
   var list=loadPmRooms();
   // Check if room already exists
-  for(var i=0;i<list.length;i++){if(list[i].room===room){list[i].guest=guest;savePmRooms(list);renderPmRooms();applyPmRooms();document.getElementById("pmRoomNo").value="";document.getElementById("pmGuestName").value="";return}}
-  list.push({room:room,guest:guest});
+  for(var i=0;i<list.length;i++){if(list[i].room===room){list[i].guest=guest;list[i].u=Date.now();savePmRooms(list);renderPmRooms();applyPmRooms();document.getElementById("pmRoomNo").value="";document.getElementById("pmGuestName").value="";return}}
+  list.push({room:room,guest:guest,u:Date.now()}); // u: senkronda mezar tasindan yeni mi diye bakilir
   savePmRooms(list);
   renderPmRooms();
   applyPmRooms();
@@ -5987,8 +5991,11 @@ function addPmRoom(){
   document.getElementById("pmGuestName").value="";
 }
 
+function bdiGetPmTombs(){try{var t=JSON.parse(localStorage.getItem("bdi_pm_tombs")||"{}");return t&&typeof t==="object"?t:{}}catch(e){return {}}}
 function removePmRoom(idx){
   var list=loadPmRooms();
+  // Mezar tasi (2026-10-29): yoksa silinen PM oda ortak klasorden geri geliyor, eski misafir adi yeni misafirin touch'larina yaziliyordu.
+  if(list[idx]&&list[idx].room){var pt=bdiGetPmTombs();pt[String(list[idx].room)]=Date.now();localStorage.setItem("bdi_pm_tombs",JSON.stringify(pt))}
   list.splice(idx,1);
   savePmRooms(list);
   renderPmRooms();
@@ -6235,12 +6242,12 @@ function buildBdiSentence(butler,label,verb,room,note,guestName,template){
     s="Butler "+butler+" assisted "+guestPhrase+" with unpacking at Room "+room+".";
   }else if(low.indexOf("pack")>=0){
     s="Butler "+butler+" assisted "+guestPhrase+" with packing at Room "+room+".";
+  }else if(low.indexOf("amenity")>=0){
+    s=detail?"Butler "+butler+" delivered "+detail+" to "+guestPhrase+" staying at Room "+room+".":"Butler "+butler+" delivered an amenity to "+guestPhrase+" staying at Room "+room+".";
   }else if(low.indexOf("welcome")>=0||low.indexOf("check-in")>=0){
     s="Butler "+butler+" welcomed "+guestPhrase+" with in-room check-in at Room "+room+".";
   }else if(low.indexOf("touch call")>=0||String(verb).indexOf("courtesy call")>=0){
     s="Butler "+butler+" made a courtesy call to "+guestPhrase+" staying at Room "+room+".";
-  }else if(low.indexOf("amenity")>=0){
-    s=detail?"Butler "+butler+" delivered "+detail+" to "+guestPhrase+" staying at Room "+room+".":"Butler "+butler+" delivered an amenity to "+guestPhrase+" staying at Room "+room+".";
   }else if(low.indexOf("laundry pickup")>=0){
     s="Butler "+butler+" collected laundry from "+guestPhrase+" staying at Room "+room+".";
   }else if(low.indexOf("laundry delivery")>=0){
@@ -6577,9 +6584,15 @@ function bdiMatchAction(words){
   for(var used=Math.min(3,words.length);used>=1;used--){
     var q=normTR(words.slice(0,used).join(" "));
     if(!q)continue;
-    var hits=[];
-    for(var i=0;i<acts.length;i++){if(normTR(acts[i].label).indexOf(q)>=0)hits.push(i)}
-    if(hits.length)return {index:hits[0],label:acts[hits[0]].label,used:used};
+    // En iyi eslesme kazanir: tam ad > adin basi > bir kelimenin basi > herhangi bir yer
+    // (eskiden ilk "icinde gecen" seciliyordu: "1903 pack" -> Unpack kaydediliyordu, 2026-10-29)
+    var best=-1,bestRank=9;
+    for(var i=0;i<acts.length;i++){
+      var lb=normTR(acts[i].label),pos=lb.indexOf(q);if(pos<0)continue;
+      var rank=lb===q?0:pos===0?1:/[^a-z0-9]/.test(lb.charAt(pos-1))?2:3;
+      if(rank<bestRank){bestRank=rank;best=i}
+    }
+    if(best>=0)return {index:best,label:acts[best].label,used:used};
   }
   return null;
 }
@@ -6697,6 +6710,16 @@ function getAlertForRoom(room){
   var r=parseInt(room,10);if(!r)return null;
   for(var i=0;i<alertList.length;i++){if(alertList[i].roomNo===r)return alertList[i]}
   return null;
+}
+// Belirli bir gunun alert'i: Alert modulunde acik gun ise canli liste, degilse o gunun kaydi (alert_YYYY-MM-DD).
+// Performans, log rozetleri ve dikkat panosu gecmis gunlerde bugunun listesine bakiyordu (2026-10-29).
+var _bdiAlertSnapCache={};
+function getAlertForRoomOn(room,date){
+  if(!date||date===getAlertDate())return getAlertForRoom(room);
+  var r=parseInt(room,10);if(!r)return null;
+  var raw=localStorage.getItem("alert_"+date)||"",c=_bdiAlertSnapCache[date];
+  if(!c||c.raw!==raw){c={raw:raw,map:{}};try{(JSON.parse(raw||"[]")||[]).forEach(function(a){if(a&&a.roomNo)c.map[parseInt(a.roomNo,10)]=a})}catch(e){}_bdiAlertSnapCache[date]=c}
+  return c.map[r]||null;
 }
 
 function renderBdiLog(){
@@ -6889,7 +6912,7 @@ function renderBdiLogWithData(logs){
     bdiNormalizeLogEntry(l,l._date||document.getElementById("bdiDate").value,i);
     h+='<tr><td style="white-space:nowrap;font-weight:600">'+esc(l.time)+'</td>';
     h+='<td>'+esc(l.butler)+'</td>';
-    var _al=getAlertForRoom(l.room);
+    var _al=getAlertForRoomOn(l.room,l._date||document.getElementById("bdiDate").value);
     var _alBadge=_al?'<span title="'+esc((_al.reasons||[]).map(function(r){return r.label||r}).join(", "))+'" style="display:block;font-size:8px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:3px;padding:0 3px;margin-top:1px;cursor:help">\u26a0 ALERT</span>':'';
     h+='<td style="font-weight:700;text-align:center">'+esc(l.room)+_alBadge+'</td>';
     h+='<td style="font-size:11px;color:#af8d69">'+esc(l.guest||"")+'</td>';
@@ -6934,7 +6957,7 @@ function renderBdiPeriodWithData(filtered,allLogs){
     h+='<td style="font-size:10px;color:#6b7280;white-space:nowrap">'+(showDate?'<b>'+fmtD+'</b>':'')+'</td>';
     h+='<td style="white-space:nowrap;font-weight:600">'+esc(l.time)+'</td>';
     h+='<td>'+esc(l.butler)+'</td>';
-    var _al2=getAlertForRoom(l.room);
+    var _al2=getAlertForRoomOn(l.room,l._date);
     var _alB2=_al2?'<span title="'+esc((_al2.reasons||[]).map(function(r){return r.label||r}).join(", "))+'" style="display:block;font-size:8px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:3px;padding:0 3px;margin-top:1px;cursor:help">\u26a0 ALERT</span>':'';
     h+='<td style="font-weight:700;text-align:center">'+esc(l.room)+_alB2+'</td>';
     h+='<td style="font-size:11px;color:#af8d69">'+esc(l.guest||"")+'</td>';
@@ -6973,7 +6996,7 @@ function bdiIsOccasionLog(l){
   if(l&&l.touchCategory==="Special Occasion")return true;
   return bdiHasWords(bdiTextBlob(l),["birthday","anniversary","honeymoon","occasion","celebration","arrangement"])
 }
-function bdiIsAlertRoom(room){try{return !!getAlertForRoom(room)}catch(e){return false}}
+function bdiIsAlertRoom(room,date){try{return !!getAlertForRoomOn(room,date)}catch(e){return false}}
 
 // ===== BDI PERFORMANCE DASHBOARD =====
 function renderBdiPerformance(){
@@ -7000,7 +7023,7 @@ function renderBdiPerformance(){
     b.actions[l.action]=(b.actions[l.action]||0)+1;
     b.rooms[l.room]=1;
     b.days[l._date]=1;
-    if(bdiIsAlertRoom(l.room)){b.alertRooms[l.room]=1;quality.alertTouches++}
+    if(bdiIsAlertRoom(l.room,l._date)){b.alertRooms[l.room]=1;quality.alertTouches++}
     if(bdiIsFollowUpLog(l)){b.followup++;quality.followup++}
     if(bdiIsRecoveryLog(l)){b.recovery++;quality.recovery++}
     if(bdiIsPreferenceLog(l)){b.preference++;quality.preference++}
@@ -7283,7 +7306,7 @@ function renderBdiAttentionBoard(){
     if(bdiIsOccasionLog(l))occasion.push(l);
   }
   var untouched=knownRooms.filter(function(r){return !touched[r]});
-  var alertRooms=knownRooms.filter(function(r){return bdiIsAlertRoom(r)});
+  var selDate=(document.getElementById("bdiDate")||{}).value;var alertRooms=knownRooms.filter(function(r){return bdiIsAlertRoom(r,selDate)});
   var alertUntouched=alertRooms.filter(function(r){return !touched[r]});
   var multi=[];
   for(var r in roomTouchCount){if(roomTouchCount[r]>=2)multi.push(r+" ("+roomTouchCount[r]+")")}
@@ -7362,7 +7385,7 @@ function getStorageUsage(){
   }
   items.sort(function(a,b){return b.kb-a.kb});
   // Group by prefix
-  var groups={"bdi_":0,"mb_":0,"exp_":0,"kw_":0,"ir_":0};
+  var groups={"bdi_":0,"mb_":0,"exp_":0,"sw_expense_":0,"kw_":0,"ir_":0};
   var other=0;
   for(var i=0;i<items.length;i++){
     var matched=false;
@@ -7384,7 +7407,7 @@ function renderStorageDashboard(){
   if(pct>=90)h+='<div style="padding:6px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:11px;color:#991b1b;margin-bottom:8px">&#9888; Depolama neredeyse dolu! Yedekleme yapin ve eski verileri arsivleyin.</div>';
   else if(pct>=70)h+='<div style="padding:6px 10px;background:#fefce8;border:1px solid #fde68a;border-radius:6px;font-size:11px;color:#92400e;margin-bottom:8px">&#9888; Depolama %'+pct+' dolu. Yedekleme yapmaniz onerilir.</div>';
   // Breakdown
-  var labels={"bdi_":"BDI Kayitlari","mb_":"Minibar","exp_":"Expense","kw_":"Anahtar Kelimeler","ir_":"Radar Ayarlari","diger":"Diger"};
+  var labels={"bdi_":"BDI Kayitlari","mb_":"Minibar","exp_":"Expense (eski)","sw_expense_":"Expense","kw_":"Anahtar Kelimeler","ir_":"Radar Ayarlari","diger":"Diger"};
   h+='<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px">';
   for(var p in u.groups){
     if(u.groups[p]<0.1)continue;
@@ -7443,6 +7466,14 @@ function importBdiBackup(files){
             var incoming2=typeof data[key]==="string"?JSON.parse(data[key]):data[key];
             for(var mn in incoming2){if(!existing2[mn])existing2[mn]=incoming2[mn]}
             localStorage.setItem(key,JSON.stringify(existing2));
+            continue;
+          }
+          // Ilkel diziler (mezar taslari, gizli balonlar): kume birlesimi. Gunluk log yoluna dusunce hepsi ayni
+          // tekrar anahtarini uretiyor, ilk ogeden sonrasi "tekrar" sayilip atlaniyordu (2026-10-29).
+          if(key==="bdi_tombstones"||key==="bdi_chip_hidden"){
+            var curArr=[];try{curArr=JSON.parse(localStorage.getItem(key)||"[]")}catch(ex){}
+            var incArr=typeof data[key]==="string"?JSON.parse(data[key]):data[key];
+            if(Array.isArray(incArr)&&Array.isArray(curArr)){incArr.forEach(function(v){if(curArr.indexOf(v)<0)curArr.push(v)});localStorage.setItem(key,JSON.stringify(curArr))}
             continue;
           }
           if(key==="bdi_pm_rooms"){
@@ -11540,7 +11571,7 @@ function refreshAlertKw(){
 }
 refreshAlertKw();
 
-function alertTodayISO(){return new Date().toISOString().split("T")[0]}
+function alertTodayISO(){return getToday()} // BDI ile ayni yerel gun (alert ziyaretleri BDI'ye ayni tarihe yazilsin)
 function getAlertDate(){
   var fallback=localStorage.getItem("alert_selected_date")||alertTodayISO();
   var el=document.getElementById("alertDateInput");
