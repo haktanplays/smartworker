@@ -864,6 +864,39 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-xf-dlg{background:#fff;border-radius:12px;padding:18px 20px;width:min(760px,100%);max-height:92vh;overflow:auto}
 #page-didit .bd-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:9px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:700}
 #page-didit .bd-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* 2026-10-29: Misafir DNA + tepki kaydi */
+#page-didit .bd-dna{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;background:var(--soft)}
+#page-didit .bd-dna-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#page-didit .bd-dna-score{font-size:11px;font-weight:700;color:var(--g);background:var(--gt);border-radius:9px;padding:2px 8px}
+#page-didit .bd-dna-sec{padding:6px 0;border-top:1px solid var(--line)}
+#page-didit .bd-dna-sec:first-of-type{border-top:0}
+#page-didit .bd-dna-t{display:flex;align-items:center;gap:8px;font-size:12px}
+#page-didit .bd-dna-t .bd-link{margin-left:auto;font-size:11px}
+#page-didit .bd-dna-pend{font-size:10.5px;color:var(--amber);background:var(--amber-t);border-radius:8px;padding:1px 6px}
+#page-didit .bd-dna-list{margin:4px 0 0 0;padding:0;list-style:none}
+#page-didit .bd-dna-list li{display:flex;flex-direction:column;padding:3px 0 3px 10px;border-left:2px solid var(--gt);margin:3px 0}
+#page-didit .bd-dna-avoid .bd-dna-list li,#page-didit .bd-dna-break .bd-dna-list li{border-left-color:#f4c7c3}
+#page-didit .bd-dna-sens .bd-dna-list li{border-left-color:#d9cdea}
+#page-didit .bd-dna-txt{font-size:12px;color:var(--ink)}
+#page-didit .bd-dna-meta{font-size:10.5px;color:var(--mut)}
+#page-didit .bd-dna-stale{font-size:10px;font-weight:700;color:var(--amber);background:var(--amber-t);border-radius:6px;padding:0 5px}
+#page-didit .bd-dna-empty{font-size:11px;color:#b5c0bc;padding-left:10px}
+#page-didit .bd-dna-addr{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+#page-didit .bd-dna-addr input,#page-didit .bd-dna-addr select{font-size:12px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;width:auto;height:auto;min-width:0}
+#page-didit .bd-dna-addr select{flex:0 0 auto}
+#page-didit .bd-dna-addr input[data-f="form"]{flex:1 1 170px}
+#page-didit .bd-dna-addr input[data-f="note"]{flex:1 1 100%}
+#page-didit .bd-react{font-size:12px;white-space:nowrap}
+#page-didit .bd-react i{font-style:italic;color:var(--mut);font-size:11px}
+#page-didit .bd-react-btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:1px 5px;font-size:13px;cursor:pointer;opacity:.45;margin-right:2px}
+#page-didit .bd-react-btn:hover,#page-didit .bd-react-btn.on{opacity:1;border-color:var(--g)}
+#page-didit .bd-react-btn.big{opacity:1;font-size:13px;padding:4px 10px}
+#page-didit .bd-react-cell{white-space:nowrap}
+#page-didit .bd-react-t{font-size:10.5px;color:var(--mut);white-space:normal;max-width:180px}
+#page-didit .bd-reactbar{position:fixed;left:50%;bottom:74px;transform:translateX(-50%) translateY(16px);background:#fff;border:1px solid var(--line);box-shadow:0 8px 28px rgba(0,0,0,.18);border-radius:12px;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:94vw;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60}
+#page-didit .bd-reactbar.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+#page-didit .bd-reactbar.pick .bd-react-btn.big{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-t)}
+#page-didit .bd-reactbar input{flex:1 1 220px;font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:7px}
 /* --- Alice (v6) --- */
 #page-didit .bd-h3{font-size:13px;font-weight:600;color:var(--ink);margin:0 0 8px}
 #page-didit .bd-alice-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:24px;margin-top:6px}
@@ -2610,6 +2643,11 @@ function initSync(){
 //  - Expense istenirse ayni klasorun "Expense" alt klasorune baglanir (ayni origin: Expense'in tutamac deposuna yazilir)
 var SW_BACKUP_DIR="Yedekler",SW_BACKUP_KEEP_DAYS=14,SW_BACKUP_RE=/^smartworker_yedek_(\d{4}-\d{2}-\d{2})\.json$/;
 var _swBackupBusy=false,_swRefreshT=null;
+function swToast(msg){
+  var el=document.getElementById("swToast");
+  if(!el){el=document.createElement("div");el.id="swToast";el.setAttribute("role","status");el.style.cssText="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1b2a27;color:#fff;padding:10px 16px;border-radius:9px;font-size:13px;z-index:600;max-width:92vw;box-shadow:0 6px 24px rgba(0,0,0,.25);transition:opacity .2s;opacity:0;pointer-events:none";document.body.appendChild(el)}
+  el.textContent=msg;el.style.opacity="1";clearTimeout(el._t);el._t=setTimeout(function(){el.style.opacity="0"},4200);
+}
 function swPerm(h,ask){
   if(!h)return Promise.resolve("none");
   if(typeof h.queryPermission!=="function")return Promise.resolve("granted");
@@ -2647,7 +2685,7 @@ async function swConnectExpense(){
   try{
     var sub=await dir.getDirectoryHandle("Expense",{create:true}),db=await swExpIdb();
     await new Promise(function(res,rej){var tx=db.transaction("handles","readwrite");tx.objectStore("handles").put(sub,"dir");tx.oncomplete=res;tx.onerror=function(){rej(tx.error)}});
-    bdiToast("Expense, "+dir.name+"/Expense klasörüne bağlandı. Expense'i açınca kendisi senkronlar.");
+    swToast("Expense, "+dir.name+"/Expense klasörüne bağlandı. Expense'i açınca kendisi senkronlar.");
   }catch(e){alert("Expense bağlanamadı: "+((e&&e.message)||e))}
   swSetupRefresh();
 }
@@ -2665,7 +2703,7 @@ async function swSetupPickFolder(){
   swSetupRefresh();
   var pl=null;try{pl=JSON.parse(localStorage.getItem("sw_py_sync_last")||"null")}catch(e){}
   var got=pl?(pl.got||0)+(pl.gotB||0)+(pl.gotS||0)+(pl.gotP||0):0;
-  bdiToast("Kurulum tamam: "+h.name+" bağlandı"+(got?", diğer bilgisayarlardan "+got+" kayıt geldi":"")+". Senkron ve günlük yedek çalışıyor.");
+  swToast("Kurulum tamam: "+h.name+" bağlandı"+(got?", diğer bilgisayarlardan "+got+" kayıt geldi":"")+". Senkron ve günlük yedek çalışıyor.");
 }
 // Sonraki acilislar: tarayici izni yeniden sorarsa tek tik (kullanici hareketi sart)
 async function swSetupGrant(){
@@ -2705,7 +2743,7 @@ async function swBackupNow(isAuto){
     localStorage.setItem("sw_backup_last",JSON.stringify({t:Date.now(),day:today,name:name,kb:Math.round(payload.length/1024)}));
     localStorage.removeItem("sw_backup_err");
     await swPruneBackups(bd,today);
-    if(!isAuto)bdiToast("Yedek alındı: "+dir.name+"/"+SW_BACKUP_DIR+"/"+name);
+    if(!isAuto)swToast("Yedek alındı: "+dir.name+"/"+SW_BACKUP_DIR+"/"+name);
   }catch(e){
     console.warn("Yedek alinamadi:",e);localStorage.setItem("sw_backup_err",String((e&&e.message)||e));
     if(!isAuto)alert("Yedek alınamadı: "+((e&&e.message)||e));
@@ -2726,7 +2764,7 @@ async function swRestoreFile(file){
   var gmGot=0;try{if(o.guestMemory)gmGot=await bdiGMMergeObj(o.guestMemory)}catch(e){console.warn(e)}
   missing.forEach(function(k){try{localStorage.setItem(k,o.localStorage[k])}catch(e){}});
   closeSetupModal();
-  bdiToast("Geri yükleme tamam: BDI kayıtları birleştirildi, "+gmGot+" misafir hafızası kaydı ve "+missing.length+" eksik ayar/kayıt eklendi.");
+  swToast("Geri yükleme tamam: BDI kayıtları birleştirildi, "+gmGot+" misafir hafızası kaydı ve "+missing.length+" eksik ayar/kayıt eklendi.");
   if(missing.length)setTimeout(function(){if(confirm("Ayarların tamamen yüklenmesi için sayfa yenilensin mi?"))location.reload()},400);
 }
 async function swSetupState(){
@@ -3022,25 +3060,32 @@ async function _bdiSyncFile(dir){
     var loc=[];
     try{loc=JSON.parse(BdiKV.get("bdi_"+d)||"[]")}catch(e){}
     var rem=(remote.bdi||{})[d]||[];
-    var byId={},order=[];
-    var addE=function(e){
+    var byId={},order=[],updated=0,localNewer=0;
+    // 2026-10-29: ayni id iki tarafta ise guncelleme damgasi (u) yeni olan kazanir -> sonradan eklenen tepki
+    // (reaction) gibi duzenlemeler de diger makinelere gider. u'su olmayan eski kayitlarda davranis ayni (local kalir).
+    var addE=function(e,fromRemote){
       if(!e)return;
       var id=e.id||"";
       if(id&&tombs[id])return;    // silinmis
-      if(id&&byId[id])return;     // zaten var
-      if(id)byId[id]=1;
+      if(id&&byId[id]!==undefined){
+        var ix=byId[id],cu=order[ix];
+        if((e.u||0)>(cu.u||0)){order[ix]=e;if(fromRemote)updated++}
+        else if(fromRemote&&(cu.u||0)>(e.u||0))localNewer++;
+        return;
+      }
+      if(id)byId[id]=order.length;
       order.push(e);
     };
-    loc.forEach(addE);
+    loc.forEach(function(e){addE(e,false)});
     var beforeLocal=order.length;
-    rem.forEach(addE);
+    rem.forEach(function(e){addE(e,true)});
     var gained=order.length-beforeLocal;                 // remote'tan gelen yeniler
     var localHadTombed=loc.length!==beforeLocal;         // localde silinmesi gerekenler vardi
-    if(gained>0||localHadTombed){
+    if(gained>0||localHadTombed||updated>0){
       BdiKV.set("bdi_"+d,JSON.stringify(order));
-      res.got+=gained;
+      res.got+=gained+updated;
     }
-    if(order.length!==rem.length)fileChanged=true;
+    if(order.length!==rem.length||localNewer>0)fileChanged=true;
     if(order.length>rem.length)res.sent+=order.length-rem.length;
     outBdi[d]=order;
   }
@@ -6857,18 +6902,18 @@ function addDidIt(){
     if(!entry)return;
     bdiNormalizeLogEntry(entry,document.getElementById("bdiDate").value,bdiLogs.length);
     bdiIssueLinkFromTouch(entry); // odada acik issue varsa ona baglanir (meta.issueId + issue gecmisine olay)
-    bdiLogs.push(entry);
+    bdiLogs.push(entry);_bdiJustAdded=[entry.id];
     if(entry.patternType==="service")bdiBumpChipCount(entry.action);
   }else{
     // Coklu oda: ayni islemi her odaya ayri kayit olarak isle
-    var added=0;
+    var added=0;_bdiJustAdded=[];
     for(var ri=0;ri<rooms.length;ri++){
       roomInput.value=rooms[ri];
       var e2=buildBdiTouchEntry(true);
       if(!e2){roomInput.value=rooms.join(",");return} // dogrulama hatasi: durumu geri koy
       bdiNormalizeLogEntry(e2,document.getElementById("bdiDate").value,bdiLogs.length);
       bdiIssueLinkFromTouch(e2);
-      bdiLogs.push(e2);
+      bdiLogs.push(e2);_bdiJustAdded.push(e2.id);
       if(e2.patternType==="service")bdiBumpChipCount(e2.action);
       added++;
     }
@@ -6881,6 +6926,7 @@ function addDidIt(){
   renderBdiQuickChips();
   renderBdiTodayCard();bdiIssueBadge();
   bdiFlashConfirm();
+  bdiAskReaction(_bdiJustAdded); // 2 saniyelik tepki (istege bagli, odagi calmaz)
   var rIn=document.getElementById("bdiRoom");if(rIn)rIn.focus(); // hiz dongusu: imlec odaya doner
 }
 // D: Power satiri - "1903 amenity cikolata" -> oda(lar) + islem eslesmesi + detay
@@ -7211,7 +7257,7 @@ function renderBdiLogWithData(logs){
   var sh='<span class="stat"><b>'+logs.length+'</b> touch</span>';
   for(var name in bc)sh+='<span class="stat"><b>'+bc[name]+'</b> '+esc(name)+'</span>';
   document.getElementById("bdiStats").innerHTML=sh;
-  var h='<table><thead><tr><th>Saat</th><th>Butler</th><th>Oda</th><th>Misafir</th><th>Islem</th><th>Detay</th><th></th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>Saat</th><th>Butler</th><th>Oda</th><th>Misafir</th><th>Islem</th><th>Detay</th><th>Tepki</th><th></th></tr></thead><tbody>';
   for(var i=logs.length-1;i>=0;i--){
     var l=logs[i];
     bdiNormalizeLogEntry(l,l._date||document.getElementById("bdiDate").value,i);
@@ -7223,6 +7269,7 @@ function renderBdiLogWithData(logs){
     h+='<td style="font-size:11px;color:#af8d69">'+esc(l.guest||"")+'</td>';
     h+='<td>'+((l.touchCategory||'Service')!==l.action?'<span class="bd-badge bd-badge-soft">'+esc(l.touchCategory||'Service')+'</span>':'')+'<span class="bd-badge">'+esc(l.action)+'</span>'+(l.manual?' <span class="bd-badge bd-badge-soft" title="Manuel giris">M</span>':'')+'</td>';
     h+='<td class="trace-text" style="max-width:350px">'+esc(l.sentence)+(l.note?' <i style="color:#9ca3af">['+esc(l.note)+']</i>':"")+'</td>';
+    h+='<td class="bd-react-cell">'+bdiReactCell(l,l._date||document.getElementById("bdiDate").value)+'</td>';
     h+="<td><button class=\"rm-btn\" onclick='removeBdiLogById("+JSON.stringify(l.id)+","+JSON.stringify(l._date||document.getElementById("bdiDate").value)+")'>\u00d7</button></td></tr>";
   }
   h+='</tbody></table>';
@@ -7267,7 +7314,7 @@ function renderBdiPeriodWithData(filtered,allLogs){
     h+='<td style="font-weight:700;text-align:center">'+esc(l.room)+_alB2+'</td>';
     h+='<td style="font-size:11px;color:#af8d69">'+esc(l.guest||"")+'</td>';
     h+='<td>'+((l.touchCategory||'Service')!==l.action?'<span class="bd-badge bd-badge-soft">'+esc(l.touchCategory||'Service')+'</span>':'')+'<span class="bd-badge">'+esc(l.action)+'</span></td>';
-    h+='<td class="trace-text" style="max-width:350px">'+esc(l.sentence)+(l.note?' <i style="color:#9ca3af">['+esc(l.note)+']</i>':'')+'</td>';
+    h+='<td class="trace-text" style="max-width:350px">'+esc(l.sentence)+(l.note?' <i style="color:#9ca3af">['+esc(l.note)+']</i>':'')+bdiReactBadge(l.reaction)+'</td>';
     h+='</tr>';
   }
   h+='</tbody></table>';
@@ -8438,6 +8485,7 @@ async function bdiGMLoad(){
   _bdiGM.dismissed=(await _gmGetMeta("dismissed"))||{};
   _bdiGM.insights=(await _gmGetMeta("insights"))||{};
   _bdiGM.state=(await _gmGetMeta("state"))||{};
+  _bdiGM.dna=(await _gmGetMeta("dna"))||{};
   _bdiGM.loaded=true;
   if(!_bdiGM.state.migratedV1){ // eski localStorage birlestirmeleri ve notlari tasinir (bir kez)
     var now=Date.now();
@@ -8485,6 +8533,7 @@ async function bdiGMIngest(){
         var k=bdiGuestKey(l.guest);if(!k)return;
         src["t:"+l.id]={id:"t:"+l.id,key:k,name:String(l.guest).trim(),date:d,time:l.time||"",kind:bdiGMKind(l),cat:l.touchCategory||"Service",
           butler:l.butler==="Butler team"?"":(l.butler||""),room:String(l.room||""),action:l.action||"",text:l.sentence||"",note:l.note||"",issueId:(l.meta&&l.meta.issueId)||""};
+        if(l.reaction&&l.reaction.f){src["t:"+l.id].react=l.reaction.f;src["t:"+l.id].reactText=l.reaction.t||""}
       });
     }
     var itombs={};bdiGetIssueTombs().forEach(function(t){itombs[t]=1});
@@ -8623,8 +8672,11 @@ async function bdiGMMerge(gids,target){
     Object.keys(p.keys).forEach(function(k){_bdiGM.aliases[k]={g:target,u:now}});
     var n=_bdiGM.notes[g];if(n&&n.t){var tn=_bdiGM.notes[target];_bdiGM.notes[target]={t:(tn&&tn.t?tn.t+"\n":"")+n.t,u:now};_bdiGM.notes[g]={t:"",u:now}}
     var si=_bdiGM.insights[g];if(si){var ti=_bdiGM.insights[target]||(_bdiGM.insights[target]={});for(var iid in si){if(!ti[iid]||(si[iid].u||0)>(ti[iid].u||0))ti[iid]=si[iid]}} // onay/ret kararlari hedef profile tasinir
+    var sd=(_bdiGM.dna||{})[g];if(sd){_bdiGM.dna=_bdiGM.dna||{};var td=_bdiGM.dna[target]||(_bdiGM.dna[target]={addr:null,items:{}});td.items=td.items||{}; // DNA da hedef profile tasinir
+      for(var dk in (sd.items||{}))if(!td.items[dk])td.items[dk]=Object.assign({},sd.items[dk],{u:now});
+      if(sd.addr&&(!td.addr||!td.addr.form))td.addr=Object.assign({},sd.addr,{u:now});}
   });
-  await _gmPutMeta("aliases",_bdiGM.aliases);await _gmPutMeta("notes",_bdiGM.notes);await _gmPutMeta("insights",_bdiGM.insights);
+  await _gmPutMeta("aliases",_bdiGM.aliases);await _gmPutMeta("notes",_bdiGM.notes);await _gmPutMeta("insights",_bdiGM.insights);await _gmPutMeta("dna",_bdiGM.dna||{});
   _bdiGMProf=null;bdiGMBackupSoon();
 }
 async function bdiGMUnmerge(key){
@@ -8667,6 +8719,7 @@ function bdiGMHint(room){
   var h='<div class="bd-mem-head"><b>'+esc(p.name)+'</b>';
   h+=p.prevStays.length?' <span class="bd-flag bd-flag-rep">'+(p.prevStays.length+1)+'. konaklama</span>':' <span class="bd-sub">ilk konaklama</span>';
   h+='<button type="button" class="bd-link" onclick="bdiGuestOpen(\''+p.gid+'\')">Profili aç</button></div>';
+  var _ad=bdiDnaAddrText(p.gid);if(_ad)h+='<div class="bd-mem-row"><span>Hitap</span><div><b>'+esc(_ad)+'</b></div></div>';
   if(p.prevStays.length){
     var last=p.prevStays[p.prevStays.length-1],le=bdiEventsIn(p,last),bc={};
     le.forEach(function(e){if(e.butler)bc[e.butler]=(bc[e.butler]||0)+1});
@@ -8809,12 +8862,13 @@ function bdiGuestDetailHtml(g){
       var k=BDI_KIND[e.kind]||BDI_KIND.touch;
       if(e.date!==lastD){h+='<li class="bd-tl-day">'+esc(bdiFmtD(e.date))+'</li>';lastD=e.date}
       var txt=e.kind==="issue-rec"?(e.text||""):(e.text||"");
-      h+='<li style="--c:'+k[1]+'"><time>'+esc(e.time||"--:--")+'</time><b>'+esc(e.kind==="issue-rec"?k[0]:(e.butler||k[0]))+'</b> <span class="bd-sub">'+esc(e.kind==="issue-rec"?(e.status==="closed"?"Kapandı"+(e.closedBy?", "+e.closedBy:""):"Açık"):(e.action||k[0]))+(e.room?' | Oda '+esc(e.room):'')+'</span><div class="bd-tl-text'+(e.kind==="issue-rec"?' bd-tl-long':'')+'">'+esc(bdiSensMask(txt))+(e.note&&txt.indexOf(e.note)<0?' <i>['+esc(bdiSensMask(e.note))+']</i>':'')+'</div></li>';
+      h+='<li style="--c:'+k[1]+'"><time>'+esc(e.time||"--:--")+'</time><b>'+esc(e.kind==="issue-rec"?k[0]:(e.butler||k[0]))+'</b>'+bdiReactBadge(e.react?{f:e.react,t:e.reactText}:null)+' <span class="bd-sub">'+esc(e.kind==="issue-rec"?(e.status==="closed"?"Kapandı"+(e.closedBy?", "+e.closedBy:""):"Açık"):(e.action||k[0]))+(e.room?' | Oda '+esc(e.room):'')+'</span><div class="bd-tl-text'+(e.kind==="issue-rec"?' bd-tl-long':'')+'">'+esc(bdiSensMask(txt))+(e.note&&txt.indexOf(e.note)<0?' <i>['+esc(bdiSensMask(e.note))+']</i>':'')+'</div></li>';
     });
     h+='</ul>';
     if(items.length>120)h+='<p class="bd-sub">+'+(items.length-120)+' eski kayıt (profil PDF\'inde tamamı var)</p>';
   }
   h+='</div><div>';
+  h+=bdiDnaHtml(g);
   h+=bdiInsightsSectionHtml(g);
   var bonds=Object.keys(g.bonds).sort(function(a,b){return g.bonds[b].n-g.bonds[a].n});
   h+='<h4 class="bd-h4">Butler bağları</h4>';
@@ -9157,6 +9211,19 @@ function bdiComputeInsights(p){
     add({id:"pro:"+g.k.replace(/\s+/g,"_"),type:"proactive",title:"Sorulmadan yap: "+it.item,dept:"BUT",conf:(n>=5||st>=2)?3:2,
       note:"Anticipate: "+it.itemEn+" requested "+n+" times over "+nd+" day(s)"+(win?", usually around "+win:"")+". Place it before the guest asks",evidence:g.items.map(bdiEvid)});
   });
+  // L) GOZLENEN TEPKI (2026-10-29, vizyon "an ve tepki"): memnun -> Keyif verenler, soguk -> Kacinilacaklar.
+  // Ayni isleme 2+ tepki ya da cumleli tek tepki yeter. Tahmin degil gozlem; yine de onaydan gecer.
+  ["good","cold"].forEach(function(f){
+    var rs=evs.filter(function(e){return e.react===f});if(!rs.length)return;
+    bdiGroupBy(rs,function(e){return bdiNoteKey(e.note||"")||normTR(e.action||"touch")}).forEach(function(g){
+      var withT=g.items.filter(function(e){return e.reactText});if(g.items.length<2&&!withT.length)return;
+      var it=g.items[0],what=String(it.note||it.action||"this touch").replace(/^[^:]{1,20}:\s*/,"").replace(/\.$/,""),st=staysOf(g.items),n=g.items.length;
+      var quote=withT.length?' ("'+bdiSensMask(String(withT[0].reactText)).replace(/"/g,"'").slice(0,120)+'")':"";
+      var ev=g.items.map(function(e){var v=bdiEvid(e);if(e.reactText)v.text=BDI_REACT[f][1]+": "+bdiSensMask(e.reactText)+" | "+v.text;return v});
+      if(f==="good")add({id:"delight:"+g.k.replace(/\W+/g,"_"),type:"delight",title:"Keyif veren: "+(it.action||"touch"),dept:"BUT",conf:(n>=2||st>=2)?3:2,note:"Delighted by "+what+quote+" ("+n+" positive reaction"+(n>1?"s":"")+")",evidence:ev});
+      else add({id:"avoid:"+g.k.replace(/\W+/g,"_"),type:"avoid",title:"Kaçınılacak: "+(it.action||"touch"),dept:"BUT",conf:n>=2?3:2,note:"Reacted coolly to "+what+quote+": avoid or adapt next time ("+n+" reaction"+(n>1?"s":"")+")",evidence:ev});
+    });
+  });
   return out;
 }
 function bdiInsState(gid){return (_bdiGM.insights&&_bdiGM.insights[gid])||{}}
@@ -9165,13 +9232,13 @@ function bdiProfileInsights(p){
   var st=bdiInsState(p.gid),comp=bdiComputeInsights(p),seen={},res={pending:[],accepted:[],rejected:[]};
   comp.forEach(function(i){
     seen[i.id]=1;var s=st[i.id];
-    if(s&&s.s==="accepted"){i.note=s.t||i.note;i.dept=s.dept||i.dept;res.accepted.push(i)}
+    if(s&&s.s==="accepted"){i.note=s.t||i.note;i.dept=s.dept||i.dept;i.by=s.by||"";res.accepted.push(i)}
     else if(s&&s.s==="rejected")res.rejected.push(i);
     else res.pending.push(i);
   });
   Object.keys(st).forEach(function(id){
     if(seen[id])return;var s=st[id];
-    var i={id:id,gid:p.gid,type:s.src==="xf"?"xf":"kept",title:s.title||"Not",dept:s.dept||"Other",conf:s.conf||2,note:s.t||"",evidence:[],src:s.src||""};
+    var i={id:id,gid:p.gid,type:s.src==="xf"?"xf":"kept",title:s.title||"Not",dept:s.dept||"Other",conf:s.conf||2,note:s.t||"",evidence:[],src:s.src||"",by:s.by||""};
     if(s.s==="accepted")res.accepted.push(i);else if(s.s==="pending")res.pending.push(i);else if(s.s==="rejected")res.rejected.push(i);
   });
   function ord(a,b){return BDI_DEPT_ORDER.indexOf(a.dept)-BDI_DEPT_ORDER.indexOf(b.dept)||b.conf-a.conf}
@@ -9187,8 +9254,8 @@ async function bdiInsightSet(gid,iid,status,extra){
 function bdiInsFind(gid,iid){var p=bdiGMProfiles().byGid[gid];if(!p)return null;var r=bdiProfileInsights(p);var all=r.pending.concat(r.accepted,r.rejected);for(var i=0;i<all.length;i++)if(all[i].id===iid)return {p:p,i:all[i]};return null}
 async function bdiInsAct(gid,iid,act){
   var f=bdiInsFind(gid,iid);if(!f)return;var i=f.i;
-  if(act==="edit"){var t=prompt("Notu duzenle (Protel / brief metni):",i.note);if(t==null)return;t=t.trim();if(!t)return;await bdiInsightSet(gid,iid,"accepted",{t:t,dept:i.dept,title:i.title,conf:i.conf,src:i.src||""})}
-  else if(act==="accept")await bdiInsightSet(gid,iid,"accepted",{t:i.note,dept:i.dept,title:i.title,conf:i.conf,src:i.src||""});
+  if(act==="edit"){var t=prompt("Notu duzenle (Protel / brief metni):",i.note);if(t==null)return;t=t.trim();if(!t||!bdiKvkkOk(t,i.dept==="SENSITIVITY"))return;await bdiInsightSet(gid,iid,"accepted",{t:t,dept:i.dept,title:i.title,conf:i.conf,src:i.src||"",by:bdiWho()})}
+  else if(act==="accept")await bdiInsightSet(gid,iid,"accepted",{t:i.note,dept:i.dept,title:i.title,conf:i.conf,src:i.src||"",by:bdiWho()});
   else if(act==="reject")await bdiInsightSet(gid,iid,"rejected",{title:i.title,dept:i.dept,t:i.note,src:i.src||""});
   else if(act==="undo")await bdiInsightSet(gid,iid,i.src==="xf"?"pending":"none",{});
   bdiInsRefresh(gid);
@@ -9225,6 +9292,141 @@ function bdiInsightsSectionHtml(g){
   if(r.rejected.length)h+='<details class="bd-ev" style="margin-top:6px"><summary>Reddedilenler ('+r.rejected.length+')</summary><ul>'+r.rejected.map(function(i){return '<li>'+esc(i.title)+': '+esc(i.note)+' <button type="button" class="bd-link" onclick="bdiInsAct(\''+i.gid+'\',\''+String(i.id).replace(/'/g,"")+'\',\'undo\')">Geri al</button></li>'}).join('')+'</ul></details>';
   return h;
 }
+// ---------- MISAFIR DNA (2026-10-29, vizyon "Misafir DNA'si"): serbest not yerine her misafirde ayni 8 bolum ----------
+// Ogeler iki kaynaktan gelir: (a) ONAYLI icgoruler, turune gore bolume oturur (tercih -> keyif verenler, saat -> ritim...);
+// (b) elle eklenenler (_bdiGM.dna[gid].items). Her oge: kanit sayisi, guven, onaylayan, tazelik (3 yildan eski -> "teyit et").
+// 1. bolum hitap/iletisim ayri alan (_bdiGM.dna[gid].addr). Hepsi misafir hafizasiyla senkronlanir ve yedeklenir.
+// KVKK: hicbir alana tibbi / inanc kelimesi yazilamaz; hassasiyet "Guest is sensitive towards X." kalibinda tutulur.
+var BDI_DNA_SECS=[["addr","1","Hitap ve iletişim"],["rhythm","2","Ritim"],["delight","3","Keyif verenler"],["avoid","4","Kaçınılacaklar"],["sens","5","Hassasiyetler"],["moments","6","Anlar ve kutlamalar"],["bond","7","İlişki"],["break","8","Geçmiş kırılmalar"]];
+var BDI_DNA_EN={addr:"ADDRESS",rhythm:"RHYTHM",delight:"DELIGHTS",avoid:"AVOID",sens:"SENSITIVITY",moments:"MOMENTS",bond:"RELATIONSHIP",break:"PAST ISSUES"};
+var BDI_DNA_HINT={rhythm:"ör. Kahvaltıyı 07:30'da odada istiyor",delight:"ör. Taze nar suyu çok hoşuna gidiyor",avoid:"ör. Turndown sırasında odada olmak istemiyor",sens:"Kaçınılacak öğe (ör. nuts, strong fragrances)",moments:"ör. Evlilik yıldönümü 30/10",bond:"ör. Butler Tuna ile sıcak bir bağı var",break:"ör. 2025'te koridor gürültüsü; oda değişimi işe yaradı"};
+var BDI_DNA_STALE_DAYS=1095;
+var BDI_KVKK_RE=/allerg|alerj|anaphyla|intoleran|diabet|diyabet|epipen|pregnan|hamile|\bgebe|medicat|\bila[cç]|disease|hastal|illness|cancer|kanser|asthma|ast[ıi]m|celiac|[cç][oö]lyak|halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|oru[cç]|ramadan|ramazan|church|kilise|mosque|\bcami\b|synagog|sinagog|faith|inan[cç]/i;
+function bdiKvkkOk(t,sens){
+  if(!BDI_KVKK_RE.test(t||""))return true;
+  alert("KVKK: tıbbi ya da inanç kelimesi yazma (alerji, hastalık, ilaç, din...)."+(sens?"\nSadece kaçınılacak öğeyi yaz (ör. nuts, strong fragrances); kayıt \"Guest is sensitive towards X.\" kalıbında tutulur.":"\nGerekiyorsa 5. bölüme sadece kaçınılacak öğeyi yaz."));
+  return false;
+}
+function bdiWho(){var b=document.getElementById("bdiButler");return (b&&b.value)||""}
+function bdiDnaOf(gid){var d=(_bdiGM.dna&&_bdiGM.dna[gid])||null;return d||{addr:null,items:{}}}
+function bdiDnaManual(gid){var it=bdiDnaOf(gid).items||{};return Object.keys(it).map(function(k){return Object.assign({id:k},it[k])}).filter(function(x){return !x.del&&x.t})}
+function bdiDnaAddrText(gid){
+  var a=bdiDnaOf(gid).addr;if(!a)return "";
+  var parts=[a.form,a.lang,a.formality,a.channel].filter(Boolean);
+  return parts.join(" · ")+(a.note?(parts.length?" · ":"")+a.note:"");
+}
+function bdiDnaSec(i){
+  var t=i.type,n=String(i.note||"");
+  if(t==="routine"||t==="habit")return "rhythm";
+  if(t==="sens"||i.dept==="SENSITIVITY")return "sens";
+  if(t==="occasion")return "moments";
+  if(t==="bond"||i.id==="style:hightouch")return "bond";
+  if(t==="risk"||t==="topic"||i.dept==="WARNING")return "break";
+  if(t==="avoid"||i.id==="style:privacy"||/does not want|doesn't want|dislikes?\b|\bavoid\b|never /i.test(n))return "avoid";
+  return "delight";
+}
+function bdiDnaStale(ymd){return !!ymd&&(Date.now()-new Date(ymd+"T12:00:00"))/864e5>BDI_DNA_STALE_DAYS}
+function bdiDnaModel(g){
+  var r=bdiProfileInsights(g),d=bdiDnaOf(g.gid),m={},filled=0;
+  BDI_DNA_SECS.forEach(function(s){m[s[0]]={acc:[],man:[],pend:0}});
+  r.accepted.forEach(function(i){m[bdiDnaSec(i)].acc.push(i)});
+  r.pending.forEach(function(i){m[bdiDnaSec(i)].pend++});
+  bdiDnaManual(g.gid).forEach(function(it){if(m[it.sec])m[it.sec].man.push(it)});
+  var a=d.addr||{};
+  BDI_DNA_SECS.forEach(function(s){var x=m[s[0]];if(x.acc.length||x.man.length||(s[0]==="addr"&&(a.form||a.lang||a.channel)))filled++});
+  return {sec:m,addr:a,filled:filled};
+}
+function bdiDnaHtml(g){
+  var M=bdiDnaModel(g),a=M.addr,gq="'"+g.gid+"'";
+  var opt=function(list,v,ph){return list.map(function(o){return '<option value="'+esc(o)+'"'+(o===(v||"")?' selected':'')+'>'+esc(o||ph)+'</option>'}).join("")};
+  var h='<div class="bd-dna"><div class="bd-dna-head"><h4 class="bd-h4" style="margin:0">Misafir DNA</h4><span class="bd-dna-score" title="Dolu bölüm sayısı">'+M.filled+'/8</span></div>';
+  BDI_DNA_SECS.forEach(function(s){
+    var k=s[0],x=M.sec[k],rows=[];
+    h+='<div class="bd-dna-sec bd-dna-'+k+'"><div class="bd-dna-t"><b>'+s[1]+'. '+esc(s[2])+'</b>'+(x.pend?'<span class="bd-dna-pend" title="Aşağıdaki İçgörüler bölümünde">'+x.pend+' öneri bekliyor</span>':'')+(k!=="addr"?'<button type="button" class="bd-link" onclick="bdiDnaAdd('+gq+',\''+k+'\')">+ ekle</button>':'')+'</div>';
+    if(k==="addr")h+='<div class="bd-dna-addr"><input data-f="form" placeholder="Nasıl hitap edilmeli (ör. Dr. Smith)" value="'+esc(a.form||"")+'"><select data-f="lang" title="Dil">'+opt(["","EN","TR","AR","RU","DE","FR","IT","ES","ZH","Diğer"],a.lang,"Dil…")+'</select><select data-f="formality" title="Resmiyet">'+opt(["","Resmi","Sıcak"],a.formality,"Resmiyet…")+'</select><select data-f="channel" title="Tercih ettiği iletişim">'+opt(["","Yüz yüze","Telefon","WhatsApp","E-posta","Not / kart"],a.channel,"İletişim…")+'</select><input data-f="note" placeholder="Not (ör. eşine Lady Ayşe diye hitap)" value="'+esc(a.note||"")+'"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiDnaSaveAddr('+gq+',this)">Kaydet</button></div>'+(a.u?'<div class="bd-dna-meta">'+(a.by?esc(a.by)+' · ':'')+esc(bdiFmtTs(a.u))+(bdiDnaStale(bdiYmd(new Date(a.u)))?' <span class="bd-dna-stale">teyit et</span>':'')+'</div>':'');
+    x.acc.forEach(function(i){
+      var last=(i.evidence||[]).reduce(function(mx,e){return e.date>mx?e.date:mx},"");
+      rows.push('<li><span class="bd-dna-txt">'+esc(i.note)+'</span><span class="bd-dna-meta">'+esc(BDI_CONF_LBL[i.conf]||"")+(i.evidence&&i.evidence.length?' · '+i.evidence.length+' kanıt':'')+(last?' · son '+esc(bdiFmtD(last)):'')+(i.by?' · onaylayan '+esc(i.by):'')+(bdiDnaStale(last)?' <span class="bd-dna-stale">teyit et</span>':'')+'</span></li>');
+    });
+    x.man.forEach(function(it){
+      var day=bdiYmd(new Date(it.at||it.u||Date.now()));
+      rows.push('<li><span class="bd-dna-txt">'+esc(it.t)+'</span><span class="bd-dna-meta">elle · '+esc(bdiFmtD(day))+(it.by?' · '+esc(it.by):'')+(bdiDnaStale(day)?' <span class="bd-dna-stale">teyit et</span>':'')+' <button type="button" class="bd-link bd-link-danger" onclick="bdiDnaDel('+gq+',\''+it.id+'\')">sil</button></span></li>');
+    });
+    if(rows.length)h+='<ul class="bd-dna-list">'+rows.join("")+'</ul>';else if(k!=="addr")h+='<div class="bd-dna-empty">—</div>';
+    h+='</div>';
+  });
+  return h+'</div>';
+}
+async function bdiDnaPut(gid,fn){
+  await bdiGMLoad();_bdiGM.dna=_bdiGM.dna||{};var d=_bdiGM.dna[gid]||(_bdiGM.dna[gid]={addr:null,items:{}});d.items=d.items||{};
+  fn(d);await _gmPutMeta("dna",_bdiGM.dna);bdiGMBackupSoon();bdiInsRefresh(gid);
+}
+async function bdiDnaSaveAddr(gid,btn){
+  var o={};btn.parentElement.querySelectorAll("[data-f]").forEach(function(el){o[el.getAttribute("data-f")]=String(el.value||"").trim()});
+  if(!bdiKvkkOk(o.form+" "+o.note))return;
+  o.u=Date.now();o.by=bdiWho();
+  await bdiDnaPut(gid,function(d){d.addr=o});bdiToast("Hitap ve iletişim kaydedildi.");
+}
+async function bdiDnaAdd(gid,sec){
+  var lbl=(BDI_DNA_SECS.filter(function(s){return s[0]===sec})[0]||[])[2]||"";
+  var t=prompt(lbl+"\n"+(BDI_DNA_HINT[sec]||""));if(t==null)return;t=t.replace(/\s+/g," ").trim();if(!t)return;
+  if(!bdiKvkkOk(t,sec==="sens"))return;
+  if(sec==="sens"&&!/^guest is sensitive towards/i.test(t))t="Guest is sensitive towards "+t.replace(/\.$/,"")+".";
+  var id="m_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),now=Date.now();
+  await bdiDnaPut(gid,function(d){d.items[id]={sec:sec,t:t,by:bdiWho(),at:now,u:now}});bdiToast(lbl+": eklendi.");
+}
+async function bdiDnaDel(gid,id){
+  if(!confirm("Bu DNA öğesi silinsin mi?"))return;
+  await bdiDnaPut(gid,function(d){if(d.items[id]){d.items[id].del=true;d.items[id].u=Date.now()}});
+}
+// ---------- TEPKI KAYDI (2026-10-29, vizyon "an ve tepki"): touch'a 2 saniyelik misafir tepkisi ----------
+// l.reaction={f:"good"|"neutral"|"cold",t:"istege bagli tek cumle",at:ms}; l.u guncellenir -> senkronla diger makinelere gider.
+// Tepkiler icgoru motorunda "Keyif veren" / "Kacinilacak" onerisi olur; Guest Relations duygu egrisini besler.
+var BDI_REACT={good:["😊","Memnun"],neutral:["😐","Nötr"],cold:["🙁","Soğuk"]};
+var _bdiJustAdded=[],_bdiReactIds=[],_bdiReactT=null;
+function bdiReactBadge(r){if(!r||!BDI_REACT[r.f])return "";return ' <span class="bd-react bd-react-'+r.f+'" title="'+esc(BDI_REACT[r.f][1]+(r.t?": "+r.t:""))+'">'+BDI_REACT[r.f][0]+(r.t?' <i>'+esc(r.t.length>60?r.t.slice(0,60)+"...":r.t)+'</i>':'')+'</span>'}
+function bdiReactCell(l,date){
+  var a=JSON.stringify(l.id)+","+JSON.stringify(date),cur=l.reaction&&l.reaction.f;
+  var h=["good","neutral","cold"].map(function(f){return "<button type=\"button\" class=\"bd-react-btn"+(cur===f?" on":"")+"\" title=\""+BDI_REACT[f][1]+"\" onclick='bdiSetReaction("+a+","+JSON.stringify(f)+")'>"+BDI_REACT[f][0]+"</button>"}).join("");
+  if(cur)h+="<button type=\"button\" class=\"bd-link\" title=\"Tepki cümlesi\" onclick='bdiReactText("+a+")'>&#9998;</button>";
+  if(l.reaction&&l.reaction.t)h+='<div class="bd-react-t">'+esc(l.reaction.t)+'</div>';
+  return h;
+}
+function bdiFindEntry(id,date){
+  if(date===document.getElementById("bdiDate").value){for(var i=0;i<bdiLogs.length;i++)if(bdiLogs[i].id===id)return {arr:bdiLogs,ix:i,cur:true};return null}
+  var arr=[];try{arr=JSON.parse(BdiKV.get("bdi_"+date)||"[]")}catch(e){}
+  for(var j=0;j<arr.length;j++)if(arr[j].id===id)return {arr:arr,ix:j,cur:false};
+  return null;
+}
+function bdiSetReaction(id,date,f,text){
+  var x=bdiFindEntry(id,date);if(!x)return;var l=x.arr[x.ix];
+  if(f===null||(text===undefined&&l.reaction&&l.reaction.f===f))delete l.reaction; // ayni yuze tekrar basmak geri alir
+  else l.reaction={f:f,t:text!==undefined?text:((l.reaction&&l.reaction.t)||""),at:Date.now()};
+  l.u=Date.now();
+  if(x.cur)saveBdiLogs();else{BdiKV.set("bdi_"+date,JSON.stringify(x.arr));if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();bdiGMSchedule()}
+  renderBdiLog();
+}
+function bdiReactText(id,date){
+  var x=bdiFindEntry(id,date);if(!x||!x.arr[x.ix].reaction)return;var r=x.arr[x.ix].reaction;
+  var t=prompt("Misafirin tepkisi (tek cümle):",r.t||"");if(t==null)return;t=t.trim();if(t&&!bdiKvkkOk(t))return;
+  bdiSetReaction(id,date,r.f,t);
+}
+function bdiAskReaction(ids){
+  if(!ids||!ids.length)return;
+  _bdiReactIds=ids.slice();var el=document.getElementById("bdiReactBar");
+  if(!el){el=document.createElement("div");el.id="bdiReactBar";el.className="bd-reactbar";el.setAttribute("role","group");el.setAttribute("aria-label","Misafirin tepkisi");document.getElementById("page-didit").appendChild(el)}
+  el.innerHTML='<span class="bd-sub">Misafirin tepkisi'+(ids.length>1?' ('+ids.length+' oda)':'')+'?</span>'+["good","neutral","cold"].map(function(f){return '<button type="button" class="bd-react-btn big" onclick="bdiReactQuick(\''+f+'\')">'+BDI_REACT[f][0]+' '+BDI_REACT[f][1]+'</button>'}).join("")+'<input id="bdiReactText" type="text" placeholder="İsteğe bağlı tek cümle (ör. çocukların adını hatırlamamıza sevindi)" onkeydown="if(event.key===\'Enter\')bdiReactQuick()"><button type="button" class="bd-link" onclick="bdiReactClose()">Atla</button>';
+  el.classList.remove("pick");el.classList.add("on");clearTimeout(_bdiReactT);_bdiReactT=setTimeout(bdiReactClose,20000);
+}
+function bdiReactQuick(f){
+  var el=document.getElementById("bdiReactBar"),t=((document.getElementById("bdiReactText")||{}).value||"").trim();
+  if(!f){if(el)el.classList.add("pick");return} // cumle yazilip Enter'a basildi: yuz secilsin
+  if(t&&!bdiKvkkOk(t))return;
+  var d=document.getElementById("bdiDate").value;_bdiReactIds.forEach(function(id){bdiSetReaction(id,d,f,t)});
+  bdiReactClose();bdiToast("Tepki kaydedildi: "+BDI_REACT[f][1]+(t?" ("+t+")":""));
+}
+function bdiReactClose(){var el=document.getElementById("bdiReactBar");if(el)el.classList.remove("on","pick");clearTimeout(_bdiReactT)}
+
 // ---- Protel notu: FORMAT ACIK (Haktan 2026-10-23: "simdilik pas, acik birakalim"). Tek adaptor. ----
 function bdiProtelFormat(p,accepted){
   var by={};accepted.forEach(function(i){(by[i.dept]||(by[i.dept]=[])).push(i.note.replace(/\s+/g," ").replace(/\.$/,""))});
@@ -9290,8 +9492,10 @@ function bdiBriefFor(gids){
   items.forEach(function(x){
     var p=x.p,r=bdiProfileInsights(p),prev=p.prevStays,last=prev[prev.length-1],bk=Object.keys(p.bonds).sort(function(a,b){return p.bonds[b].n-p.bonds[a].n});
     h+='<div class="g"><div class="gh"><span class="gn">'+esc(p.name)+'</span><span class="gr">'+esc(x.room?"Room "+x.room:"")+'</span></div>';
+    var _adr=bdiDnaAddrText(p.gid,true);if(_adr)h+='<div class="meta"><b>Address as:</b> '+esc(_adr)+'</div>';
     h+='<div class="meta">'+(prev.length?(prev.length+1)+'. stay. Last stay: '+esc(bdiStayLabel(last)):'First recorded stay')+(bk.length?' | Most contact: '+esc(bk.slice(0,2).map(function(b){return b+" ("+p.bonds[b].n+")"}).join(", ")):'')+(p.issues.length?' | Issues on record: '+p.issues.length:'')+'</div><ul>';
     r.accepted.forEach(function(i){h+='<li><span class="box"></span><span class="d'+(i.dept==="WARNING"?' w':'')+'">'+esc(i.dept)+'</span>'+esc(i.note)+'</li>'});
+    bdiDnaManual(p.gid).forEach(function(it){h+='<li><span class="box"></span><span class="d'+(it.sec==="avoid"||it.sec==="sens"?' w':'')+'">'+esc(BDI_DNA_EN[it.sec]||"NOTE")+'</span>'+esc(it.t)+'</li>'});
     r.pending.filter(function(i){return i.conf>=3}).forEach(function(i){h+='<li><span class="box"></span><span class="d'+(i.dept==="WARNING"?' w':'')+'">'+esc(i.dept)+'</span>'+esc(i.note)+' <span class="un">(not yet approved)</span></li>'});
     if(!r.accepted.length&&!r.pending.some(function(i){return i.conf>=3}))h+='<li>No approved notes yet.</li>';
     h+='</ul></div>';
@@ -9589,7 +9793,7 @@ async function renderBdiAlice(){
 // ----- yedek: yerel gunluk kopya + ortak klasor dosyasi -----
 function bdiGMExportObj(){
   var ev=Object.keys(_bdiGM.events).map(function(k){return _bdiGM.events[k]});
-  return {version:1,app:"SmartWorker",kind:"guest-memory",updated:new Date().toISOString(),events:ev,aliases:_bdiGM.aliases,notes:_bdiGM.notes,dismissed:_bdiGM.dismissed,insights:_bdiGM.insights};
+  return {version:1,app:"SmartWorker",kind:"guest-memory",updated:new Date().toISOString(),events:ev,aliases:_bdiGM.aliases,notes:_bdiGM.notes,dismissed:_bdiGM.dismissed,insights:_bdiGM.insights,dna:_bdiGM.dna||{}};
 }
 async function bdiGMDailySnapshot(){
   var today=bdiYmd(new Date());
@@ -9612,13 +9816,18 @@ async function bdiGMMergeObj(obj){
   var metaCh=false;
   ["aliases","notes"].forEach(function(f){var src=obj[f]||{};for(var k in src){var a=src[k],b=_bdiGM[f][k];if(a&&(!b||(a.u||0)>(b.u||0))){_bdiGM[f][k]=a;metaCh=true;got++}}});
   for(var d in (obj.dismissed||{}))if(!_bdiGM.dismissed[d]){_bdiGM.dismissed[d]=obj.dismissed[d];metaCh=true}
+  var rd=obj.dna||{};_bdiGM.dna=_bdiGM.dna||{};var dnaCh=false; // DNA: hitap ve elle eklenen ogeler, yeni-u kazanir
+  for(var dg in rd){var Ld=_bdiGM.dna[dg]||(_bdiGM.dna[dg]={addr:null,items:{}}),Rd=rd[dg]||{};Ld.items=Ld.items||{};
+    if(Rd.addr&&(!Ld.addr||(Rd.addr.u||0)>(Ld.addr.u||0))){Ld.addr=Rd.addr;dnaCh=true;got++}
+    for(var dk in (Rd.items||{})){var ra=Rd.items[dk],la=Ld.items[dk];if(ra&&(!la||(ra.u||0)>(la.u||0))){Ld.items[dk]=ra;dnaCh=true;got++}}}
+  if(dnaCh)await _gmPutMeta("dna",_bdiGM.dna);
   var ri=obj.insights||{};for(var ig in ri){var lm=_bdiGM.insights[ig]||(_bdiGM.insights[ig]={});for(var ii in ri[ig]){var a2=ri[ig][ii],b2=lm[ii];if(a2&&(!b2||(a2.u||0)>(b2.u||0))){lm[ii]=a2;metaCh=true;got++}}}
   await _gmPutEvents(put);
   if(metaCh){await _gmPutMeta("aliases",_bdiGM.aliases);await _gmPutMeta("notes",_bdiGM.notes);await _gmPutMeta("dismissed",_bdiGM.dismissed);await _gmPutMeta("insights",_bdiGM.insights)}
   if(got)_bdiGMProf=null;
   return got;
 }
-function bdiGMSig(o){var n=0,mu=0;(o.events||[]).forEach(function(e){n++;if((e.u||0)>mu)mu=e.u||0});return n+"|"+mu+"|"+JSON.stringify(o.aliases||{}).length+"|"+JSON.stringify(o.notes||{}).length+"|"+Object.keys(o.dismissed||{}).length+"|"+JSON.stringify(o.insights||{}).length}
+function bdiGMSig(o){var n=0,mu=0;(o.events||[]).forEach(function(e){n++;if((e.u||0)>mu)mu=e.u||0});return JSON.stringify(o.dna||{}).length+"|"+n+"|"+mu+"|"+JSON.stringify(o.aliases||{}).length+"|"+JSON.stringify(o.notes||{}).length+"|"+Object.keys(o.dismissed||{}).length+"|"+JSON.stringify(o.insights||{}).length}
 async function _bdiGuestMemSyncFile(dir){
   var res={got:0,sent:0};
   await bdiGMIngest();
@@ -13440,7 +13649,8 @@ window.bdiLogs = bdiLogs;
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
   bdiGMSuggestAct, bdiGMUnmerge, bdiGMSaveNote, bdiGuestOpen, bdiGraphSelect, bdiGMDownload, bdiGMRestoreFile, bdiGMRestoreSnapshot,
   bdiInsAct, bdiProtelCopy, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
-  bdiAliceImportFile, bdiAliceSetPeriod, bdiStaffSet, renderBdiAlice
+  bdiAliceImportFile, bdiAliceSetPeriod, bdiStaffSet, renderBdiAlice,
+  bdiSetReaction, bdiReactText, bdiReactQuick, bdiReactClose, bdiDnaAdd, bdiDnaDel, bdiDnaSaveAddr
 ].forEach(function(fn){ if(fn && fn.name) window[fn.name] = fn });
 window.__bdiExtSyncFile = _bdiExtSyncFile; // test kancasi
 window.__bdiGuestMemSyncFile = _bdiGuestMemSyncFile; // test kancasi
