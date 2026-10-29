@@ -2747,14 +2747,6 @@ async function swEnsureGuestFile(dir){
 }
 function swExpIdb(){return new Promise(function(res,rej){var r=indexedDB.open("sw_expense_sync",1);r.onupgradeneeded=function(){r.result.createObjectStore("handles")};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
 function swExpGet(){return swExpIdb().then(function(db){return new Promise(function(res){var rq=db.transaction("handles","readonly").objectStore("handles").get("dir");rq.onsuccess=function(){res(rq.result||null)};rq.onerror=function(){res(null)}})}).catch(function(){return null})}
-// Expense ayri kurulum istemez (2026-10-29): ayni tarayicida bu ortak klasoru kendisi bulur ve "Expense" alt klasorunu kullanir.
-// Expense'te eskiden ayrica secilmis bir klasor varsa o oncelikli; bu buton o ayri baglantiyi kaldirir, Expense ortak klasore doner.
-function swExpDel(){return swExpIdb().then(function(db){return new Promise(function(res){var tx=db.transaction("handles","readwrite");tx.objectStore("handles").delete("dir");tx.oncomplete=res;tx.onerror=function(){res()}})}).catch(function(){})}
-async function swConnectExpense(){
-  await swExpDel();
-  swToast("Expense artık ortak klasörü kullanıyor ("+(_pyDirHandle?_pyDirHandle.name+"/Expense":"Expense")+"). Expense'i açınca kendisi senkronlar.");
-  swSetupRefresh();
-}
 async function swSetupPickFolder(){
   if(typeof window.showDirectoryPicker!=="function")return alert("Bu tarayıcı klasör seçmeyi desteklemiyor. SmartWorker'ı Edge (ya da Chrome) ile açın.");
   var h;
@@ -2840,9 +2832,8 @@ async function swSetupState(){
   var h=_pyDirHandle||await _pyDirGet();
   if(h){s.folder=h.name;s.perm=await swPerm(h)}
   if(_syncHandle){s.guest={name:_syncHandle.name,inFolder:false};if(h&&s.perm==="granted"){try{var pth=await h.resolve(_syncHandle);s.guest.inFolder=!!(pth&&pth.length)}catch(e){}}}
-  var eh=await swExpGet();
-  if(eh&&h&&s.perm==="granted"){try{var sub=await h.getDirectoryHandle("Expense");if(await sub.isSameEntry(eh)){await swExpDel();eh=null}}catch(e){}} // eski "Expense'i bagla" kaydi = ortak/Expense: ayri baglanti gereksiz
-  if(eh)s.expense=eh.name;
+  var ex=await swExpIdb().then(function(db){return new Promise(function(res){var rq=db.transaction("handles","readonly").objectStore("handles").get("xlsxDir");rq.onsuccess=function(){res(rq.result||null)};rq.onerror=function(){res(null)}})}).catch(function(){return null});
+  if(ex)s.expense=ex.name;
   try{s.sync=JSON.parse(localStorage.getItem("sw_py_sync_last")||"null")}catch(e){}
   return s;
 }
@@ -2862,7 +2853,7 @@ function swSetupHtml(s){
   if(s.backup)h+=row(s.backupErr?"warn":"ok","Otomatik yedek","Son yedek: <b>"+bdiFmtTs(s.backup.t)+"</b> · "+esc(SW_BACKUP_DIR+"/"+s.backup.name)+" · "+s.backup.kb+" KB · her gün; son "+SW_BACKUP_KEEP_DAYS+" gün + aylık yedekler saklanır"+(s.backupErr?'<br><span style="color:#b45309">Son deneme hatası: '+esc(s.backupErr)+'</span>':'')+".",granted?b("Şimdi yedekle","swBackupNow(false)"):"");
   else h+=row(granted?"warn":"off","Otomatik yedek",granted?"Henüz yedek yok.":"Ortak klasör bağlanınca her gün "+esc(SW_BACKUP_DIR)+" klasörüne tam yedek alınır.",granted?b("Şimdi yedekle","swBackupNow(false)",1):"");
   h+=granted?row("ok","iPad Butler Rehberi","Sabah rehberi <b>"+esc(s.folder+"/"+BGD_DIR)+"</b> altına yazılır; butlerların dönüşleri <b>"+esc(BGD_DIR+"/"+BGD_IN)+"</b> klasöründen kendiliğinden alınır (Butler Did It › Brifing › iPad rehberi)."):row("off","iPad Butler Rehberi","Ortak klasör bağlanınca Rehber ve Rehber/Gelen klasörleri kendiliğinden kurulur.");
-  h+=s.expense?row("warn","Expense","Expense ayrı bir klasöre bağlı: <b>"+esc(s.expense)+"</b>. Diğer bilgisayarlarla aynı klasörü kullanması için ortak klasöre geçir.",granted?b("Ortak klasöre geçir","swConnectExpense()",1):""):row(granted?"ok":"off","Expense",granted?"Ayrı kurulum yok: Expense bu tarayıcıda açılınca ortak klasörün <b>Expense</b> alt klasörünü kendiliğinden kullanır.":"Ortak klasör bağlanınca Expense de onu kendiliğinden kullanır.");
+  h+=s.expense?row("ok","Expense","Expense <b>"+esc(s.expense)+"</b> klasörüne bağlı: senkron (<b>SmartWorker Senkron</b> alt klasörü) ve aylık Excel (yıl/ay klasörleri) orada, kendiliğinden."):row("off","Expense","Expense'in tek ayarı Expense içinde: <b>Expenses</b> klasörünü (ACCOR › HA5E2_SPOF - DPT-BS › Expenses) bir kez seç; senkron ve aylık Excel kendiliğinden çalışır.");
   return h;
 }
 function swSetupRefresh(){
@@ -14515,7 +14506,6 @@ window.swSetupGrant = swSetupGrant;
 window.swSetupTryPersist = swSetupTryPersist;
 window.swSetupSnooze = swSetupSnooze;
 window.swBackupNow = swBackupNow;
-window.swConnectExpense = swConnectExpense;
 window.swRestoreFile = swRestoreFile;
 swSetupBoot();
 window.removeKW = removeKW;
