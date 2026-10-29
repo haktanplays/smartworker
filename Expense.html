@@ -51,16 +51,19 @@ table{width:100%;border-collapse:collapse;font-size:11px}th{background:#f8fafc;c
 kbd{font-family:inherit;font-size:10px;border:1px solid #cbd5e1;border-bottom-width:2px;border-radius:4px;padding:1px 5px;background:#fff;color:#475569}
 .trend{display:flex;align-items:flex-end;gap:6px;height:150px;padding:6px 0 0}.trend .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;min-width:0}.trend .bar{width:100%;border-radius:4px 4px 0 0;background:#1a6b5c}.trend .bar.rec{background:#a855f7;border-radius:0}.trend .lbl{font-size:9px;color:#64748b;white-space:nowrap}.trend .val{font-size:9px;font-weight:800;color:#334155}
 .frow{display:flex;gap:12px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f1f5f9}.frow>label{width:90px;flex:none;margin:0;padding-top:5px}.frow .chipbar{margin-top:0}.frow .chip{padding:5px 11px;font-size:12px}
+.sync-banner{background:#fff7ed;border-color:#fdba74;color:#7c2d12}
+#syncPill{cursor:pointer}
 .stripe{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:12px}
 </style>
 </head>
 <body>
 <div class="topbar">
   <div><small>Raffles Istanbul</small><h1>SmartWorker — Expense v3</h1></div>
-  <div class="row"><span id="syncPill" class="off" onclick="showPage('learning')" title="Ortak klasör senkronu"><span class="dot"></span><span id="syncPillText">Ortak klasör seçilmedi</span></span><a href="SmartWorker3.html">← Ana Sayfa</a></div>
+  <div class="row"><span id="syncPill" class="off" onclick="syncPillClick()" title="Ortak klasör senkronu"><span class="dot"></span><span id="syncPillText">Ortak klasör seçilmedi</span></span><a href="SmartWorker3.html">← Ana Sayfa</a></div>
 </div>
 <div class="nav" id="nav"></div>
 <div class="container">
+  <div id="syncBanner" class="stripe sync-banner" style="display:none"></div>
   <div id="globalNotice"></div>
   <section id="page-dashboard" class="page active"></section>
   <section id="page-expenses" class="page"></section>
@@ -594,7 +597,7 @@ function loadData(){
   let d=defaultData();applySeedVendors(d);return d;
 }
 function saveLocal(){data.updatedAt=new Date().toISOString();localStorage.setItem(DATA_KEY,JSON.stringify(data))}
-function saveData(){saveLocal();scheduleAutoSync();updateNavCounts()}
+function saveData(){saveLocal();markPending();scheduleAutoSync();updateNavCounts();updateSyncUI()}
 function log(action,details={}){data.logs.unshift({id:uid("log"),ts:new Date().toISOString(),action,details,u:nowU()});data.logs=data.logs.slice(0,800)}
 function notice(html,type="info",ms=6000){let el=$("globalNotice");el.innerHTML='<div class="notice '+type+'">'+html+'</div>';window.scrollTo({top:0,behavior:"smooth"});clearTimeout(notice._t);notice._t=setTimeout(()=>{el.innerHTML=""},ms)}
 
@@ -1228,62 +1231,143 @@ function dedupeEntries(){
   victims.forEach(e=>{e.deleted=true;touch(e)});log("dedupe",{count:victims.length,ids:victims.map(e=>e.id)});saveData();renderAll();notice(victims.length+" mükerrer kayıt silindi.","ok");
 }
 
-// ---------- ORTAK KLASOR SENKRONU (SmartWorker3 deseni) ----------
-// Klasor bir kez secilir (showDirectoryPicker), handle IndexedDB'de saklanir. Klasordeki
-// smartworker_expense_sync.json tek gercek kaynak: id bazli birlesim, yuksek u kazanir.
-// Ayni klasore aylik "Invoice <Month> <Year>.xlsx" / "Receipt ...xlsx" otomatik yazilir.
-const SYNC_JSON="smartworker_expense_sync.json",XLSX_STAMP_KEY="sw_expense_xlsx_written";
-let syncState={dir:null,busy:false,last:null,error:"",timer:null,interval:null};
+// ---------- ORTAK KLASOR SENKRONU (2026-10-29 sadelestirme: kurulum yok, kendiliginden) ----------
+// Klasor: Expense, SmartWorker'in ortak klasorunu (SmartWorker > Kurulum) kendisi kullanir; verisi onun "Expense" alt
+// klasorune yazilir. Ayni tarayicida SmartWorker kuruluysa Expense'te hicbir sey secilmez. SmartWorker kurulmamissa
+// burada BIR KEZ klasor secilir ve ayni klasor SmartWorker'a da kaydedilir. (Eskiden ayrica secilen klasor varsa o kullanilir.)
+// Izin: Edge tarayici yeniden acilinca klasor iznini unutur. Sayfadaki ilk tiklamada izin kendiliginden istenir; ustteki
+// bantta ve senkron rozetinde tek tik "Erisim ver" var. Izin gelince bekleyen degisiklikler hemen gider.
+// Zamanlama: acilista, her kayittan 3 sn sonra, dakikada bir ve pencereye donuldugunde.
+// Dosyalar: her bilgisayar kendi senkron/<cihaz>.json dosyasina yazar, digerlerininkini okuyup birlestirir (id bazli, ayni kayitta
+// en yeni degisiklik kazanir, silinenler geri gelmez). Iki bilgisayar ayni anda senkronlasa da kimse kimsenin uzerine yazmaz.
+// smartworker_expense_sync.json (birlesik) eski surumlerle uyum icin okunur ve yazilir.
+// Cihaz listesi = senkron/ klasorundeki dosyalar: listede olmayan bilgisayar ayni klasoru kullanmiyordur.
+// Ayin Invoice/Receipt Excel'leri ayni klasorde yil/ay alt klasorlerine otomatik yazilir.
+const SYNC_JSON="smartworker_expense_sync.json",SYNC_DIR="senkron",XLSX_STAMP_KEY="sw_expense_xlsx_written",SW_SUB="Expense",PENDING_KEY="sw_expense_pending";
+let syncState={base:null,sub:"",dir:null,mode:"",swRoot:null,perm:"",asked:false,busy:false,last:null,error:"",timer:null,interval:null,devices:{}};
 function syncSupported(){return typeof window.showDirectoryPicker==="function"&&typeof indexedDB!=="undefined"}
 function _idb(){return new Promise((res,rej)=>{let r=indexedDB.open("sw_expense_sync",1);r.onupgradeneeded=()=>{r.result.createObjectStore("handles")};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 function _dirPut(h){return _idb().then(db=>new Promise((res,rej)=>{let tx=db.transaction("handles","readwrite");tx.objectStore("handles").put(h,"dir");tx.oncomplete=res;tx.onerror=()=>rej(tx.error)}))}
 function _dirGet(){return _idb().then(db=>new Promise(res=>{let tx=db.transaction("handles","readonly");let rq=tx.objectStore("handles").get("dir");rq.onsuccess=()=>res(rq.result||null);rq.onerror=()=>res(null)})).catch(()=>null)}
-function _dirDel(){return _idb().then(db=>{db.transaction("handles","readwrite").objectStore("handles").delete("dir")}).catch(()=>{})}
+function _dirDel(){return _idb().then(db=>new Promise(res=>{let tx=db.transaction("handles","readwrite");tx.objectStore("handles").delete("dir");tx.oncomplete=res;tx.onerror=()=>res()})).catch(()=>{})}
+// SmartWorker'in ortak klasor tutamaci (ayni tarayici, ayni depo: sw_sync/handles/pyDir)
+function _swIdb(){return new Promise((res,rej)=>{let r=indexedDB.open("sw_sync",1);r.onupgradeneeded=()=>{r.result.createObjectStore("handles")};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function _swRootGet(){return _swIdb().then(db=>new Promise(res=>{let rq=db.transaction("handles","readonly").objectStore("handles").get("pyDir");rq.onsuccess=()=>res(rq.result||null);rq.onerror=()=>res(null)})).catch(()=>null)}
+function _swRootPut(h){return _swIdb().then(db=>new Promise((res,rej)=>{let tx=db.transaction("handles","readwrite");tx.objectStore("handles").put(h,"pyDir");tx.oncomplete=res;tx.onerror=()=>rej(tx.error)}))}
+function deviceId(){let id=localStorage.getItem("sw_device_id");if(!id){id="pc_"+Math.random().toString(36).slice(2,10);localStorage.setItem("sw_device_id",id)}return id}
+function deviceName(){return localStorage.getItem("sw_device_name")||("Bilgisayar "+deviceId().slice(3,7).toUpperCase())}
+function renameDevice(){let n=prompt("Bu bilgisayarın adı (diğer bilgisayarlarda böyle görünür):",deviceName());if(n==null)return;n=n.trim().slice(0,40);if(n){localStorage.setItem("sw_device_name",n);syncNow(false);renderAll()}}
+function pendingCount(){return +localStorage.getItem(PENDING_KEY)||0}
+function markPending(){localStorage.setItem(PENDING_KEY,String(pendingCount()+1))}
+function folderLabel(){return syncState.base?syncState.base.name+(syncState.sub?"/"+syncState.sub:""):""}
+async function resolveSyncTarget(){
+  let own=await _dirGet(),sw=await _swRootGet();syncState.swRoot=sw;syncState.dir=null;
+  if(own){syncState.base=own;syncState.sub="";syncState.mode="own"}
+  else if(sw){syncState.base=sw;syncState.sub=SW_SUB;syncState.mode="sw"}
+  else{syncState.base=null;syncState.sub="";syncState.mode=""}
+}
 async function syncInit(){
   if(!syncSupported()){updateSyncUI("off");return}
-  syncState.dir=await _dirGet();
+  deviceId();await resolveSyncTarget();
   try{syncState.last=JSON.parse(localStorage.getItem("sw_expense_sync_last")||"null")}catch(e){}
   updateSyncUI();
-  if(syncState.dir){setTimeout(()=>syncNow(true),1200);syncState.interval=setInterval(()=>{if(document.visibilityState==="visible")syncNow(true)},120000)}
+  document.addEventListener("click",grantOnFirstClick,true);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")syncNow(true)});
+  window.addEventListener("focus",()=>syncNow(true));
+  if(syncState.base)setTimeout(()=>syncNow(true),800);
+  syncState.interval=setInterval(()=>{if(document.visibilityState==="visible")syncNow(true)},60000);
 }
-function scheduleAutoSync(){if(!syncState.dir)return;clearTimeout(syncState.timer);syncState.timer=setTimeout(()=>syncNow(true),4000)}
-async function pickSyncDir(){try{let h=await window.showDirectoryPicker({mode:"readwrite"});syncState.dir=h;await _dirPut(h).catch(()=>{});updateSyncUI();await syncNow(false);if(!syncState.interval)syncState.interval=setInterval(()=>{if(document.visibilityState==="visible")syncNow(true)},120000)}catch(e){if(e&&e.name!=="AbortError")alert("Klasör seçilemedi: "+e.message)}}
-function forgetSyncDir(){if(!confirm("Ortak klasör bağlantısı unutulsun mu? (Veriler silinmez.)"))return;syncState.dir=null;_dirDel();localStorage.removeItem("sw_expense_sync_last");clearInterval(syncState.interval);syncState.interval=null;updateSyncUI();renderLearning()}
+// Izin penceresi sadece bir kullanici hareketiyle acilabilir: sayfadaki ilk tiklamada bir kez kendiliginden sorulur.
+async function grantOnFirstClick(){
+  if(!syncState.base||syncState.perm==="granted"||syncState.asked||syncState.busy)return;
+  syncState.asked=true;
+  try{if(await ensurePermission(false))syncNow(true)}catch(e){}
+}
+function scheduleAutoSync(){if(!syncState.base)return;clearTimeout(syncState.timer);syncState.timer=setTimeout(()=>syncNow(true),3000)}
+// Tek seferlik kurulum (SmartWorker kurulmamissa). SmartWorker'in klasoru varsa bu "baska klasor kullan" olur (gelismis).
+async function pickSyncDir(){
+  try{
+    let h=await window.showDirectoryPicker({id:"smartworker",mode:"readwrite"});
+    if(!syncState.swRoot){await _swRootPut(h).catch(()=>{});await _dirDel()}else await _dirPut(h).catch(()=>{});
+    await resolveSyncTarget();syncState.perm="";updateSyncUI();await syncNow(false);renderAll();
+  }catch(e){if(e&&e.name!=="AbortError")alert("Klasör seçilemedi: "+e.message)}
+}
+async function useSmartWorkerFolder(){await _dirDel();await resolveSyncTarget();syncState.perm="";updateSyncUI();await syncNow(false);renderAll()}
 async function ensurePermission(isAuto){
-  let h=syncState.dir;if(!h)return false;
-  if(typeof h.queryPermission!=="function")return true;
-  let p=await h.queryPermission({mode:"readwrite"});if(p==="granted")return true;
-  if(isAuto){updateSyncUI("need-perm");return false}
-  p=await h.requestPermission({mode:"readwrite"});if(p!=="granted")throw new Error("Klasör izni verilmedi");
+  let h=syncState.base;if(!h)return false;
+  let p="granted";
+  if(typeof h.queryPermission==="function"){
+    p=await h.queryPermission({mode:"readwrite"});
+    if(p!=="granted"&&!isAuto){ // ayni anda gelen istekler (ilk tiklama + "Erisim ver") tek izin penceresini paylasir
+      if(!syncState.permReq){let rq=h.requestPermission({mode:"readwrite"}).catch(()=>"prompt");syncState.permReq=rq;rq.then(()=>{if(syncState.permReq===rq)syncState.permReq=null})}
+      p=await syncState.permReq;
+    }
+  }
+  syncState.perm=p;
+  if(p!=="granted"){updateSyncUI("need-perm");if(!isAuto&&p==="denied")throw new Error("Klasör izni verilmedi. Adres çubuğundaki kilit simgesinden izin verip tekrar dene.");return false}
+  if(!syncState.dir){
+    if(syncState.sub)syncState.dir=await h.getDirectoryHandle(syncState.sub,{create:true});
+    else{
+      syncState.dir=h;
+      // Eski kurulum: SmartWorker sihirbazinin kaydettigi "ortak/Expense" tutamaci -> SmartWorker klasorunu izle (tek izin yeter)
+      let sw=syncState.swRoot;
+      if(sw&&(await sw.queryPermission({mode:"readwrite"}).catch(()=>""))==="granted"){
+        let s=await sw.getDirectoryHandle(SW_SUB).catch(()=>null);
+        if(s&&await s.isSameEntry(h).catch(()=>false)){await _dirDel();syncState.base=sw;syncState.sub=SW_SUB;syncState.mode="sw";syncState.dir=s}
+      }
+    }
+  }
   return true;
 }
+function syncPayload(){return {version:1,app:"SmartWorkerExpense",updated:new Date().toISOString(),settings:data.settings,entries:data.entries,forms:data.forms,vendors:data.vendors,guests:data.guests||{},cashAdjustments:data.cashAdjustments,logs:data.logs.slice(0,400),devices:syncState.devices}}
+// Sifirlama yayilmadan once ezilecek veri yedek/ klasorune yazilir (geri donus noktasi)
+async function backupBeforeReset(tag,txt){
+  try{let d=await syncState.dir.getDirectoryHandle(BACKUP_DIR,{create:true}),n=new Date(),name="expense_sifirlama_oncesi_"+tag+"_"+localISO(n)+"_"+pad(n.getHours())+pad(n.getMinutes())+".json";
+    let fh=await d.getFileHandle(name,{create:true}),w=await fh.createWritable();await w.write(txt);await w.close()}catch(e){console.warn("Sıfırlama öncesi yedek yazılamadı:",e)}
+}
+// Her bilgisayar SADECE kendi dosyasina yazar (senkron/<cihaz>.json), digerlerininkini okuyup birlestirir: iki bilgisayar
+// ayni anda senkronlasa da kimse kimsenin uzerine yazmaz, kayit kaybolmaz. Birlesik smartworker_expense_sync.json eski
+// surumlerle uyum icin yazilmaya ve okunmaya devam eder.
+async function readSyncJson(fh){try{let t=await (await fh.getFile()).text();return t&&t.trim()?JSON.parse(t):null}catch(e){return e instanceof SyntaxError?{__bad:true}:null}}
+async function writeText(fh,txt){let w=await fh.createWritable();await w.write(txt);await w.close()}
 async function syncNow(isAuto){
-  if(syncState.busy||!syncState.dir)return;
-  syncState.busy=true;updateSyncUI("busy");
+  if(syncState.busy||!syncState.base)return;
+  syncState.busy=true;
   try{
     if(!(await ensurePermission(isAuto))){syncState.busy=false;return}
-    let fh=await syncState.dir.getFileHandle(SYNC_JSON,{create:true});
-    let f=await fh.getFile(),txt=await f.text(),remote=null;
-    if(txt&&txt.trim()){try{remote=JSON.parse(txt)}catch(e){throw new Error("Senkron dosyası bozuk (JSON okunamadı). Ortak klasördeki yedek/ içinden en son tarihli expense_....json dosyasını smartworker_expense_sync.json adıyla kopyala; kaldığın yerden devam eder.")}}
-    let st={got:0,sent:0,renamed:[]};
-    if(remote&&remote.app==="SmartWorkerExpense"){
-      let le=+(data.settings.dataEpoch||0),re=+((remote.settings||{}).dataEpoch||0);
-      if(re>le){data=normalizeData(remote);st.got=data.entries.length;notice("Ortak klasörde veri sıfırlanmış ("+new Date(re).toLocaleString("tr-TR")+"); bu bilgisayardaki eski veri bırakıldı, ortak veri alındı.","warn",8000)} // baska PC sifirladi: yerel eski veri atilir
-      else if(le>re){/* biz sifirladik: eski ortak veriyle birlesme yok, bizimki yazilir */}
-      else{let m=EXP.mergeData(data,remote);data=normalizeData(m.data);st=m.stats}
+    updateSyncUI("busy");
+    let pend=pendingCount(),me=deviceId(),dir=syncState.dir,sd=await dir.getDirectoryHandle(SYNC_DIR,{create:true});
+    let lf=await dir.getFileHandle(SYNC_JSON,{create:true}),srcs=[],bad=[],devs={};
+    let lj=await readSyncJson(lf);if(lj&&lj.__bad)bad.push(SYNC_JSON);else if(lj&&lj.app==="SmartWorkerExpense")srcs.push(lj);
+    for await(let h of sd.values()){
+      if(h.kind!=="file"||!/\.json$/i.test(h.name)||h.name===me+".json")continue;
+      let j=await readSyncJson(h);if(j&&j.__bad)bad.push(SYNC_DIR+"/"+h.name);else if(j&&j.app==="SmartWorkerExpense"){srcs.push(j);if(j.device&&j.device.id)devs[j.device.id]=j.device}
     }
-    saveLocal();
-    let payload={version:1,app:"SmartWorkerExpense",updated:new Date().toISOString(),settings:data.settings,entries:data.entries,forms:data.forms,vendors:data.vendors,guests:data.guests||{},cashAdjustments:data.cashAdjustments,logs:data.logs.slice(0,400)};
-    let txtOut=JSON.stringify(payload);let w=await fh.createWritable();await w.write(txtOut);await w.close();
+    let st={got:0,sent:pend,renamed:[]},ep=j=>+(((j||{}).settings||{}).dataEpoch||0);
+    let le=ep({settings:data.settings}),re=srcs.reduce((m,j)=>Math.max(m,ep(j)),0);
+    if(le>re&&!data.settings.dataEpochShared){data.settings.dataEpoch=re;le=re} // baglanti yokken yapilmis sifirlama yayilmaz: ortak veriyle birlesir
+    if(re>le){ // baska bilgisayar (bagliyken) sifirladi: bu bilgisayardaki eski veri once yedeklenir, sifirlanmis veri alinir
+      await backupBeforeReset(deviceName().replace(/[^\w-]+/g,"_"),JSON.stringify(syncPayload()));
+      data=normalizeData(JSON.parse(JSON.stringify(srcs.filter(j=>ep(j)===re)[0])));le=re;
+      notice("Başka bir bilgisayarda veri sıfırlanmış ("+new Date(re).toLocaleString("tr-TR")+"); ortak veri alındı. Bu bilgisayardaki eski veri yedek/ klasörüne kaydedildi.","warn",9000);
+    }else if(le>re&&lj&&lj.app==="SmartWorkerExpense")await backupBeforeReset("ortak",JSON.stringify(lj)); // bu bilgisayarda bagliyken sifirlandi
+    srcs.forEach(j=>{if(ep(j)<le)return; // sifirlama oncesinden kalan kopya: alinmaz
+      let m=EXP.mergeData(data,j);data=normalizeData(m.data);st.got+=m.stats.got;st.renamed=st.renamed.concat(m.stats.renamed||[])});
+    let now=Date.now();devs[me]={id:me,name:deviceName(),last:now};syncState.devices=devs;
+    let payload=syncPayload();payload.device=devs[me];
+    let txtOut=JSON.stringify(payload);
+    await writeText(await sd.getFileHandle(me+".json",{create:true}),txtOut);
+    try{await writeText(lf,txtOut)}catch(e){console.warn("Birleşik senkron dosyası yazılamadı:",e)}
+    saveLocal();localStorage.setItem(PENDING_KEY,String(Math.max(0,pendingCount()-pend)));
     try{await writeDailyBackup(txtOut)}catch(e){console.warn("Yedek yazılamadı:",e)}
     let xl={written:[],errors:[]};
     try{xl=await writeDirtyWorkbooks()}catch(e){console.warn("Excel yazma hatası:",e);xl.errors.push(e.message)}
-    syncState.last={t:Date.now(),got:st.got,sent:st.sent,xlsx:xl.written,xlsxErr:xl.errors,renamed:st.renamed||[]};
+    syncState.last={t:now,got:st.got,sent:st.sent,xlsx:xl.written,xlsxErr:xl.errors,renamed:st.renamed,bad:bad};
     localStorage.setItem("sw_expense_sync_last",JSON.stringify(syncState.last));
     syncState.error="";updateSyncUI("ok");
-    if(st.got>0||(st.renamed&&st.renamed.length))renderAll();else updateNavCounts();
+    if(st.got>0||st.renamed.length)renderAll();else updateNavCounts();
     if(state.tab==="learning"&&(!isAuto||st.got>0))renderLearning();
-    if(!isAuto)notice("Senkron tamam: "+st.got+" alındı, "+st.sent+" gönderildi"+(xl.written.length?" · Excel yazıldı: "+xl.written.join(", "):"")+(xl.errors.length?' · <span class="danger">Excel yazılamadı: '+esc(xl.errors.join(" | "))+'</span>':""),xl.errors.length?"warn":"ok");
+    if(!isAuto)notice("Senkron tamam: "+st.got+" alındı, "+st.sent+" değişiklik gönderildi"+(xl.written.length?" · Excel yazıldı: "+xl.written.join(", "):"")+(xl.errors.length?' · <span class="danger">Excel yazılamadı: '+esc(xl.errors.join(" | "))+'</span>':"")+(bad.length?' · <span class="danger">Okunamayan dosya atlandı: '+esc(bad.join(", "))+'</span>':""),xl.errors.length||bad.length?"warn":"ok");
   }catch(e){
     console.warn("Senkron hatası:",e);syncState.error=(e&&e.message)||String(e);updateSyncUI("error");
     if(!isAuto)alert("Senkron hatası: "+syncState.error);
@@ -1332,32 +1416,64 @@ async function writeWorkbookToFolder(type,mk){
   let w=await fh.createWritable();await w.write(bytes);await w.close();return t.path+name;
 }
 async function writeMonthWorkbooksToFolder(mk,manual){
-  if(!syncState.dir)return alert("Önce ortak klasörü seç (Senkron & Veri).");
+  if(!syncState.base)return alert("Ortak klasör bağlı değil (Ayarlar › Senkron).");
   try{if(!(await ensurePermission(false)))return;let names=[];for(let type of ["invoice","receipt"]){if(monthFormsOf(type,mk).length)names.push(await writeWorkbookToFolder(type,mk))}notice(names.length?"Klasöre yazıldı: "+esc(names.join(", ")):"Bu ayda form yok.",names.length?"ok":"warn")}
   catch(e){alert("Excel yazılamadı: "+(e.name==="NoModificationAllowedError"?"dosya Excel'de açık, kapatıp tekrar dene.":e.message))}
 }
+function deviceList(){let me=deviceId();return Object.keys(syncState.devices||{}).map(id=>Object.assign({id,me:id===me},syncState.devices[id])).sort((a,b)=>(b.last||0)-(a.last||0))}
+function agoText(t){if(!t)return "";let m=Math.round((Date.now()-t)/60000);return m<2?"şimdi":m<60?m+" dk önce":m<1440?Math.round(m/60)+" sa önce":Math.round(m/1440)+" gün önce"}
+function syncPillClick(){
+  if(!syncSupported())return;
+  if(!syncState.base){showPage("learning");setTimeout(()=>{let c=$("syncCard");if(c)c.scrollIntoView({block:"start"})},60);return}
+  syncNow(false);
+}
 function updateSyncUI(mode){
-  let pill=$("syncPill"),txt=$("syncPillText");if(!pill)return;
-  if(!syncSupported()){pill.className="off";txt.textContent="Senkron yok (Edge/Chrome gerekli)";return}
-  if(!syncState.dir){pill.className="off";txt.textContent="Ortak klasör seçilmedi";return}
-  if(mode==="busy"){pill.className="busy";txt.textContent="Senkronlanıyor…";return}
-  if(mode==="error"){pill.className="error";txt.textContent="Senkron hatası";return}
-  if(mode==="need-perm"){pill.className="error";txt.textContent="Klasör izni gerekli (tıkla)";return}
-  let l=syncState.last;pill.className="ok";txt.textContent=l?"Senkron ✓ "+new Date(l.t).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}):"Ortak klasör bağlı";
+  let pill=$("syncPill"),txt=$("syncPillText"),bn=$("syncBanner");if(!pill)return;
+  let pend=pendingCount(),need=false,cls="ok",t="";
+  if(!syncSupported()){cls="off";t="Senkron yok (Edge gerekli)"}
+  else if(!syncState.base){cls="error";t="Senkron kapalı: kur"}
+  else if(mode==="busy"){cls="busy";t="Senkronlanıyor…"}
+  else if(mode==="need-perm"||(syncState.perm&&syncState.perm!=="granted")){cls="error";t="Senkron bekliyor: tıkla";need=true}
+  else if(mode==="error"||syncState.error){cls="error";t="Senkron hatası: tıkla"}
+  else{let l=syncState.last;t=l?"Senkron ✓ "+new Date(l.t).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}):"Senkron hazır"}
+  if(pend&&cls!=="busy"&&syncState.base)t+=" · "+pend+" bekliyor";
+  pill.className=cls;txt.textContent=t;
+  pill.title=!syncState.base?"Ortak klasör kurulumu":"Klasör: "+folderLabel()+(need?" · tıkla: erişim ver ve senkronla":" · tıkla: şimdi senkronla");
+  if(!bn)return;
+  if(need){bn.innerHTML='<span>🔒 <b>Senkron bekliyor.</b> Edge bu açılışta ortak klasör (<b>'+esc(folderLabel())+'</b>) için izin istiyor'+(pend?'; <b>'+pend+'</b> değişiklik henüz gitmedi':'')+'. İzin penceresinde "Her ziyarette izin ver" seçeneği çıkarsa onu seç, bir daha sormaz.</span><button class="btn btn-sm btn-primary" onclick="syncNow(false)">Erişim ver</button>';bn.style.display="flex"}
+  else if(syncSupported()&&!syncState.base){bn.innerHTML='<span><b>Senkron kapalı:</b> ortak klasör bağlı değil, kayıtlar sadece bu bilgisayarda duruyor.</span><button class="btn btn-sm btn-primary" onclick="syncPillClick()">Kur</button>';bn.style.display="flex"}
+  else bn.style.display="none";
 }
 function syncStripe(){
   if(!syncSupported())return '<div class="stripe"><span>Bu tarayıcı ortak klasör senkronunu desteklemiyor (Edge veya Chrome kullan). JSON yedekle/yükle çalışır.</span></div>';
-  if(!syncState.dir)return '<div class="stripe"><span><b>Ortak klasör seçilmedi.</b> Diğer bilgisayarlarla senkron ve otomatik Excel için bir kez seç.</span><button class="btn btn-sm btn-primary" onclick="pickSyncDir()">Ortak Klasörü Seç</button></div>';
-  let l=syncState.last;
-  return '<div class="stripe"><span>Ortak klasör: <b>'+esc(syncState.dir.name)+'</b>'+(l?' · son senkron '+new Date(l.t).toLocaleString("tr-TR")+' · '+l.got+' alındı / '+l.sent+' gönderildi':"")+(syncState.error?' · <span class="danger">'+esc(syncState.error)+'</span>':"")+'</span><span class="actions"><button class="btn btn-sm btn-outline" onclick="syncNow(false)">Şimdi Senkronla</button></span></div>';
+  if(!syncState.base)return "";
+  let l=syncState.last,dv=deviceList();
+  return '<div class="stripe"><span>Senkron: <b>'+esc(folderLabel())+'</b>'+(l?' · son '+esc(agoText(l.t)):"")+(dv.length?' · '+dv.length+' bilgisayar ('+dv.map(d=>esc(d.name)+(d.me?" (bu)":"")).join(", ")+')':"")+(syncState.error?' · <span class="danger">'+esc(syncState.error)+'</span>':"")+'</span><span class="actions"><button class="btn btn-sm btn-outline" onclick="syncNow(false)">Şimdi Senkronla</button></span></div>';
+}
+function syncCardHtml(){
+  let h='<div class="card" id="syncCard"><h2>Senkron</h2>';
+  if(!syncSupported())return h+'<div class="notice warn">Bu tarayıcı ortak klasörü desteklemiyor. Expense\'i Edge ile aç.</div></div>';
+  if(!syncState.base)return h+'<p class="hint">Expense, SmartWorker\'ın ortak klasörünü kendiliğinden kullanır; bu bilgisayarda SmartWorker kurulumu (ortak klasör) yapılmamış. Klasörü bir kez burada seç: SmartWorker da aynı klasörü kullanır. Diğer bilgisayarlarda da <b>aynı ağ klasörünü</b> seç.</p><button class="btn btn-primary btn-lg" onclick="pickSyncDir()">Ortak klasörü seç</button></div>';
+  let l=syncState.last,dv=deviceList(),pend=pendingCount(),need=syncState.perm&&syncState.perm!=="granted";
+  h+='<p class="hint">Kurulum gerekmez: '+(syncState.mode==="sw"?'Expense, SmartWorker\'ın ortak klasörünü kullanıyor ve verisini <b>'+esc(SW_SUB)+'</b> alt klasörüne yazıyor.':'Expense ayrı bir klasör kullanıyor.')+' Her kayıt birkaç saniye içinde gider, diğer bilgisayarlardaki değişiklikler dakikada bir gelir; her bilgisayar kendi dosyasına yazdığı için aynı anda çalışmak kayıt kaybettirmez. Ayın Invoice / Receipt Excel dosyaları aynı klasörde yıl/ay alt klasörlerine yazılır; her gün <code>yedek/</code> klasörüne kopya alınır (son 14 gün).</p>';
+  h+='<div class="notice '+(syncState.error||need?'warn':'ok')+'">Klasör: <b>'+esc(folderLabel())+'</b>'+
+    (need?'<br>🔒 Edge bu açılışta izin istiyor. <button class="btn btn-sm btn-primary" onclick="syncNow(false)">Erişim ver</button>':'')+
+    (l?'<br>Son senkron: '+new Date(l.t).toLocaleString("tr-TR")+' · '+l.got+' alındı, '+l.sent+' gönderildi'+((l.xlsx||[]).length?'<br>Yazılan Excel: '+esc(l.xlsx.join(", ")):"")+((l.xlsxErr||[]).length?'<br><span class="danger">Excel yazılamadı: '+esc(l.xlsxErr.join(" | "))+'</span>':"")+((l.renamed||[]).length?'<br>Numara çakışması düzeltildi: '+esc(l.renamed.join(", ")):"")+((l.bad||[]).length?'<br><span class="danger">Okunamayan senkron dosyası atlandı: '+esc(l.bad.join(", "))+' (o bilgisayar bir sonraki senkronda düzeltir)</span>':""):'<br>Henüz senkron yapılmadı.')+
+    (pend?'<br><b>'+pend+'</b> değişiklik henüz gönderilmedi.':'')+(syncState.error?'<br><span class="danger">Hata: '+esc(syncState.error)+'</span>':'')+'</div>';
+  h+='<div class="section-title">Bu klasörü kullanan bilgisayarlar</div>';
+  h+=dv.length?'<div class="table-wrap"><table><thead><tr><th>Bilgisayar</th><th>Son senkron</th></tr></thead><tbody>'+dv.map(d=>'<tr><td><b>'+esc(d.name||d.id)+'</b>'+(d.me?' <span class="badge b-open">bu bilgisayar</span> <button class="btn btn-sm btn-outline" onclick="renameDevice()">Adını değiştir</button>':'')+'</td><td>'+esc(agoText(d.last))+'</td></tr>').join("")+'</tbody></table></div><p class="tiny">Bir bilgisayar listede yoksa o bilgisayar bu klasörü kullanmıyor: orada SmartWorker › Kurulum\'dan <b>aynı ağ klasörünü</b> seç, sonra Expense\'i bir kez aç.</p>':'<p class="tiny">Henüz senkron yapılmadı.</p>';
+  h+='<div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="syncNow(false)">Şimdi Senkronla</button><button class="btn btn-gold" onclick="writeMonthWorkbooksToFolder(curMonthKey(),true)">Bu Ayın Excel Dosyalarını Klasöre Yaz</button></div>';
+  h+='<details style="margin-top:12px"><summary class="tiny" style="cursor:pointer">Gelişmiş</summary><div class="row" style="margin:8px 0"><label class="tiny" style="text-transform:none;margin:0">Excel yerleşimi</label><select class="input-sm" onchange="data.settings.xlsxLayout=this.value;touch(data.settings);saveData();localStorage.removeItem(XLSX_STAMP_KEY);notice(\'Yerleşim kaydedildi; bir sonraki senkronda Excel dosyaları yeni yere yazılır.\',\'ok\')"><option value="yearMonth" '+((data.settings.xlsxLayout||"yearMonth")==="yearMonth"?"selected":"")+'>Yıl / Ay klasörleri (2026/9-Eylül 2026/)</option><option value="flat" '+(data.settings.xlsxLayout==="flat"?"selected":"")+'>Düz (doğrudan klasöre)</option></select></div><div class="actions">'+
+    (syncState.mode==="own"&&syncState.swRoot?'<button class="btn btn-primary" onclick="useSmartWorkerFolder()">SmartWorker\'ın ortak klasörünü kullan</button>':'')+
+    '<button class="btn btn-outline" onclick="pickSyncDir()">Başka bir klasör kullan</button><button class="btn btn-outline" onclick="cleanupOurWorkbooks()" title="Uygulamanın klasöre yazdığı Invoice/Receipt … YYYY.xlsx dosyalarını listeler ve onayla siler">Uygulamanın Yazdığı Excel Dosyalarını Sil</button></div></details>';
+  return h+'</div>';
 }
 
 // ---------- SENKRON & VERI SAYFASI ----------
 function syncCardsHtml(){
   let l=syncState.last;
-  let html='<div class="card"><h2>Ortak Klasör Senkronu</h2><p class="hint">SmartWorker3 ile aynı mantık: ortak ağ klasöründe <code>'+SYNC_JSON+'</code> tutulur, her bilgisayar kendi verisini bununla birleştirir (aynı kayıtta en yeni değişiklik kazanır, silinenler geri gelmez). Ayın <b>Invoice</b> ve <b>Receipt</b> Excel dosyaları finansın düzenine göre <code>2026/9-Eylül 2026/</code> alt klasörüne otomatik yazılır (seçilen klasör zaten yıl klasörüyse yıl katmanı atlanır; ay klasörü varsa olduğu gibi kullanılır). Her gün <code>yedek/expense_TARİH.json</code> kopyası alınır, son 14 gün tutulur.</p>'+
-   (syncSupported()?(syncState.dir?'<div class="notice ok">Bağlı klasör: <b>'+esc(syncState.dir.name)+'</b>'+(l?'<br>Son senkron: '+new Date(l.t).toLocaleString("tr-TR")+' · '+l.got+' alındı, '+l.sent+' gönderildi'+((l.xlsx||[]).length?'<br>Yazılan Excel: '+esc(l.xlsx.join(", ")):"")+((l.xlsxErr||[]).length?'<br><span class="danger">Excel yazılamadı: '+esc(l.xlsxErr.join(" | "))+'</span>':"")+((l.renamed||[]).length?'<br>Numara çakışması düzeltildi: '+esc(l.renamed.join(", ")):""):"")+(syncState.error?'<br><span class="danger">Hata: '+esc(syncState.error)+'</span>':"")+'</div><div class="row" style="margin:8px 0"><label class="tiny" style="text-transform:none;margin:0">Excel yerleşimi</label><select class="input-sm" onchange="data.settings.xlsxLayout=this.value;touch(data.settings);saveData();localStorage.removeItem(XLSX_STAMP_KEY);notice(\'Yerleşim kaydedildi; bir sonraki senkronda Excel dosyaları yeni yere yazılır.\',\'ok\')"><option value="yearMonth" '+((data.settings.xlsxLayout||"yearMonth")==="yearMonth"?"selected":"")+'>Yıl / Ay klasörleri (2026/9-Eylül 2026/)</option><option value="flat" '+(data.settings.xlsxLayout==="flat"?"selected":"")+'>Düz (doğrudan seçilen klasöre)</option></select></div><div class="actions"><button class="btn btn-primary" onclick="syncNow(false)">Şimdi Senkronla</button><button class="btn btn-gold" onclick="writeMonthWorkbooksToFolder(curMonthKey(),true)">Bu Ayın Excel Dosyalarını Klasöre Yaz</button><button class="btn btn-outline" onclick="cleanupOurWorkbooks()" title="Uygulamanın klasöre yazdığı Invoice/Receipt … YYYY.xlsx dosyalarını listeler ve onayla siler">Uygulamanın Yazdığı Excel Dosyalarını Sil</button><button class="btn btn-outline" onclick="pickSyncDir()">Klasörü Değiştir</button><button class="btn btn-danger" onclick="forgetSyncDir()">Klasörü Unut</button></div>':'<div class="notice warn">Henüz ortak klasör seçilmedi.</div><button class="btn btn-primary btn-lg" onclick="pickSyncDir()">Ortak Klasörü Seç</button>'):'<div class="notice warn">Bu tarayıcı File System Access API desteklemiyor. Edge veya Chrome ile aç.</div>')+'</div>';
-  html+='<div class="card"><h2>Excel Dosyasından İçeri Al (hücre hücre)</h2><p class="hint">Elindeki <b>Invoice … .xlsx</b> / <b>Receipt … .xlsx</b> dosyalarını seç. Her sayfa bir form olur (sayfa adından Fiş/Invoice ve numara, C4\'ten tarih, C5 çalışan, C7 sebep), satırlar kayıt olur. Aynı fatura no + tutar zaten varsa güncellenir, iki kez eklenmez.</p><div class="grid grid-3"><div><label>Dosyalar</label><input id="xlsxImport" type="file" accept=".xlsx,.xls" multiple onchange="importFinanceFiles(this.files);this.value=\'\'"></div><div><label>İçe alınan formların durumu</label><select id="xlsxImportStatus"><option value="created">Form Oluşturuldu</option><option value="submitted" selected>Finansa Teslim Edildi</option><option value="paid">Yattı</option></select></div><div><label>E/C</label><select id="xlsxImportPay"><option value="E">E · Kasadan</option><option value="X">X · Ekstra</option><option value="C">C · Cepten</option></select></div></div>'+(syncState.dir?'<div class="actions" style="margin-top:10px"><button class="btn btn-outline" onclick="importFromFolder()">Ortak klasördeki Excel dosyalarını tara (seçerek)</button></div>':"")+'<div id="xlsxImportResult" style="margin-top:10px"></div></div>';
+  let html=syncCardHtml();
+  html+='<div class="card"><h2>Excel Dosyasından İçeri Al (hücre hücre)</h2><p class="hint">Elindeki <b>Invoice … .xlsx</b> / <b>Receipt … .xlsx</b> dosyalarını seç. Her sayfa bir form olur (sayfa adından Fiş/Invoice ve numara, C4\'ten tarih, C5 çalışan, C7 sebep), satırlar kayıt olur. Aynı fatura no + tutar zaten varsa güncellenir, iki kez eklenmez.</p><div class="grid grid-3"><div><label>Dosyalar</label><input id="xlsxImport" type="file" accept=".xlsx,.xls" multiple onchange="importFinanceFiles(this.files);this.value=\'\'"></div><div><label>İçe alınan formların durumu</label><select id="xlsxImportStatus"><option value="created">Form Oluşturuldu</option><option value="submitted" selected>Finansa Teslim Edildi</option><option value="paid">Yattı</option></select></div><div><label>E/C</label><select id="xlsxImportPay"><option value="E">E · Kasadan</option><option value="X">X · Ekstra</option><option value="C">C · Cepten</option></select></div></div>'+(syncState.base?'<div class="actions" style="margin-top:10px"><button class="btn btn-outline" onclick="importFromFolder()">Ortak klasördeki Excel dosyalarını tara (seçerek)</button></div>':"")+'<div id="xlsxImportResult" style="margin-top:10px"></div></div>';
   html+='<div class="card"><h2>JSON Yedek</h2><div class="actions"><button class="btn btn-primary" onclick="exportBackup()">Tam Yedek İndir (.json)</button><button class="btn btn-outline" onclick="$(\'backupImport\').click()">Yedek Yükle (birleştir)</button><input id="backupImport" type="file" accept=".json" style="display:none" onchange="importBackupFile(this.files[0]);this.value=\'\'"><button class="btn btn-outline" onclick="dedupeEntries()">Mükerrer Kayıtları Temizle</button><button class="btn btn-outline" onclick="checkLegacyData()">Eski Sürüm Verisini Kontrol Et</button><button class="btn btn-danger" onclick="resetAllData()">Bu Bilgisayardaki Veriyi Sıfırla</button></div><p class="tiny" style="margin-top:8px">'+activeEntries().length+' kayıt · '+liveForms().length+' form · '+Object.keys(data.vendors).length+' satıcı · v3</p></div>';
   html+='<div class="card"><h2>İşlem Günlüğü</h2><div class="table-wrap" style="max-height:320px"><table><thead><tr><th>Zaman</th><th>İşlem</th><th>Detay</th></tr></thead><tbody>'+data.logs.slice(0,80).map(lg=>'<tr><td>'+new Date(lg.ts).toLocaleString("tr-TR")+'</td><td>'+esc(lg.action)+'</td><td><code style="font-size:10px">'+esc(JSON.stringify(lg.details||{}))+'</code></td></tr>').join("")+'</tbody></table></div></div>';
   return html;
@@ -1366,7 +1482,7 @@ function syncCardsHtml(){
 // (2026-10-02: tarama butun yillari alip 400 kayit yuklemisti.)
 let _scanFound=[];
 async function importFromFolder(){
-  if(!syncState.dir)return;try{if(!(await ensurePermission(false)))return;_scanFound=[];
+  if(!syncState.base)return;try{if(!(await ensurePermission(false)))return;_scanFound=[];
     async function scan(dir,depth,path){for await(let [name,h] of dir.entries()){if(h.kind==="file"&&/\.xlsx$/i.test(name)&&/^(invoice|receipt|fi[şs])/i.test(name))_scanFound.push({path:path+name,handle:h,ours:isOurWorkbookName(name)});else if(h.kind==="directory"&&depth<2&&name!==BACKUP_DIR)await scan(h,depth+1,path+name+"/")}}
     await scan(syncState.dir,0,"");if(!_scanFound.length)return alert("Klasörde (ve yıl/ay alt klasörlerinde) Invoice/Receipt .xlsx bulunamadı.");
     _scanFound.sort((a,b)=>a.path.localeCompare(b.path,"tr"));
@@ -1378,7 +1494,7 @@ async function importScanned(){let idx=qsa(".scanSel:checked").map(c=>+c.value);
 function isOurWorkbookName(name){return new RegExp("^(Invoice|Receipt) ("+EXP.MONTHS_EN.filter(Boolean).join("|")+") \\d{4}\\.xlsx$").test(name)}
 // Temizlik: uygulamanin klasore yazdigi Excel'leri bul, listele, onayla sil. Finansin dosyalarina dokunmaz.
 async function cleanupOurWorkbooks(){
-  if(!syncState.dir)return;try{if(!(await ensurePermission(false)))return;let found=[];
+  if(!syncState.base)return;try{if(!(await ensurePermission(false)))return;let found=[];
     async function scan(dir,depth,path){for await(let [name,h] of dir.entries()){if(h.kind==="file"&&isOurWorkbookName(name))found.push({dir,name,path:path+name});else if(h.kind==="directory"&&depth<2&&name!==BACKUP_DIR)await scan(h,depth+1,path+name+"/")}}
     await scan(syncState.dir,0,"");if(!found.length)return notice("Uygulamanın yazdığı Excel dosyası bulunamadı.","ok");
     if(!confirm(found.length+" dosya silinecek (finansın kendi dosyalarına dokunulmaz):\n\n"+found.map(f=>f.path).join("\n")+"\n\nSilinsin mi?"))return;
@@ -1547,15 +1663,16 @@ function runLegacyImport(){
 }
 function hideLegacyCard(){try{localStorage.setItem(LEGACY_HIDDEN_KEY,legacySig(legacyScan()))}catch(e){}renderAll()}
 function checkLegacyData(){try{localStorage.removeItem(LEGACY_HIDDEN_KEY)}catch(e){}previewLegacyImport()}
-// Sifirlama: yerel veri silinir, baslangic saticilari yuklenir, settings.dataEpoch damgasi atilir. Ortak klasor bagliysa bu damga sayesinde
-// diger bilgisayarlar bir sonraki senkronda eski verilerini birakip sifirlanmis veriyi alir (eski veri geri dirilmez).
+// Sifirlama: yerel veri silinir, baslangic saticilari yuklenir. Ortak klasor bagliysa settings.dataEpoch damgasi atilir ve diger
+// bilgisayarlar bir sonraki senkronda eski verilerini birakip sifirlanmis veriyi alir (ezilen veri once yedek/ klasorune yazilir).
+// Bagli degilken yapilan sifirlama YAYILMAZ (2026-10-29: baglantisiz sifirlanan PC baglaninca butun bilgisayarlarin verisini siliyordu).
 function resetAllData(){
   if(kasaLocked())return unlockKasaPrompt(resetAllData);
-  let shared=!!syncState.dir;
-  if(!confirm("Bu bilgisayardaki tüm Expense verisi silinecek"+(shared?" ve ortak klasördeki veri de sıfırlanacak; diğer bilgisayarlar bir sonraki senkronda bu sıfırlanmış veriyi alır":"")+". Başlangıç satıcıları yeniden yüklenir. Emin misin?"))return;
+  let shared=!!syncState.base;
+  if(!confirm("Bu bilgisayardaki tüm Expense verisi silinecek"+(shared?" ve ortak klasördeki veri de sıfırlanacak; diğer bilgisayarlar bir sonraki senkronda bu sıfırlanmış veriyi alır (eski veri yedek/ klasörüne kaydedilir)":". Bu bilgisayar ortak klasöre bağlı değil: sıfırlama sadece burada geçerli, bağlanınca ortak veri geri gelir")+". Başlangıç satıcıları yeniden yüklenir. Emin misin?"))return;
   if(!confirm("Son kez: gerçekten sıfırlansın mı?"))return;
   let keepPin=data.settings.kasaPinHash||"";
-  localStorage.removeItem(DATA_KEY);localStorage.removeItem(XLSX_STAMP_KEY);data=defaultData();applySeedVendors(data);data.settings.kasaPinHash=keepPin;data.settings.dataEpoch=Date.now();touch(data.settings);saveLocal();renderAll();
+  localStorage.removeItem(DATA_KEY);localStorage.removeItem(XLSX_STAMP_KEY);data=defaultData();applySeedVendors(data);data.settings.kasaPinHash=keepPin;data.settings.dataEpoch=shared?Date.now():0;data.settings.dataEpochShared=shared;touch(data.settings);saveLocal();localStorage.setItem(PENDING_KEY,"0");renderAll();
   notice("Veri sıfırlandı; başlangıç satıcıları yüklendi."+(shared?" Ortak klasör de sıfırlanıyor.":""),"warn",6000);
   if(shared)syncNow(false);
 }
