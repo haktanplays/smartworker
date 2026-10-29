@@ -642,7 +642,7 @@ function renderDashboard(){
   let forms=liveForms(),submitted=forms.filter(f=>f.status==="submitted"),created=forms.filter(f=>f.status==="created");
   let overdue=submitted.filter(f=>daysSince(f.submittedAt||f.createdAt)>=data.settings.overdueDays);
   let paidMonth=forms.filter(f=>f.status==="paid"&&String(f.paidAt||"").slice(0,7)===mk).reduce((s,f)=>s+formTotal(f),0);
-  let html=syncStripe();
+  let html=syncStripe()+legacyCard();
   let locked=kasaLocked();kasaTouchUnlock();
   let monthAdj=(data.cashAdjustments||[]).filter(a=>!a.deleted&&a.type!=="start"&&String(a.date||"").slice(0,7)===mk).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   let monthDelta=round2(monthAdj.reduce((s,a)=>s+(+a.amount||0),0));
@@ -1358,7 +1358,7 @@ function syncCardsHtml(){
   let html='<div class="card"><h2>Ortak Klasör Senkronu</h2><p class="hint">SmartWorker3 ile aynı mantık: ortak ağ klasöründe <code>'+SYNC_JSON+'</code> tutulur, her bilgisayar kendi verisini bununla birleştirir (aynı kayıtta en yeni değişiklik kazanır, silinenler geri gelmez). Ayın <b>Invoice</b> ve <b>Receipt</b> Excel dosyaları finansın düzenine göre <code>2026/9-Eylül 2026/</code> alt klasörüne otomatik yazılır (seçilen klasör zaten yıl klasörüyse yıl katmanı atlanır; ay klasörü varsa olduğu gibi kullanılır). Her gün <code>yedek/expense_TARİH.json</code> kopyası alınır, son 14 gün tutulur.</p>'+
    (syncSupported()?(syncState.dir?'<div class="notice ok">Bağlı klasör: <b>'+esc(syncState.dir.name)+'</b>'+(l?'<br>Son senkron: '+new Date(l.t).toLocaleString("tr-TR")+' · '+l.got+' alındı, '+l.sent+' gönderildi'+((l.xlsx||[]).length?'<br>Yazılan Excel: '+esc(l.xlsx.join(", ")):"")+((l.xlsxErr||[]).length?'<br><span class="danger">Excel yazılamadı: '+esc(l.xlsxErr.join(" | "))+'</span>':"")+((l.renamed||[]).length?'<br>Numara çakışması düzeltildi: '+esc(l.renamed.join(", ")):""):"")+(syncState.error?'<br><span class="danger">Hata: '+esc(syncState.error)+'</span>':"")+'</div><div class="row" style="margin:8px 0"><label class="tiny" style="text-transform:none;margin:0">Excel yerleşimi</label><select class="input-sm" onchange="data.settings.xlsxLayout=this.value;touch(data.settings);saveData();localStorage.removeItem(XLSX_STAMP_KEY);notice(\'Yerleşim kaydedildi; bir sonraki senkronda Excel dosyaları yeni yere yazılır.\',\'ok\')"><option value="yearMonth" '+((data.settings.xlsxLayout||"yearMonth")==="yearMonth"?"selected":"")+'>Yıl / Ay klasörleri (2026/9-Eylül 2026/)</option><option value="flat" '+(data.settings.xlsxLayout==="flat"?"selected":"")+'>Düz (doğrudan seçilen klasöre)</option></select></div><div class="actions"><button class="btn btn-primary" onclick="syncNow(false)">Şimdi Senkronla</button><button class="btn btn-gold" onclick="writeMonthWorkbooksToFolder(curMonthKey(),true)">Bu Ayın Excel Dosyalarını Klasöre Yaz</button><button class="btn btn-outline" onclick="cleanupOurWorkbooks()" title="Uygulamanın klasöre yazdığı Invoice/Receipt … YYYY.xlsx dosyalarını listeler ve onayla siler">Uygulamanın Yazdığı Excel Dosyalarını Sil</button><button class="btn btn-outline" onclick="pickSyncDir()">Klasörü Değiştir</button><button class="btn btn-danger" onclick="forgetSyncDir()">Klasörü Unut</button></div>':'<div class="notice warn">Henüz ortak klasör seçilmedi.</div><button class="btn btn-primary btn-lg" onclick="pickSyncDir()">Ortak Klasörü Seç</button>'):'<div class="notice warn">Bu tarayıcı File System Access API desteklemiyor. Edge veya Chrome ile aç.</div>')+'</div>';
   html+='<div class="card"><h2>Excel Dosyasından İçeri Al (hücre hücre)</h2><p class="hint">Elindeki <b>Invoice … .xlsx</b> / <b>Receipt … .xlsx</b> dosyalarını seç. Her sayfa bir form olur (sayfa adından Fiş/Invoice ve numara, C4\'ten tarih, C5 çalışan, C7 sebep), satırlar kayıt olur. Aynı fatura no + tutar zaten varsa güncellenir, iki kez eklenmez.</p><div class="grid grid-3"><div><label>Dosyalar</label><input id="xlsxImport" type="file" accept=".xlsx,.xls" multiple onchange="importFinanceFiles(this.files);this.value=\'\'"></div><div><label>İçe alınan formların durumu</label><select id="xlsxImportStatus"><option value="created">Form Oluşturuldu</option><option value="submitted" selected>Finansa Teslim Edildi</option><option value="paid">Yattı</option></select></div><div><label>E/C</label><select id="xlsxImportPay"><option value="E">E · Kasadan</option><option value="X">X · Ekstra</option><option value="C">C · Cepten</option></select></div></div>'+(syncState.dir?'<div class="actions" style="margin-top:10px"><button class="btn btn-outline" onclick="importFromFolder()">Ortak klasördeki Excel dosyalarını tara (seçerek)</button></div>':"")+'<div id="xlsxImportResult" style="margin-top:10px"></div></div>';
-  html+='<div class="card"><h2>JSON Yedek</h2><div class="actions"><button class="btn btn-primary" onclick="exportBackup()">Tam Yedek İndir (.json)</button><button class="btn btn-outline" onclick="$(\'backupImport\').click()">Yedek Yükle (birleştir)</button><input id="backupImport" type="file" accept=".json" style="display:none" onchange="importBackupFile(this.files[0]);this.value=\'\'"><button class="btn btn-outline" onclick="dedupeEntries()">Mükerrer Kayıtları Temizle</button><button class="btn btn-danger" onclick="resetAllData()">Bu Bilgisayardaki Veriyi Sıfırla</button></div><p class="tiny" style="margin-top:8px">'+activeEntries().length+' kayıt · '+liveForms().length+' form · '+Object.keys(data.vendors).length+' satıcı · v3</p></div>';
+  html+='<div class="card"><h2>JSON Yedek</h2><div class="actions"><button class="btn btn-primary" onclick="exportBackup()">Tam Yedek İndir (.json)</button><button class="btn btn-outline" onclick="$(\'backupImport\').click()">Yedek Yükle (birleştir)</button><input id="backupImport" type="file" accept=".json" style="display:none" onchange="importBackupFile(this.files[0]);this.value=\'\'"><button class="btn btn-outline" onclick="dedupeEntries()">Mükerrer Kayıtları Temizle</button><button class="btn btn-outline" onclick="checkLegacyData()">Eski Sürüm Verisini Kontrol Et</button><button class="btn btn-danger" onclick="resetAllData()">Bu Bilgisayardaki Veriyi Sıfırla</button></div><p class="tiny" style="margin-top:8px">'+activeEntries().length+' kayıt · '+liveForms().length+' form · '+Object.keys(data.vendors).length+' satıcı · v3</p></div>';
   html+='<div class="card"><h2>İşlem Günlüğü</h2><div class="table-wrap" style="max-height:320px"><table><thead><tr><th>Zaman</th><th>İşlem</th><th>Detay</th></tr></thead><tbody>'+data.logs.slice(0,80).map(lg=>'<tr><td>'+new Date(lg.ts).toLocaleString("tr-TR")+'</td><td>'+esc(lg.action)+'</td><td><code style="font-size:10px">'+esc(JSON.stringify(lg.details||{}))+'</code></td></tr>').join("")+'</tbody></table></div></div>';
   return html;
 }
@@ -1448,6 +1448,105 @@ function guessTpl(desc){let d=String(desc||"").toLocaleLowerCase("en-US");let L=
   if(/courier/.test(d))return find(/courier/);if(/shoe/.test(d))return find(/shoe/);if(/departure gift/.test(d))return find(/departure/);if(/sleep ritual/.test(d))return find(/sleep/);if(/wow/.test(d))return find(/wow/);if(/birthday|occasion|bithday/.test(d))return find(/birthday|occasion/);if(/child|daughter|dauyghter|granddaugh/.test(d))return find(/child/);if(/issue/.test(d))return find(/issue/);if(/office|staff|spare key/.test(d))return find(/office/);if(/preference/.test(d))return find(/preference/);if(/request/.test(d))return find(/request/);if(/gesture|gift/.test(d))return find(/gesture/);return ""}
 function exportBackup(){saveLocal();downloadBlob(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),"SmartWorker_Expense_v3_backup_"+localISO()+".json")}
 async function importBackupFile(file){if(!file)return;try{let inc=JSON.parse(await file.text());if(!inc.entries||!inc.forms)return alert("Geçersiz yedek dosyası.");if(inc.version!==3&&!inc.app){inc=migrateV2(inc)}let m=EXP.mergeData(data,normalizeData(inc));data=normalizeData(m.data);log("backup_merge",{file:file.name,got:m.stats.got});saveData();renderAll();notice("Yedek birleştirildi: "+m.stats.got+" kayıt alındı.","ok")}catch(e){alert("Yedek yüklenemedi: "+e.message)}}
+// ---- Eski surum verisi -> v3 (v1: exp_YYYY_M aylik listeler + exp_forms; v2: sw_expense_v2_data)
+// Eski anahtarlar sadece okunur, asla silinmez/degistirilmez. Yalnizca v3'te olmayan kayitlar eklenir: once id, sonra icerik
+// (Excel ice aktarmadaki kural: fatura no + tutar, no yoksa satici + tarih + tutar). Panoda kart -> onizleme (kasa etkisi) -> onay.
+const LEGACY_HIDDEN_KEY="sw_expense_legacy_hidden";
+function legacyHash(s){let h=0;s=String(s);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return (h>>>0).toString(36)}
+function legacyV1Data(){
+  let lists=[],forms=[];
+  for(let i=0;i<localStorage.length;i++){let k=localStorage.key(i)||"",m=/^exp_(\d{4})_(\d{1,2})$/.exec(k);if(!m)continue;try{let a=JSON.parse(localStorage.getItem(k));if(Array.isArray(a))lists.push({k,mk:m[1]+"-"+pad(+m[2]),a})}catch(e){}}
+  try{forms=JSON.parse(localStorage.getItem("exp_forms")||"[]")}catch(e){}
+  if(!Array.isArray(forms))forms=[];
+  if(!lists.length&&!forms.length)return null;
+  let v1Forms={};forms.forEach(f=>{if(f&&f.id)v1Forms[f.id]=f});
+  let entries=[];
+  lists.forEach(L=>L.a.forEach((e,idx)=>{if(!e||typeof e!=="object")return;
+    let total=round2(+e.totalAmount||0),date=EXP.anyToISO(e.date)||L.mk+"-01",r=+e.vatRate||0;
+    let ms=/^e_(\d{12,14})_/.exec(e.id||""),createdAt=ms?new Date(+ms[1]).toISOString():date+"T12:00:00.000Z";
+    let n={id:e.id||("v1e_"+L.k+"_"+idx+"_"+legacyHash([e.date,e.vendor,e.totalAmount,e.invoiceNo].join("|"))),type:e.type==="invoice"?"invoice":"receipt",date,
+      vendor:String(e.vendor||"").trim(),invoiceNo:String(e.invoiceNo||"").trim(),vat1:0,vat10:0,vat20:0,totalAmount:total,noVat:false,payType:e.payType==="cep"?"C":"E",extraAmount:0,
+      butler:String(e.butler||""),guest:String(e.guest||"").trim(),item:String(e.item||"").trim(),tpl:"",description:String(e.description||"").trim(),
+      formId:e.formId&&v1Forms[e.formId]?e.formId:null,fileRef:e.fileRef||"",deleted:false,createdAt,u:Date.parse(createdAt)||1,
+      legacy:{src:"v1",status:e.status||"",purpose:e.purpose||"",category:e.category||"",vatRate:r}};
+    // KDV: v1 tek oran + tutar tutuyordu (PDF faturada vatBreakdown); v3'te %1/%10/%20 sutunlari. Tutar aynen, sutun en yakin oran.
+    let parts=Array.isArray(e.vatBreakdown)&&e.vatBreakdown.length?e.vatBreakdown:[{rate:r,amount:e.vatAmount!=null?e.vatAmount:(e.netAmount!=null?total-(+e.netAmount||0):0)}];
+    parts.forEach(p=>{let pr=+p.rate||0,amt=round2(+p.amount||0);if(!amt)return;let col=pr<5?"vat1":pr<15?"vat10":"vat20";n[col]=round2(n[col]+amt)});
+    n.netAmount=round2(total-n.vat1-n.vat10-n.vat20);
+    n.noVat=!(n.vat1||n.vat10||n.vat20)&&r===0&&n.type==="receipt"; // fis + "KDV Yok"; KDV'siz fatura "KDV eksik" gorunsun, kontrol edilsin
+    if(n.payType==="C")n.settledAt=date; // v1'de cepten alinan girildigi an kasadan dusuyordu: kisiye odenmis sayilir
+    entries.push(n);
+  }));
+  // Formlar: v1 "finansta" -> submitted, "yatti" -> paid. Formsuz ama v1'de tek tek "yapildi/yatti" isaretlenenler (formlardan onceki akis)
+  // acik listeye dusup ikinci kez finansa gitmesin diye ay+tip bazinda "v1 eski kayitlar" formuna konur.
+  let groups={};
+  entries.forEach(e=>{let st=e.legacy.status,k=e.formId?"f|"+e.formId:(st==="yatti"||st==="yapildi")?"o|"+e.date.slice(0,7)+"|"+e.type+"|"+st:"";if(k)(groups[k]=groups[k]||[]).push(e)});
+  let outForms=Object.keys(groups).map(k=>{
+    let ents=groups[k],p=k.split("|"),v1=p[0]==="f"?v1Forms[p[1]]:null;
+    let rec=ents.filter(e=>e.type==="receipt").length,type=v1?(rec&&rec>=ents.length/2?"receipt":"invoice"):p[2];
+    let paid=v1?v1.status==="yatti":p[3]==="yatti",last=ents.reduce((m,e)=>e.date>m?e.date:m,"");
+    let month=v1?(v1.year&&v1.month?v1.year+"-"+pad(+v1.month):String(EXP.anyToISO(v1.closedAt)||last).slice(0,7)):p[1];
+    let created=v1?(EXP.anyToISO(v1.closedAt)||last):last,id=v1?v1.id:"v1o_"+legacyHash(k+"|"+ents.map(e=>e.id).sort().join(","));
+    ents.forEach(e=>e.formId=id);
+    return {id,type,month,seq:0,name:"",legacyName:v1?(v1.label||((v1.prefix||"")+" "+(v1.number||"")).trim()):"v1 eski kayıtlar ("+(paid?"yattı":"yapıldı")+")",
+      employee:data.settings.employeeName,department:data.settings.department,purpose:data.settings.expensePurpose,createdAt:created,submittedAt:created,
+      paidAt:paid?((v1&&EXP.anyToISO(v1.paidAt))||created):null,status:paid?"paid":"submitted",locked:paid,u:Date.parse(created)||1,legacy:{src:"v1"}};
+  });
+  return {entries,forms:outForms,vendors:{}};
+}
+function legacyV2Data(){let raw=localStorage.getItem(V2_KEY);if(!raw)return null;let d=migrateV2(JSON.parse(raw));d.entries.forEach(e=>{e.legacy={src:"v2"}});d.forms.forEach(f=>{f.legacy={src:"v2"}});return {entries:d.entries,forms:d.forms,vendors:d.vendors||{}}}
+// v2 once (v1'den turemis olabilir): bir kaynaktan alinan kayit sonrakinde tekrar sayilmaz
+function legacyScan(){
+  let ids={};data.entries.forEach(e=>ids[e.id]=1);data.forms.forEach(f=>ids[f.id]=1);
+  let act=activeEntries().slice(),same=(e,x)=>Math.abs((+e.totalAmount||0)-(+x.totalAmount||0))<0.01;
+  let isDup=x=>x.invoiceNo?act.some(e=>String(e.invoiceNo||"").trim()===String(x.invoiceNo).trim()&&same(e,x)):act.some(e=>normVendor(e.vendor)===normVendor(x.vendor)&&e.date===x.date&&same(e,x));
+  let out=[],allForms=data.forms.slice();
+  [["v2",legacyV2Data],["v1",legacyV1Data]].forEach(([src,fn])=>{
+    let d;try{d=fn()}catch(e){console.warn("Eski veri okunamadı ("+src+")",e);return}if(!d)return;
+    let fresh=d.entries.filter(e=>!e.deleted&&!ids[e.id]),ents=fresh.filter(e=>!isDup(e)),used={};
+    ents.forEach(e=>{ids[e.id]=1;act.push(e);if(e.formId)used[e.formId]=1});
+    let forms=d.forms.filter(f=>used[f.id]&&!ids[f.id]).sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));
+    forms.forEach(f=>{ids[f.id]=1;f.seq=EXP.nextFormSeq(allForms,f.type,f.month);f.name=EXP.formName(f.type,f.seq);if(f.status==="paid"&&f.paidAmount==null)f.paidAmount=round2(ents.filter(e=>e.formId===f.id).reduce((s,e)=>s+(+e.totalAmount||0),0));allForms.push(f)});
+    let vendors={};for(let k in d.vendors)if(!data.vendors[k])vendors[k]=d.vendors[k];
+    if(ents.length||forms.length)out.push({src,ents,forms,vendors,dup:fresh.length-ents.length});
+  });
+  return out;
+}
+function legacySig(scan){return scan.map(s=>s.src+":"+s.ents.length+":"+s.forms.length).join("|")}
+function legacyApply(scan,target){
+  let inc={version:3,settings:structuredClone(target.settings),entries:[],forms:[],vendors:{},guests:{},cashAdjustments:[],logs:[]};
+  scan.forEach(s=>{inc.entries.push(...s.ents);inc.forms.push(...s.forms);Object.assign(inc.vendors,s.vendors)});
+  return normalizeData(EXP.mergeData(target,normalizeData(inc)).data);
+}
+function legacyCard(){
+  let scan;try{scan=legacyScan()}catch(e){console.warn("Eski veri taraması",e);return ""}
+  if(!scan.length||localStorage.getItem(LEGACY_HIDDEN_KEY)===legacySig(scan))return "";
+  return '<div class="card" style="background:#fffbeb;border-color:#fde68a"><div class="split"><div><h2>Eski Expense verisi bulundu</h2><p class="hint">'+scan.map(s=>(s.src==="v1"?"İlk sürüm (v1)":"Ara sürüm (v2)")+': '+s.ents.length+' kayıt, '+s.forms.length+' form').join(" · ")+'. Bunlar şu an listede yok. Eski veri silinmez; aynı kayıt iki kez eklenmez.</p></div><div class="actions"><button class="btn btn-primary" onclick="previewLegacyImport()">Önizle ve içe aktar</button><button class="btn btn-sm btn-outline" onclick="hideLegacyCard()">Gizle</button></div></div></div>';
+}
+function previewLegacyImport(){
+  if(kasaLocked())return unlockKasaPrompt(previewLegacyImport);
+  let scan=legacyScan();if(!scan.length)return notice("Eski sürüm verisi yok ya da hepsi zaten listede.","ok",3500);
+  let before=EXP.computeKasa(data),after=EXP.computeKasa(legacyApply(legacyScan(),structuredClone(data)));
+  let row=(lbl,a,b)=>'<tr><td>'+lbl+'</td><td class="money">'+money(a)+'</td><td class="money">'+money(b)+'</td><td class="money">'+(b-a>0?"+":"")+money(round2(b-a))+'</td></tr>';
+  let srcLine=s=>{let ds=s.ents.map(e=>e.date).sort(),fb=formsById(),cnt={open:0,submitted:0,paid:0};s.forms.forEach(f=>fb[f.id]=f);
+    s.ents.forEach(e=>{let st=EXP.entryStatus(e,fb);cnt[st==="paid"||st==="open"?st:"submitted"]++});
+    return '<li><b>'+(s.src==="v1"?"İlk sürüm (v1)":"Ara sürüm (v2)")+'</b>: '+s.ents.length+' kayıt · '+s.forms.length+' form · '+(ds.length?isoToDisplay(ds[0])+' – '+isoToDisplay(ds[ds.length-1])+' · ':'')+money(s.ents.reduce((t,e)=>t+(+e.totalAmount||0),0))+' TL<br><span class="tiny">'+cnt.paid+' yatmış · '+cnt.submitted+' finansta · '+cnt.open+' açık'+(s.dup?' · '+s.dup+' kayıt zaten listede (aynı belge), atlanacak':'')+'</span></li>'};
+  modal('<h2>Eski Expense verisini içe aktar</h2><ul style="margin:8px 0 12px 18px;font-size:13px">'+scan.map(srcLine).join("")+'</ul>'+
+    '<div class="table-wrap"><table><thead><tr><th>Etkisi</th><th class="right">Şimdi</th><th class="right">Aktarınca</th><th class="right">Fark</th></tr></thead><tbody>'+row("Kasada şu an",before.kasa,after.kasa)+row("Finanstan alacak",before.alacak,after.alacak)+row("Kişilere borç",before.owed,after.owed)+'</tbody></table></div>'+
+    '<p class="hint" style="margin-top:10px">Eski veri tarayıcıda olduğu gibi kalır. Aynı kayıt iki kez eklenmez (aynı id, ya da aynı fatura no + tutar / satıcı + tarih + tutar). Açık kayıtlar Harcamalar\'a, eski formlar eski adıyla Formlar\'a eklenir. Fark beklediğinden büyükse önce yedek indir.</p>'+
+    '<div class="modal-footer"><button class="btn btn-outline" onclick="exportBackup()">Önce Yedek İndir</button><button class="btn btn-outline" onclick="closeModal()">İptal</button><button class="btn btn-primary" onclick="runLegacyImport()">İçe Aktar</button></div>');
+}
+function runLegacyImport(){
+  let scan=legacyScan();if(!scan.length){closeModal();return}
+  data=legacyApply(scan,data);
+  let known={};Object.keys(data.vendors).forEach(k=>known[k]=1); // v2'den gelen saticilar dahil; olmayanlar kayitlardan ogrenilir
+  let imported=scan.flatMap(s=>s.ents).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  imported.forEach(e=>{rememberGuest(e);let key=normVendor(e.vendor);if(!key)return;if(!known[key]){learnFromEntry(e);return}let v=data.vendors[key],p=invPrefix(e.invoiceNo);if(v&&p&&!(v.prefixes||[]).includes(p)){v.prefixes=(v.prefixes||[]).concat(p).slice(0,12);v.u=nowU()}});
+  log("legacy_import",{sources:scan.map(s=>({src:s.src,entries:s.ents.length,forms:s.forms.length,dup:s.dup}))});saveData();closeModal();renderAll();
+  notice("Eski veriler eklendi: <b>"+imported.length+" kayıt, "+scan.reduce((t,s)=>t+s.forms.length,0)+" form</b>. Eski kayıtlar tarayıcıda olduğu gibi duruyor.","ok",6000);
+}
+function hideLegacyCard(){try{localStorage.setItem(LEGACY_HIDDEN_KEY,legacySig(legacyScan()))}catch(e){}renderAll()}
+function checkLegacyData(){try{localStorage.removeItem(LEGACY_HIDDEN_KEY)}catch(e){}previewLegacyImport()}
 // Sifirlama: yerel veri silinir, baslangic saticilari yuklenir, settings.dataEpoch damgasi atilir. Ortak klasor bagliysa bu damga sayesinde
 // diger bilgisayarlar bir sonraki senkronda eski verilerini birakip sifirlanmis veriyi alir (eski veri geri dirilmez).
 function resetAllData(){
