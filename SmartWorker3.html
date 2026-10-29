@@ -9312,9 +9312,7 @@ function bdiComputeInsights(p){
       note:items.length?"Sensitivity: avoid "+items.join(", ")+" in amenities and F&B; confirm with guest before serving":"Sensitivity noted in a past interaction: confirm details with guest before serving food or amenities",
       evidence:sh.map(function(x){return {date:x.e.date,time:x.e.time,butler:x.e.butler,text:bdiSensMask(bdiSnippet(x.t,BDI_SENS_TRIG)||x.t.slice(0,140))}})});
   }
-  var fh=uniqE(srcT.filter(function(x){return BDI_SENS_FAITH.test(x.t)}));
-  if(fh.length){var hal=fh.some(function(x){return /halal|helal/i.test(x.t)});
-    add({id:"sens:food-standard",type:"sens",title:"Hassasiyet: yemek standardı",dept:"SENSITIVITY",conf:2,note:"Food standard: "+(hal?"halal-certified":"kosher")+" options only; confirm with guest",evidence:fh.map(function(x){return {date:x.e.date,time:x.e.time,butler:x.e.butler,text:"[yemek standardı] kaydı"}})})}
+  // helal/koser (yemek standardi) onerisi kaldirildi (Haktan 2026-10-29: "su ana kadar hic girmedik"); bu kelimeler KVKK filtresinde engelli kalir
   var DIET=/vegan|vegetarian|vejetaryen|pescatarian/i,di=uniqE(srcT.filter(function(x){return DIET.test(x.t)}));
   if(di.length)add({id:"diet:pref",type:"diet",title:"Beslenme tercihi",dept:"F&B",conf:2,note:"Dietary preference: "+(/vegan/i.test(di[0].t)?"vegan":/pescatarian/i.test(di[0].t)?"pescatarian":"vegetarian"),evidence:di.map(function(x){return {date:x.e.date,time:x.e.time,butler:x.e.butler,text:bdiSnippet(x.t,DIET)}})});
   // I) oda tercihi
@@ -9352,7 +9350,7 @@ function bdiComputeInsights(p){
 function bdiInsState(gid){return (_bdiGM.insights&&_bdiGM.insights[gid])||{}}
 // Profilin tum icgoruleri: hesaplanan + kayitli (onayli/xf). {pending:[],accepted:[],rejected:[]}
 function bdiProfileInsights(p){
-  var st=bdiInsState(p.gid),comp=bdiComputeInsights(p),seen={},res={pending:[],accepted:[],rejected:[]};
+  var st=bdiInsState(p.gid),comp=bdiComputeInsights(p),seen={"sens:food-standard":1},res={pending:[],accepted:[],rejected:[]}; // eski helal/koser onayi hicbir yere cikmaz
   comp.forEach(function(i){
     seen[i.id]=1;var s=st[i.id];
     if(s&&s.s==="accepted"){i.note=s.t||i.note;i.dept=s.dept||i.dept;i.by=s.by||"";res.accepted.push(i)}
@@ -9579,7 +9577,6 @@ function bdiProtelSens(t){
   t=String(t||"").replace(/\s+/g," ").trim().replace(/\.+$/,"");var m,x;
   if((m=/sensitive towards\s+(.+)$/i.exec(t)))x=m[1];
   else if((m=/avoid\s+(.+?)\s+in amenities/i.exec(t)))x=m[1];
-  else if(/^food standard/i.test(t))x="food standard (certified options only); confirm with guest"; // helal/koser yazimi standartta [ACIK]
   else if(/^sensitivity noted/i.test(t))x="certain food and amenity items; confirm details with guest";
   else x=t.replace(/^(sensitivity|hassasiyet)\s*:\s*/i,"").replace(/^avoid\s+/i,"");
   return "Guest is highly sensitive towards "+x+".";
@@ -9612,7 +9609,7 @@ function bdiProtelNotes(p){
   if(a.form)addP("BUT","Guest prefers to be addressed as "+String(a.form).replace(/\.+$/,"")+".",a.u,a.by);
   if(a.channel)addP("BUT","Guest prefers communication via "+a.channel+".",a.u,a.by);
   r.accepted.forEach(function(i){
-    if(i.dept==="SENSITIVITY"||i.dept==="WARNING"||["occasion","bond","risk","topic"].indexOf(i.type)>=0)return;
+    if(i.dept==="SENSITIVITY"||i.dept==="WARNING"||["occasion","bond","risk","topic","proactive"].indexOf(i.type)>=0)return; // "sorulmadan yap" Protel'e girmez (Haktan 2026-10-29), SmartWorker ve iPad ic alani
     addP(i.dept,bdiProtelPref(i.note),ts(i),who(i));
   });
   man.forEach(function(it){
@@ -9622,9 +9619,10 @@ function bdiProtelNotes(p){
   var pb=BDI_PROTEL_DEPTS.filter(function(d){return prefs[d]}).map(function(d){var l=uniq(prefs[d]);np+=l.length;return block(d+" Preferences",l)});
   if(pb.length)out.push({title:"Guest Preferences",n:np,text:"***Guest Preferences***\n\n"+pb.join("\n\n")});
   // 3) Butler Did It: bu (ya da son) konaklamanin kayda deger isleri; rutin girmez, en fazla 5 satir
-  var sy=p.currentStay||p.stays[p.stays.length-1],did=[];
+  var sy=p.currentStay||p.stays[p.stays.length-1],did=[],kv=0; // kv: KVKK kelimesi (tibbi/inanc) tasidigi icin Protel'e yazilmayan satir
   if(sy)bdiEventsIn(p,sy).forEach(function(e){
     if(e.kind==="pref"||BDI_PROTEL_ROUTINE.test(e.action||""))return;
+    if(BDI_KVKK_RE.test((e.text||"")+" "+(e.note||""))){kv++;return}
     did.push({t:bdiProtelDid(e),ts:new Date(e.date+"T"+(e.time||"12:00")+":00").getTime(),by:e.butler,score:(e.kind==="occ"?3:0)+(e.react==="good"?2:0)+(e.note?1:0)});
   });
   did=uniq(did.sort(function(x,y){return y.score-x.score||y.ts-x.ts})).slice(0,5).sort(function(x,y){return x.ts-y.ts});
@@ -9640,11 +9638,13 @@ function bdiProtelNotes(p){
   p.issues.slice().sort(function(x,y){return x.date<y.date?-1:1}).forEach(function(x){
     if(parseInt(String(x.date).slice(0,4),10)<cutY){var tp=BDI_TOPICS.filter(function(t){return t[0].test(x.text||"")})[0];old.push(tp?tp[1].toLowerCase():"other");return}
     var is=recs[x.issueId],act="";(is&&is.events||[]).forEach(function(e){if((e.type==="close"||e.type==="touch")&&e.text)act=e.text});
+    if(BDI_KVKK_RE.test((x.text||"")+" "+act)){kv++;return}
     var t=String(x.text||"Issue").replace(/\s+/g," ").trim().replace(/[.;]+$/,"")+(act?"; "+String(act).replace(/[.;]+$/,""):"")+", "+(x.status==="closed"?"resolved":"open")+".";
     iss.push({t:t,ts:new Date(x.date+"T12:00:00").getTime(),by:x.closedBy||(x.handlers||[])[0]||""});
   });
   if(old.length){var tops=old.filter(function(t,i){return old.indexOf(t)===i});iss.push({t:"Before "+cutY+": "+old.length+" issue"+(old.length>1?"s":"")+" ("+tops.join(", ")+").",noSig:true})}
   if(iss.length)out.push({title:"Issues",n:iss.length,text:block("Issues",iss)});
+  out.kvkk=kv;
   return out;
 }
 var _bdiProtelLast=null,_bdiProtelGid="";
@@ -9656,6 +9656,7 @@ function bdiProtelCopy(gid){
   if(!m){m=document.createElement("div");m.id="bdiProtelModal";m.className="bd-xf-modal";m.addEventListener("click",function(e){if(e.target===m)m.classList.remove("on")});document.getElementById("page-didit").appendChild(m)}
   var h='<div class="bd-xf-dlg"><div class="bd-toolbar" style="margin-bottom:6px"><h3 class="bd-h3" style="margin:0">Protel notları · '+esc(p.name)+'</h3><span style="flex:1"></span><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelCopyBlock(-1)">Hepsini kopyala</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelMarkIdx(-1,true)">Hepsi girildi</button><button type="button" class="bd-btn bd-btn-sm" onclick="document.getElementById(\'bdiProtelModal\').classList.remove(\'on\')">Kapat</button></div>';
   h+='<p class="bd-sub" style="margin:0 0 10px">Her blok Protel\'de <b>ayrı bir Web Note</b>: Note Type "Web Notes", Note Title = blok adı. Başlık satırı (***...***) notun içinde kalmalı; arrival raporu Note Title\'ı göstermez. Protel\'e yapıştırdığın bloğu <b>Girildi</b> diye işaretle; blok sonradan değişirse Brifing › Protel\'e girilecekler listesinde tekrar çıkar.</p>';
+  if(notes.kvkk)h+='<p class="bd-sub" style="margin:-4px 0 10px;color:#9a5b00">'+notes.kvkk+' satır tıbbi ya da inanç kelimesi içerdiği için Protel çıktısına alınmadı (KVKK). Gerekiyorsa kaçınılacak öğeyi DNA\'da Hassasiyet olarak ekle.</p>';
   notes.forEach(function(n,i){var st=bdiProtelState(gid,n);h+='<div class="bd-pm-blk"><div class="bd-pm-head"><span class="bd-dept'+(n.title==="WARNING"?' w':'')+'">Note Title: '+esc(n.title)+'</span><span class="bd-sub">'+n.n+' satır</span>'+bdiProtelStHtml(st)+'<span style="flex:1"></span><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelCopyBlock('+i+')">Kopyala</button>'+(st.s==="ok"?'<button type="button" class="bd-link" onclick="bdiProtelMarkIdx('+i+',false)">geri al</button>':'<button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiProtelMarkIdx('+i+',true)">Girildi</button>')+'</div><pre class="bd-pm-pre">'+esc(n.text)+'</pre></div>'});
   m.innerHTML=h+'</div>';m.classList.add("on");
 }

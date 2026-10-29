@@ -2448,6 +2448,7 @@ function getDefaultWNSettings(){
     headers:{
       preArrival:"Pre Arrival",
       postDeparture:"Post Departure",
+      paPd:"Pre Arrival & Post Departure",
       py:"Passionately Yours",
       title:"Title",
       trustYou:"Trust You",
@@ -2535,8 +2536,8 @@ function upgradeWebNotesUI(){
           + '<div class="section">'
           + '<h3>Opera Çıktısında Gösterilecek Bölümler</h3>'
           + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'
-          + checkboxHtml('wnSetShowPreArrival','Pre Arrival')
-          + checkboxHtml('wnSetShowPostDeparture','Post Departure')
+          + checkboxHtml('wnSetShowPreArrival','Pre Arrival mailleri (ortak not)')
+          + checkboxHtml('wnSetShowPostDeparture','Post Departure mailleri (ortak not)')
           + checkboxHtml('wnSetShowPY','Passionately Yours')
           + checkboxHtml('wnSetShowTitle','Title')
           + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:#374151"><input type="checkbox" checked disabled> Trust You <span style="font-size:10px;color:#6b7280">her zaman</span></label>'
@@ -2549,8 +2550,7 @@ function upgradeWebNotesUI(){
           + '<div class="section">'
           + '<h3>Başlık İsimleri</h3>'
           + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">'
-          + inputHtml('wnHeadPreArrival','Pre Arrival')
-          + inputHtml('wnHeadPostDeparture','Post Departure')
+          + inputHtml('wnHeadPaPd','Pre Arrival & Post Departure')
           + inputHtml('wnHeadPY','Passionately Yours')
           + inputHtml('wnHeadTitle','Title')
           + inputHtml('wnHeadTrustYou','Trust You')
@@ -2608,8 +2608,7 @@ function renderWNSettings(){
   document.getElementById("wnSetShowPrefs").checked=!!s.showSections.preferences;
   document.getElementById("wnSetShowOtherPrefs").checked=!!s.showSections.otherPreferences;
   document.getElementById("wnSetShowHistory").checked=!!s.showSections.history;
-  document.getElementById("wnHeadPreArrival").value=s.headers.preArrival;
-  document.getElementById("wnHeadPostDeparture").value=s.headers.postDeparture;
+  document.getElementById("wnHeadPaPd").value=s.headers.paPd;
   document.getElementById("wnHeadPY").value=s.headers.py;
   document.getElementById("wnHeadTitle").value=s.headers.title;
   document.getElementById("wnHeadTrustYou").value=s.headers.trustYou;
@@ -2644,8 +2643,9 @@ function saveWNSettingsFromUI(rerun){
     history:!!document.getElementById("wnSetShowHistory").checked
   };
   current.headers={
-    preArrival:document.getElementById("wnHeadPreArrival").value.trim()||"Pre Arrival",
-    postDeparture:document.getElementById("wnHeadPostDeparture").value.trim()||"Post Departure",
+    preArrival:current.headers.preArrival||"Pre Arrival",
+    postDeparture:current.headers.postDeparture||"Post Departure",
+    paPd:document.getElementById("wnHeadPaPd").value.trim()||"Pre Arrival & Post Departure",
     py:document.getElementById("wnHeadPY").value.trim()||"Passionately Yours",
     title:document.getElementById("wnHeadTitle").value.trim()||"Title",
     trustYou:document.getElementById("wnHeadTrustYou").value.trim()||"Trust You",
@@ -2779,8 +2779,10 @@ function buildOperaSections(data){
   var show=s.showSections;
   var prefGroups=groupPreferenceFormatted(data.prefResult.formatted||[]);
   var sections=[];
-  sections.push(makeSection('preArrival',h.preArrival,formatMailEntriesChronological(data.paEntries),"No records.",show.preArrival));
-  sections.push(makeSection('postDeparture',h.postDeparture,formatMailEntriesChronological(data.pdEntries),"No records.",show.postDeparture));
+  // Not standardi (Haktan 2026-10-29): pre arrival ve post departure mailleri TEK web note, Note Title "Pre Arrival & Post Departure".
+  // Iki kutucuk hangi mail turlerinin bu nota girecegini secer.
+  var paPd=(show.preArrival?(data.paEntries||[]):[]).concat(show.postDeparture?(data.pdEntries||[]):[]);
+  sections.push(makeSection('paPd',h.paPd,formatMailEntriesChronological(paPd),"No records.",show.preArrival||show.postDeparture));
   sections.push(makeSection('py',h.py,data.pyLines,"No records.",show.py));
   sections.push(makeSection('title',h.title,data.titleLines,"No records.",show.title));
   sections.push(makeSection('trustYou',h.trustYou,data.trustYouLines,"No records.",true));
