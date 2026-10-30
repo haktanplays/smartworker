@@ -865,6 +865,17 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-pm-head{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--soft);border-bottom:1px solid var(--line)}
 #page-didit .bd-pm-pre{margin:0;padding:10px 12px;font:12px/1.5 Consolas,"Segoe UI Mono",monospace;white-space:pre-wrap;color:var(--ink)}
 #page-didit .bd-dept.w{background:#fde8e6;color:#b3261e}
+#page-didit .bd-at-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+#page-didit .bd-chip.on{background:var(--g);color:#fff;border-color:var(--g)}#page-didit .bd-chip.warn{border-color:#e0b25c;color:#8a5a00}#page-didit .bd-chip.on.warn{background:#8a5a00;color:#fff}
+#page-didit .bd-at-g{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#fff;overflow:hidden}
+#page-didit .bd-at-gh{padding:6px 10px;background:var(--soft);border-bottom:1px solid var(--line);font-size:13px}
+#page-didit .bd-at-row{padding:6px 10px;border-bottom:1px solid #eef2f1}#page-didit .bd-at-row:last-child{border-bottom:0}
+#page-didit .bd-at-row.fix{background:#fffaf0}
+#page-didit .bd-at-raw{font:11.5px/1.4 Consolas,"Segoe UI Mono",monospace;color:var(--mut);margin-bottom:4px;word-break:break-word}
+#page-didit .bd-at-std{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+#page-didit .bd-at-std select{width:auto;padding:4px 6px;font-size:12px}
+#page-didit .bd-at-t{flex:1;min-width:240px;padding:5px 8px;font-size:12.5px}
+#page-didit .bd-at-warn{font-size:11.5px;color:#9a5b00;margin-top:3px}
 #page-didit .bd-kt-room{border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:10px;padding:8px 12px;background:#fff;margin-bottom:6px}
 #page-didit .bd-kt-room.done{border-left-color:#1e7b3a;background:#fbfdfb}
 #page-didit .bd-kt-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
@@ -1328,6 +1339,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <button type="button" class="bd-tab" data-tab="log" onclick="switchBdiTab('log')">Log ve rapor</button>
   <button type="button" class="bd-tab" data-tab="issues" onclick="switchBdiTab('issues')">Issues <span id="bdiIssueTabCount" class="bd-count"></span></button>
   <button type="button" class="bd-tab" data-tab="guests" onclick="switchBdiTab('guests')">Misafirler</button>
+  <button type="button" class="bd-tab" data-tab="atelier" onclick="switchBdiTab('atelier')">Atölye</button>
   <button type="button" class="bd-tab" data-tab="alice" onclick="switchBdiTab('alice')">Alice</button>
   <button type="button" class="bd-tab" data-tab="dept" onclick="switchBdiTab('dept')">Departman</button>
   <button type="button" class="bd-tab" data-tab="coverage" onclick="switchBdiTab('coverage')">Kapsam</button>
@@ -1604,6 +1616,14 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   </label>
   <div id="bdiAliceStatus" class="bd-status"></div>
   <div id="bdiAliceBody" style="margin-top:14px"></div>
+</div>
+</section>
+
+<!-- TAB: Veri Atolyesi -->
+<section id="bdiTab_atelier" class="bd-pane" style="display:none">
+<div class="bd-panel">
+  <div class="bd-panel-head"><div><h2>Veri Atölyesi</h2><div class="bd-sub">Protel'deki eski notları standarda çevirip misafir hafızasına alır (NoteStandardizer'ın yerine)</div></div></div>
+  <div id="bdiAtBody"></div>
 </div>
 </section>
 
@@ -6611,7 +6631,7 @@ function getBdiActions(){
 
 // ===== BDI TAB SWITCHING =====
 function switchBdiTab(tab){
-  ["entry","brief","log","issues","guests","alice","dept","coverage"].forEach(function(t){
+  ["entry","brief","log","issues","guests","atelier","alice","dept","coverage"].forEach(function(t){
     var el=document.getElementById("bdiTab_"+t);
     if(el)el.style.display=t===tab?"block":"none";
   });
@@ -6626,6 +6646,7 @@ function switchBdiTab(tab){
   if(tab==="alice"){bdiAliceSetupDrop();renderBdiAlice()}
   if(tab==="brief"){renderBdiBriefTab()}
   if(tab==="dept"){renderBdiDeptTab()}
+  if(tab==="atelier"){renderBdiAtelier()}
 }
 
 // ===== UNTOUCHED ROOMS =====
@@ -8702,6 +8723,8 @@ async function bdiGMLoad(){
   _bdiGM.state=(await _gmGetMeta("state"))||{};
   _bdiGM.dna=(await _gmGetMeta("dna"))||{};
   _bdiGM.protel=(await _gmGetMeta("protel"))||{};
+  _bdiGM.imp=(await _gmGetMeta("imp"))||{}; // Veri Atolyesi kararlari (red / geri al)
+  _bdiGM.rules=(await _gmGetMeta("rules"))||{}; // Veri Atolyesi ogrenilmis alan/departman kurallari
   _bdiGM.loaded=true;
   if(!_bdiGM.state.migratedV1){ // eski localStorage birlestirmeleri ve notlari tasinir (bir kez)
     var now=Date.now();
@@ -9570,7 +9593,7 @@ function bdiDnaHtml(g){
     });
     x.man.forEach(function(it){
       var day=bdiYmd(new Date(it.at||it.u||Date.now()));
-      rows.push('<li><span class="bd-dna-txt">'+esc(it.t)+'</span><span class="bd-dna-meta">elle · '+esc(bdiFmtD(day))+(it.by?' · '+esc(it.by):'')+(bdiDnaStale(day)?' <span class="bd-dna-stale">teyit et</span>':'')+' <button type="button" class="bd-link bd-link-danger" onclick="bdiDnaDel('+gq+',\''+it.id+'\')">sil</button></span></li>');
+      rows.push('<li><span class="bd-dna-txt">'+esc(it.t)+'</span><span class="bd-dna-meta">'+(it.src==="protel"?"Protel'den":"elle")+' · '+esc(bdiFmtD(day))+(it.by?' · '+esc(it.by):'')+(bdiDnaStale(day)?' <span class="bd-dna-stale">teyit et</span>':'')+' <button type="button" class="bd-link bd-link-danger" onclick="bdiDnaDel('+gq+',\''+it.id+'\')">sil</button></span></li>');
     });
     if(rows.length)h+='<ul class="bd-dna-list">'+rows.join("")+'</ul>';else if(k!=="addr")h+='<div class="bd-dna-empty">—</div>';
     h+='</div>';
@@ -9656,7 +9679,8 @@ var BDI_PROTEL_DEPTS=["F&B","HSK","PBR","BUT","REC","CON","SPA"];
 var BDI_PROTEL_DID_MAX=5; // Butler Did It: konaklama basina en fazla satir
 // Butler Did It'e girmeyen rutin isler. Haktan 2026-10-30: shoeshine, pack/unpack, inhouse inspection, welcome / in-room check-in (odaya eslik) GIRER.
 var BDI_PROTEL_ROUTINE=/turndown|laundry|\bice\b|water|courtesy|touch call|follow-?up|issue|alert/i;
-function bdiInitials(name){var w=String(name||"").trim().split(/\s+/).filter(Boolean);if(!w.length)return "";var f=function(s){return s.charAt(0).toLocaleUpperCase("tr-TR")};return w.length>1?f(w[0])+f(w[w.length-1]):f(w[0])}
+function bdiInitials(name){if(/^[A-ZÇĞİÖŞÜ]{2,3}$/.test(String(name||"").trim()))return String(name).trim(); // Protel'den gelen bas harf
+  var w=String(name||"").trim().split(/\s+/).filter(Boolean);if(!w.length)return "";var f=function(s){return s.charAt(0).toLocaleUpperCase("tr-TR")};return w.length>1?f(w[0])+f(w[w.length-1]):f(w[0])}
 function bdiSigDate(ts){var d=ts?new Date(ts):new Date();return ("0"+d.getDate()).slice(-2)+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+d.getFullYear()}
 function bdiSig(ts,by){var i=bdiInitials(by);return "** "+bdiSigDate(ts)+(i?" "+i:"")}
 function bdiProtelLine(t){t=String(t||"").replace(/\s+/g," ").trim();return t&&!/[.!?]$/.test(t)?t+".":t}
@@ -9696,11 +9720,12 @@ function bdiProtelNotes(p){
   var ts=function(i){var s=st[i.id];return (s&&s.u)||Date.now()};
   var who=function(i){return i.author||i.by||""};
   var uniq=function(list){var seen={};return list.filter(function(x){var k=normTR(x.t);if(seen[k])return false;seen[k]=1;return true})};
-  var block=function(title,items){return "***"+title+"***\n"+items.map(function(x,n){return (n+1)+"- "+x.t+(x.noSig?"":" "+bdiSig(x.ts,x.by))}).join("\n")};
+  var block=function(title,items){return "***"+title+"***\n"+items.map(function(x,n){return (n+1)+"- "+x.t+(x.noSig?"":x.ts?" "+bdiSig(x.ts,x.by):(bdiInitials(x.by)?" ** "+bdiInitials(x.by):""))}).join("\n")};
+  var mts=function(it){return it.src==="protel"?(it.at||0):(it.at||it.u)}; // Atolye'den gelen satir orijinal tarihini tasir (yoksa tarihsiz imza)
   // 1) WARNING
   var warn=[];
   r.accepted.forEach(function(i){if(i.dept==="SENSITIVITY")warn.push({t:bdiProtelSens(i.note),ts:ts(i),by:who(i)})});
-  man.forEach(function(it){if(it.sec==="sens")warn.push({t:bdiProtelSens(it.t),ts:it.at||it.u,by:it.by})});
+  man.forEach(function(it){if(it.sec==="sens")warn.push({t:bdiProtelSens(it.t),ts:mts(it),by:it.by})});
   warn=uniq(warn);if(warn.length)out.push({title:"WARNING",n:warn.length,text:block("WARNING",warn)});
   // 2) Guest Preferences (departman sirasi sabit, bos departman yazilmaz)
   var prefs={},np=0,a=dna.addr||{};
@@ -9712,14 +9737,14 @@ function bdiProtelNotes(p){
     addP(i.dept,bdiProtelPref(i.note),ts(i),who(i));
   });
   man.forEach(function(it){
-    if(it.sec==="delight"||it.sec==="rhythm")addP("BUT",bdiProtelPref(it.t),it.at||it.u,it.by);
-    else if(it.sec==="avoid")addP("BUT",bdiProtelAvoid(it.t),it.at||it.u,it.by);
+    if(it.sec==="delight"||it.sec==="rhythm")addP(it.dept||"BUT",bdiProtelPref(it.t),mts(it),it.by);
+    else if(it.sec==="avoid")addP(it.dept||"BUT",bdiProtelAvoid(it.t),mts(it),it.by);
   });
   var pb=BDI_PROTEL_DEPTS.filter(function(d){return prefs[d]}).map(function(d){var l=uniq(prefs[d]);np+=l.length;return block(d+" Preferences",l)});
   if(pb.length)out.push({title:"Guest Preferences",n:np,text:"***Guest Preferences***\n\n"+pb.join("\n\n")});
   // 3) Butler Did It: her konaklamadan en kayda deger en fazla 5 is (standart: konaklama basina ust sinir), konaklamalar eskiden yeniye.
   // Ayni konaklamada tekrar eden ayni is (her gun shoeshine) bir kez yazilir. Secim: ozel gun > misafirin begendigi > notu olan > yeni.
-  var did=[],kv=0; // kv: KVKK kelimesi (tibbi/inanc) tasidigi icin Protel'e yazilmayan satir
+  var did=man.filter(function(it){return it.sec==="did"}).map(function(it){return {t:bdiProtelLine(it.t),ts:mts(it),by:it.by}}).sort(function(x,y){return (x.ts||0)-(y.ts||0)}),kv=0; // Protel'deki eski Butler Did It satirlari (Atolye) once; kv: KVKK kelimesi tasidigi icin yazilmayan satir
   p.stays.forEach(function(sy){
     var part=[];
     bdiEventsIn(p,sy).forEach(function(e){
@@ -9729,11 +9754,11 @@ function bdiProtelNotes(p){
     });
     did=did.concat(uniq(part.sort(function(x,y){return y.score-x.score||y.ts-x.ts})).slice(0,BDI_PROTEL_DID_MAX).sort(function(x,y){return x.ts-y.ts}));
   });
-  if(did.length)out.push({title:"Butler Did It",n:did.length,text:block("Butler Did It",did)});
+  did=uniq(did);if(did.length)out.push({title:"Butler Did It",n:did.length,text:block("Butler Did It",did)});
   // 4) Special Occasions
   var occ=[];
   r.accepted.forEach(function(i){if(i.type==="occasion")occ.push({t:bdiProtelOcc(i.note),ts:ts(i),by:who(i)})});
-  man.forEach(function(it){if(it.sec==="moments")occ.push({t:bdiProtelLine(it.t),ts:it.at||it.u,by:it.by})});
+  man.forEach(function(it){if(it.sec==="moments")occ.push({t:bdiProtelLine(it.t),ts:mts(it),by:it.by})});
   occ=uniq(occ);if(occ.length)out.push({title:"Special Occasions",n:occ.length,text:block("Special Occasions",occ)});
   // 5) Issues: "Sorun; ne yapildi, durum." 3 yildan eskiler tek ozet satirina iner (imzasiz)
   var cutY=new Date().getFullYear()-3,old=[],iss=[],recs={};
@@ -9745,8 +9770,22 @@ function bdiProtelNotes(p){
     var t=String(x.text||"Issue").replace(/\s+/g," ").trim().replace(/[.;]+$/,"")+(act?"; "+String(act).replace(/[.;]+$/,""):"")+", "+(x.status==="closed"?"resolved":"open")+".";
     iss.push({t:t,ts:new Date(x.date+"T12:00:00").getTime(),by:x.closedBy||(x.handlers||[])[0]||""});
   });
+  man.forEach(function(it){ // Protel'deki eski issue satirlari (Atolye, DNA "Gecmis kirilmalar")
+    if(it.sec!=="break"||it.src!=="protel")return;var y=it.at?new Date(it.at).getFullYear():null;
+    if(y&&y<cutY){var tp2=BDI_TOPICS.filter(function(t){return t[0].test(it.t||"")})[0];old.push(tp2?tp2[1].toLowerCase():"other");return}
+    iss.push({t:bdiProtelLine(it.t),ts:it.at||0,by:it.by});
+  });
+  iss=uniq(iss).sort(function(x,y){return (x.ts||0)-(y.ts||0)});
   if(old.length){var tops=old.filter(function(t,i){return old.indexOf(t)===i});iss.push({t:"Before "+cutY+": "+old.length+" issue"+(old.length>1?"s":"")+" ("+tops.join(", ")+").",noSig:true})}
   if(iss.length)out.push({title:"Issues",n:iss.length,text:block("Issues",iss)});
+  // 6) Pre Arrival & Post Departure (not standardi 2026-10-29): mail kayitlari tek notta; 3 yildan eskiler tek ozet satiri
+  var ml=man.filter(function(it){return it.sec==="mail"}).map(function(it){return {t:bdiProtelLine(it.t),ts:mts(it),by:it.by,pre:!/post/i.test(it.t)}}).sort(function(x,y){return (x.ts||0)-(y.ts||0)});
+  var mOld=ml.filter(function(x){return x.ts&&new Date(x.ts).getFullYear()<cutY}),mNew=ml.filter(function(x){return mOld.indexOf(x)<0});
+  if(mOld.length){var np2=mOld.filter(function(x){return x.pre}).length,nd2=mOld.length-np2;mNew.push({t:"Before "+cutY+": "+[np2?np2+" pre arrival":"",nd2?nd2+" post departure":""].filter(Boolean).join(", ")+" mail"+(mOld.length>1?"s":"")+".",noSig:true})}
+  if(mNew.length)out.push({title:"Pre Arrival & Post Departure",n:mNew.length,text:block("Pre Arrival & Post Departure",mNew)});
+  // 7) Title (unvan / gorev)
+  var tl=uniq(man.filter(function(it){return it.sec==="title"}).map(function(it){return {t:bdiProtelLine(it.t),ts:mts(it),by:it.by}}));
+  if(tl.length)out.push({title:"Title",n:tl.length,text:block("Title",tl)});
   out.kvkk=kv;
   return out;
 }
@@ -10189,7 +10228,7 @@ async function renderBdiAlice(){
 // ----- yedek: yerel gunluk kopya + ortak klasor dosyasi -----
 function bdiGMExportObj(){
   var ev=Object.keys(_bdiGM.events).map(function(k){return _bdiGM.events[k]});
-  return {version:1,app:"SmartWorker",kind:"guest-memory",updated:new Date().toISOString(),events:ev,aliases:_bdiGM.aliases,notes:_bdiGM.notes,dismissed:_bdiGM.dismissed,insights:_bdiGM.insights,dna:_bdiGM.dna||{},protel:_bdiGM.protel||{}};
+  return {version:1,app:"SmartWorker",kind:"guest-memory",updated:new Date().toISOString(),events:ev,aliases:_bdiGM.aliases,notes:_bdiGM.notes,dismissed:_bdiGM.dismissed,insights:_bdiGM.insights,dna:_bdiGM.dna||{},protel:_bdiGM.protel||{},imp:_bdiGM.imp||{},rules:_bdiGM.rules||{}};
 }
 async function bdiGMDailySnapshot(){
   var today=bdiYmd(new Date());
@@ -10220,13 +10259,19 @@ async function bdiGMMergeObj(obj){
   var rp=obj.protel||{};_bdiGM.protel=_bdiGM.protel||{};var ptCh=false; // Protel "girildi" isaretleri: misafir+blok bazinda yeni-u kazanir
   for(var pg in rp){var Lp=_bdiGM.protel[pg]||(_bdiGM.protel[pg]={});for(var pt in (rp[pg]||{})){var ra2=rp[pg][pt],la2=Lp[pt];if(ra2&&(!la2||(ra2.u||0)>(la2.u||0))){Lp[pt]=ra2;ptCh=true;got++}}}
   if(ptCh)await _gmPutMeta("protel",_bdiGM.protel);
+  var ri2=obj.imp||{};_bdiGM.imp=_bdiGM.imp||{};var imCh=false; // Atolye kararlari: misafir+satir bazinda yeni-u
+  for(var mg in ri2){var Lm=_bdiGM.imp[mg]||(_bdiGM.imp[mg]={});for(var mi in (ri2[mg]||{})){var a3=ri2[mg][mi],b3=Lm[mi];if(a3&&(!b3||(a3.u||0)>(b3.u||0))){Lm[mi]=a3;imCh=true;got++}}}
+  if(imCh)await _gmPutMeta("imp",_bdiGM.imp);
+  var rr=obj.rules||{};_bdiGM.rules=_bdiGM.rules||{};var ruCh=false; // Atolye kurallari: ifade bazinda yeni-u
+  for(var rk in rr){var a4=rr[rk],b4=_bdiGM.rules[rk];if(a4&&(!b4||(a4.u||0)>(b4.u||0))){_bdiGM.rules[rk]=a4;ruCh=true;got++}}
+  if(ruCh)await _gmPutMeta("rules",_bdiGM.rules);
   var ri=obj.insights||{};for(var ig in ri){var lm=_bdiGM.insights[ig]||(_bdiGM.insights[ig]={});for(var ii in ri[ig]){var a2=ri[ig][ii],b2=lm[ii];if(a2&&(!b2||(a2.u||0)>(b2.u||0))){lm[ii]=a2;metaCh=true;got++}}}
   await _gmPutEvents(put);
   if(metaCh){_bdiRuleCache=null;await _gmPutMeta("aliases",_bdiGM.aliases);await _gmPutMeta("notes",_bdiGM.notes);await _gmPutMeta("dismissed",_bdiGM.dismissed);await _gmPutMeta("insights",_bdiGM.insights)}
   if(got)_bdiGMProf=null;
   return got;
 }
-function bdiGMSig(o){var n=0,mu=0;(o.events||[]).forEach(function(e){n++;if((e.u||0)>mu)mu=e.u||0});return JSON.stringify(o.dna||{}).length+"|"+n+"|"+mu+"|"+JSON.stringify(o.aliases||{}).length+"|"+JSON.stringify(o.notes||{}).length+"|"+Object.keys(o.dismissed||{}).length+"|"+JSON.stringify(o.insights||{}).length+"|"+bdiProtelSig(o.protel)}
+function bdiGMSig(o){var n=0,mu=0;(o.events||[]).forEach(function(e){n++;if((e.u||0)>mu)mu=e.u||0});return JSON.stringify(o.dna||{}).length+"|"+n+"|"+mu+"|"+JSON.stringify(o.aliases||{}).length+"|"+JSON.stringify(o.notes||{}).length+"|"+Object.keys(o.dismissed||{}).length+"|"+JSON.stringify(o.insights||{}).length+"|"+bdiProtelSig(o.protel)+"|"+bdiProtelSig(o.imp)+"|"+bdiProtelSig({r:o.rules||{}})}
 function bdiProtelSig(m){var n=0,mu=0;for(var g in (m||{}))for(var t in (m[g]||{})){n++;var u=(m[g][t]||{}).u||0;if(u>mu)mu=u}return n+"/"+mu} // uzunluk degil en yeni damga: ayni uzunlukta yeniden isaretleme de yazilir
 async function _bdiGuestMemSyncFile(dir){
   var res={got:0,sent:0};
@@ -10688,6 +10733,186 @@ async function bdiPrepMark(gid,on){
   BdiKV.set("bdi_prep_v1",JSON.stringify(all));if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();
   renderBdiBriefTab();
 }
+// ---------- VERI ATOLYESI v1 (2026-10-30, Haktan: "note standardizer direkt butler did it'e bagli olan bir sistem olmali") ----------
+// In-house raporundaki (GIH01102) Protel notlari satir satir okunur, standarda gore alana ayrilir (WARNING, Guest Preferences +
+// departman, Butler Did It, Special Occasions, Issues, Pre Arrival & Post Departure, Title), metni ve imzasi standartlastirilir.
+// Toplu onizleme: onaylanan satir misafirin DNA'sina "Protel'den" ogesi olarak yazilir (orijinal satir, tarih, bas harf saklanir);
+// Protel ciktisi, kat turu ve iPad rehberi oradan beslenir. Karar kayitlari: kabul = DNA ogesi (id "p_..."), red/geri al =
+// _bdiGM.imp[gid][id]={st:"r"|"p",u}; en yeni karar gecerli. Alan/departman duzeltmesi kural olur: _bdiGM.rules[anahtar]={f,d,u}
+// (ayni satir baska misafirde ya da sonraki raporda dogru gelir). Hepsi misafir hafizasiyla senkronlanir.
+// Departman sozlugu NoteStandardizer'in PREF_KW / SC_DEPT eslemesinden: PBR = minibar ve icecek, HSK = yatak/yastik/oda, F&B = diyet ve restoran...
+var BDI_AT_F={sens:"WARNING",pref:"Tercih",avoid:"İstemez",did:"Butler Did It",occ:"Kutlama",iss:"Issue",mail:"Pre Arrival & Post Departure",title:"Title",other:"Diğer"};
+var BDI_AT_SEC={sens:"sens",pref:"delight",avoid:"avoid",did:"did",occ:"moments",iss:"break",mail:"mail",title:"title"};
+var BDI_AT_DEPT=[
+  ["PBR",/minibar|fridge|alcohol|soft drinks?|beverage|\bcola\b|\bwater\b|\btea\b|coffee|nespresso|\bmilk\b|juice|\bwine\b|champagne|whisk(e)?y|\bdrinks?\b|\bsoda\b|pellegrino|perrier|\bsu\b|i[cç]ecek|alkol|[cç]ay\b|kahve/i],
+  ["SPA",/\bspa\b|massage|hammam|hamam|facial|wellness/i],
+  ["CON",/transfer|airport|limousine|\bcar\b|\btours?\b|tickets?|concierge/i],
+  ["REC",/\bfloor\b|\bview\b|elevator|room ending|quiet room|connecting|upgrade|check-?in|check-?out|\bpoints?\b|loyalty|register|membership/i],
+  ["F&B",/kahvalt|yemek|restoran|breakfast|restaurant|dinner|lunch|\bfood\b|vegan|vegetarian|gluten|lactose|sugar|onion|garlic|chocolate|fruit|\bnuts?\b|pistachio|berr(y|ies)|banana|isokyo|lavinia|\bmenu\b|salad|room service|in-room dining/i],
+  ["HSK",/yast[iı]k|nevresim|[cç]ar[sş]af|havlu|terlik|bornoz|temizlik|\bhk\b|sabun|pillow|mattress|\bbeds?\b|sheet|duvet|blanket|cushion|towel|robe|slipper|soap|shampoo|toiletr|amenit|turn ?down|clean|housekeep|ashtray|temperature|degrees|humidifier|\biron\b|\bmugs?\b|glasses|wall side|window side|\bsleeps?\b|guards?|rails?|\bcrib\b|\bcot\b|curtain|balcony/i]
+];
+var BDI_AT_PREF=/^\s*\*|\bprefer|does not|doesn't|\bdo not\b|please|make sure|\bplace\b|provide|\bextra\b|\bremove\b|always|never|\bshould\b|\bsleeps?\b|favou?rite|\bwants?\b|\blikes?\b|\buses?\b|consumes?|\bdrinks?\b|\beats?\b|\bloves?\b|enjoys?|requests?|asks? for|would like|istiyor|istemiyor|tercih|\bsever\b|sevmez|l[uü]tfen|koyul|konul|yerle[sş]tir|haz[iı]rla|olsun|olmas[iı]n|kullan/i;
+var BDI_AT_AVOID=/^(guest\s+)?(does not|doesn't|do not|did not|never)\s+(prefer|want|like|use|eat|drink|consume)s?\b|^(no|without)\s|istemiyor|sevmez|olmas[iı]n|kullanm[iı]yor/i;
+var BDI_AT_FAITH=/halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|oru[cç]|ramadan|ramazan|church|kilise|mosque|\bcami\b|synagog|sinagog|faith|inan[cç]/i;
+var _bdiAtEdit={},_bdiAtFilter="all",_bdiAtView="p",_bdiAtQ="";
+function bdiAtKey(t){return String(t||"").toLowerCase().replace(/\*\*.*$/,"").replace(/\d{1,2}[./]\d{1,2}[./]\d{2,4}/g," ").replace(/^\s*(\*|\d+\s*[-.)])\s*/,"").replace(/[^a-z0-9ğüşıöç]+/g," ").replace(/\s+/g," ").trim()}
+function bdiAtId(gid,raw){return "p_"+bdiProtelHash(gid+"|"+String(raw||"").toLowerCase().replace(/[^a-z0-9ğüşıöç]+/g," ").trim()).replace(/\./g,"_")} // tarih dahil: ayni cumle farkli tarih = ayri satir
+// Satirdan imza: son tarih (gg.aa.yyyy / gg.aa.yy / g.a.yy) ve bas harfler (**HD, ** 03.07.2026 HD, Butler LA, 2026 GA); metinden ayiklanir
+function bdiAtSig(raw){
+  var s=String(raw||""),at=0,ini="",m,U="A-ZÇĞİÖŞÜ";
+  var dm=s.match(/\d{1,2}[./]\d{1,2}[./]\d{2,4}/g);
+  if(dm){var q=dm[dm.length-1].split(/[./]/),y=q[2].length===2?"20"+q[2]:q[2],d=new Date(+y,+q[1]-1,+q[0],12);if(!isNaN(d)&&+y>=2000&&+y<=2100&&+q[1]>=1&&+q[1]<=12)at=d.getTime()}
+  if((m=new RegExp("\\*\\*\\s*(?:\\d{1,2}[./]\\d{1,2}[./]\\d{2,4}\\s*)?(?:[Bb]utler\\s+)?(["+U+"]{2,3})(?![a-zçğıöşü])").exec(s)))ini=m[1];
+  else if((m=new RegExp("\\b[Bb]utler\\s+(["+U+"]{2,3})\\s*$").exec(s)))ini=m[1];
+  else if((m=new RegExp("\\d{2,4}\\s*\\*{0,2}\\s*(["+U+"]{2,3})\\s*$").exec(s)))ini=m[1];
+  var txt=s.replace(/\*\*.*$/,"").replace(new RegExp("\\s*(?:on\\s+)?\\d{1,2}[./]\\d{1,2}[./]\\d{2,4}\\s*\\**\\s*(?:["+U+"]{2,3})?\\s*\\.?\\s*$"),"")
+    .replace(/\s*\*+\s*[a-zçğıöşü]+\s*$/i,"").replace(/^\s*(\*|\d+\s*[-.)])\s*/,"").replace(/^[;:,.\-\s]+/,"").replace(/\s+-\s+/g,"-").replace(/\s+/g," ").trim().replace(/[.;,\s]+$/,"");
+  return {txt:txt,at:at,ini:ini};
+}
+function bdiAtDept(t){for(var i=0;i<BDI_AT_DEPT.length;i++)if(BDI_AT_DEPT[i][1].test(t))return BDI_AT_DEPT[i][0];return "BUT"}
+function bdiAtText(f,t,o){
+  var m;
+  if(f==="mail"){var pre=!/post/i.test(t),no=/not\s+(been\s+)?sen[dt]|did not send|could not|couldn't|unable/i.test(t),why=/no\s+(e-?)?mail/i.test(t)?" - no mail address":/not match|mismatch/i.test(t)?" - mail address does not match":"";return (pre?"Pre arrival":"Post departure")+" mail has "+(no?"not ":"")+"been sent"+(no?why:"")}
+  if(f==="sens"){var x="";
+    if((m=/allerg\w*\s+(?:to|towards|against|for)\s+([^.;]+)/i.exec(t)))x=m[1];else if((m=/intoleran\w*\s+(?:to|towards|against|for)?\s*([^.;]+)/i.exec(t)))x=m[1];
+    else if((m=/sensitive\s+(?:to|towards)\s+([^.;]+)/i.exec(t)))x=m[1];else if((m=/([a-zçğıöşü][a-zçğıöşü ,&-]{1,40}?)\s+(?:allerg|intoleran)/i.exec(t)))x=m[1];
+    x=String(x).replace(/^(guest\s+(is|has)\s+(an?\s+)?)/i,"").trim();
+    if(!x||BDI_KVKK_RE.test(x)){o.warn="Neye karşı hassas olduğunu yaz (tıbbi kelime olmadan)";return "Guest is highly sensitive towards ___."}
+    return "Guest is highly sensitive towards "+x+"."}
+  if(f==="avoid")return /^(guest\s+)?(does not|doesn't|do not|did not|never)\s+(prefer|want|like|use|eat|drink|consume)s?\s+|^(no|without)\s+/i.test(t)?t.replace(/^(guest\s+)?(does not|doesn't|do not|did not|never)\s+(prefer|want|like|use|eat|drink|consume)s?\s+(to\s+(use|have|eat|drink|consume)\s+)?/i,"").replace(/^(no|without)\s+/i,""):t;
+  if(f==="pref")return t.replace(/^guest\s+prefers?\s+/i,"Guest prefers ");
+  if(f==="did")return t.charAt(0).toUpperCase()+t.slice(1).replace(/\bfor guest\b/i,"for the guest");
+  if(f==="occ"&&(m=/^([A-Za-zÇĞİÖŞÜçğıöşü]+)\s*\(\s*(daughter|son|wife|husband|child|kid|baby)\s*\)?\s*(\d{1,2})[./ ](\d{1,2})[./ ]\d{2,4}/i.exec(t))){o.at=0;return m[2].charAt(0).toUpperCase()+m[2].slice(1).toLowerCase()+" "+m[1]+"'s birthday on "+("0"+m[3]).slice(-2)+"/"+("0"+m[4]).slice(-2)}
+  return t.charAt(0).toUpperCase()+t.slice(1);
+}
+function bdiAtClassify(raw,inIss,rules){
+  var S=bdiAtSig(raw),t=S.txt;if(!t||t.length<2)return null;
+  if(/^(guest\s+)?issues?\s+recorded/i.test(t))return null; // grup basligi
+  var o={raw:raw,f:"other",d:"",at:S.at,ini:S.ini,warn:""},f="other";
+  if(/\be?-?mail\b/i.test(t)&&/(pre|post)[\s-]*(arr|arrival|departure)|\bsent\b|\bsend\b/i.test(t))f="mail";
+  else if(BDI_AT_FAITH.test(t)){f="other";o.warn="İnanç bilgisi: Protel'e yazılmaz (KVKK)"}
+  else if(BDI_KVKK_RE.test(t))f="sens";
+  else if(inIss)f="iss";
+  else if(/^\s*\d*\s*[-.)]?\s*butler\s+(did|placed|prepared|performed|arranged|gifted|delivered|made|organi[sz]ed|set|decorated)\b/i.test(raw)||/^butler\s+(did|placed|prepared|performed|arranged|gifted|delivered|made)\b/i.test(t))f="did";
+  else if(/birthday|anniversary|honeymoon|wedding|celebrat|do[gğ]um g[uü]n|y[iı]ld[oö]n[uü]m/i.test(t)||/\(\s*(daughter|son|wife|husband|child|kid|baby)\b/i.test(t))f="occ";
+  else if((/^\s*\d+\s*[-.)]/.test(raw)&&!BDI_AT_PREF.test(t))||/complain|not working|was not|wasn't|were not|broken|dirty|noise|noisy|\blate\b|wrong|missing|worm|\bhair\b|smell|leak|flicker|not ready|protested|stain|insect/i.test(t))f="iss";
+  else if(t.length<=80&&!BDI_AT_PREF.test(t)&&/\b(director|manager|ceo|cfo|coo|president|vice|diplomat|ambassador|attach[eé]|atteche|minister|consul|owner|founder|chairman|waiter|chef|doctor|professor|officer|employee|engineer|lawyer|deputy|secretary|at raffles|embass)/i.test(t))f="title";
+  else if(BDI_AT_PREF.test(t)||/^guest\b/i.test(t)||/^\s*\*/.test(raw))f=BDI_AT_AVOID.test(t)?"avoid":"pref"; // "Do not call guest..." gibi talimatlar tercih olarak kalir
+  var R=rules&&rules[bdiAtKey(raw)];
+  if(R&&R.f&&!(f==="sens"&&R.f!=="sens"&&BDI_KVKK_RE.test(t))){f=R.f;o.rule=1}
+  o.f=f;o.d=(f==="pref"||f==="avoid")?((R&&R.d)||bdiAtDept(t)):"";
+  o.t=bdiAtText(f,t,o);
+  return o;
+}
+// Kararlar: DNA ogesi (kabul / silindiyse red) ve imp kaydi (red / geri al); en yeni olan gecerli
+function bdiAtState(gid,id){
+  var it=((bdiDnaOf(gid).items)||{})[id],dd=((_bdiGM.imp||{})[gid]||{})[id],best=null;
+  [it?{s:it.del?"r":"a",u:it.u||0}:null,dd?{s:dd.st,u:dd.u||0}:null].forEach(function(x){if(x&&(!best||x.u>best.u))best=x});
+  return best?best.s:"p";
+}
+function bdiAtCandidates(){
+  var out=[],rules=_bdiGM.rules||{},seen={};
+  bdiGihRows().forEach(function(r){
+    if(!r.notes||!r.notes.length)return;
+    var pn=bdiKatPersonName(r.name),gid=bdiGMGid(bdiGuestKey(pn.full));if(!gid)return;
+    r.notes.forEach(function(g){
+      var inIss=/issues?\s+recorded|guest issue/i.test(g[0]||"");
+      g.forEach(function(raw,i){
+        var c=bdiAtClassify(raw,inIss&&i>0,rules);if(!c)return;
+        var id=bdiAtId(gid,raw);if(seen[id])return;seen[id]=1;
+        c.id=id;c.gid=gid;c.name=pn.full;c.room=r.room;c.st=bdiAtState(gid,id);out.push(c);
+      });
+    });
+  });
+  return out;
+}
+function bdiAtVal(c){var e=_bdiAtEdit[c.id]||{};return {f:e.f||c.f,d:e.d||c.d,t:(e.t!=null?e.t:c.t)}}
+function bdiAtProblem(c){
+  var v=bdiAtVal(c),t=String(v.t||"").trim();
+  if(v.f==="other")return c.warn||"Alan seç (Diğer Protel'e girmez)";
+  if(!t)return "Metin boş";
+  if(v.f==="sens"){var x=t.replace(/^.*sensitive towards\s*/i,"");if(/___/.test(t)||!/sensitive towards\s+\S/i.test(t)||BDI_KVKK_RE.test(x))return c.warn||"Neye karşı hassas olduğunu yaz (tıbbi kelime olmadan)";return ""}
+  if(BDI_KVKK_RE.test(t))return "Tıbbi ya da inanç kelimesi var: düzelt ya da reddet";
+  return "";
+}
+async function bdiAtDecide(ids,how){
+  await bdiGMLoad();var by={};bdiAtCandidates().forEach(function(c){by[c.id]=c});
+  var now=Date.now(),n=0,skip=0;_bdiGM.dna=_bdiGM.dna||{};_bdiGM.imp=_bdiGM.imp||{};var dnaCh=false,impCh=false;
+  ids.forEach(function(id){
+    var c=by[id];if(!c)return;var D=_bdiGM.dna[c.gid]||(_bdiGM.dna[c.gid]={addr:null,items:{}});D.items=D.items||{};var I=_bdiGM.imp[c.gid]||(_bdiGM.imp[c.gid]={});
+    if(how==="a"){
+      if(c.st!=="p")return;if(bdiAtProblem(c)){skip++;return}
+      var v=bdiAtVal(c);D.items[id]={sec:BDI_AT_SEC[v.f],t:String(v.t).trim().replace(/\.$/,""),dept:(v.f==="pref"||v.f==="avoid")?(v.d||"BUT"):"",by:c.ini||"",at:c.at||0,u:now,src:"protel",raw:c.raw,imp:bdiYmd(new Date())};dnaCh=true;n++;
+    }else if(how==="r"){if(c.st!=="p")return;I[id]={st:"r",u:now};impCh=true;n++}
+    else{ // geri al: bekleyene doner
+      if(D.items[id]&&!D.items[id].del){D.items[id].del=true;D.items[id].u=now;dnaCh=true}
+      I[id]={st:"p",u:now+1};impCh=true;n++;
+    }
+    delete _bdiAtEdit[id];
+  });
+  if(dnaCh)await _gmPutMeta("dna",_bdiGM.dna);if(impCh)await _gmPutMeta("imp",_bdiGM.imp);
+  if(n){_bdiGMProf=null;bdiGMBackupSoon()}
+  bdiToast(how==="a"?n+" satır misafir hafızasına alındı"+(skip?" · "+skip+" satır düzeltme bekliyor":"")+".":how==="r"?n+" satır reddedildi.":n+" satır bekleyene döndü.");
+  renderBdiAtelier();
+}
+function bdiAtAct(id,how){bdiAtDecide([id],how)}
+function bdiAtBulk(how){var ids=bdiAtVisible().filter(function(c){return c.st==="p"&&(how!=="a"||!bdiAtProblem(c))}).map(function(c){return c.id});if(!ids.length)return;
+  if(!confirm(ids.length+" satır "+(how==="a"?"misafir hafızasına alınsın":"reddedilsin")+" mi?"))return;bdiAtDecide(ids,how)}
+function bdiAtEditText(id,v){(_bdiAtEdit[id]=_bdiAtEdit[id]||{}).t=v}
+// Alan / departman duzeltmesi: bu satira uygulanir ve kural olur (ayni ifade baska misafirde ve sonraki raporlarda ayni gelir)
+async function bdiAtSetField(id,f,d){
+  var c=bdiAtCandidates().filter(function(x){return x.id===id})[0];if(!c)return;
+  var e=_bdiAtEdit[id]=_bdiAtEdit[id]||{};if(f){e.f=f;if(!(f==="pref"||f==="avoid"))e.d="";else if(!e.d&&!c.d)e.d=bdiAtDept(c.t);if(f!==c.f&&e.t==null){var o={};e.t=bdiAtText(f,bdiAtSig(c.raw).txt,o)}}if(d)e.d=d;
+  await bdiGMLoad();_bdiGM.rules=_bdiGM.rules||{};var v=bdiAtVal(c);_bdiGM.rules[bdiAtKey(c.raw)]={f:v.f,d:v.d||"",u:Date.now()};await _gmPutMeta("rules",_bdiGM.rules);bdiGMBackupSoon();
+  var same=bdiAtCandidates().filter(function(x){return x.id!==id&&x.st==="p"&&bdiAtKey(x.raw)===bdiAtKey(c.raw)}).length;
+  if(same)bdiToast("Kural öğrenildi: aynı ifade "+same+" satırda daha düzeldi.");
+  renderBdiAtelier();
+}
+function bdiAtVisible(){
+  var C=bdiAtCandidates(),q=normTR(_bdiAtQ||"").trim();
+  return C.filter(function(c){var v=bdiAtVal(c);return c.st===_bdiAtView&&(_bdiAtFilter==="all"||(_bdiAtFilter==="fix"?!!bdiAtProblem(c):v.f===_bdiAtFilter||(_bdiAtFilter==="pref"&&v.f==="avoid")))&&(!q||normTR(c.name+" "+c.room+" "+c.raw).indexOf(q)>=0)});
+}
+function bdiAtSetFilter(f){_bdiAtFilter=f;renderBdiAtelier()}
+function bdiAtSetView(v){_bdiAtView=v;renderBdiAtelier()}
+function bdiAtSearch(v){_bdiAtQ=v;clearTimeout(bdiAtSearch._t);bdiAtSearch._t=setTimeout(renderBdiAtelier,250)}
+function bdiAtSigText(c){var d=c.at?bdiSigDate(c.at):"";return (d||c.ini)?"** "+[d,c.ini].filter(Boolean).join(" "):"imzasız"}
+async function renderBdiAtelier(){
+  var el=document.getElementById("bdiAtBody");if(!el)return;
+  try{await bdiGMIngest()}catch(e){}
+  var gih=bdiGih(),C=bdiAtCandidates(),h='';
+  if(!gih||!(gih.rows||[]).length){el.innerHTML='<p class="bd-empty">Kaynak yok. Kayıt sekmesindeki kutuya <b>in-house raporunu (GIH01102)</b> bırak; içindeki Protel notları burada standarda çevrilir.</p>';return}
+  var P=C.filter(function(c){return c.st==="p"}),cnt={},fix=P.filter(function(c){return bdiAtProblem(c)}).length;
+  P.forEach(function(c){var f=bdiAtVal(c).f;f=f==="avoid"?"pref":f;cnt[f]=(cnt[f]||0)+1});
+  var guests={};C.forEach(function(c){guests[c.gid]=1});
+  h+='<p class="bd-sub" style="margin:0 0 10px">Kaynak: in-house raporu '+esc(bdiFmtTs(gih.at))+' · '+Object.keys(guests).length+' misafir · '+C.length+' satır · bekleyen <b>'+P.length+'</b>, alınan '+C.filter(function(c){return c.st==="a"}).length+', reddedilen '+C.filter(function(c){return c.st==="r"}).length+'. Onaylanan satır misafirin DNA\'sına "Protel\'den" diye yazılır; Protel çıktısı, kat turu ve iPad oradan beslenir. Alan ya da departman düzeltmen kural olur.</p>';
+  h+='<div class="bd-toolbar" style="flex-wrap:wrap;gap:6px;margin-bottom:8px"><div class="bd-seg" role="group" aria-label="Durum">'+[["p","Bekleyen"],["a","Alınan"],["r","Reddedilen"]].map(function(v){return '<button type="button" class="'+(_bdiAtView===v[0]?'active':'')+'" onclick="bdiAtSetView(\''+v[0]+'\')">'+v[1]+'</button>'}).join("")+'</div>';
+  h+='<input type="search" placeholder="Misafir, oda ya da kelime" value="'+esc(_bdiAtQ)+'" oninput="bdiAtSearch(this.value)" style="max-width:220px">';
+  h+='<span style="flex:1"></span>'+(_bdiAtView==="p"?'<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiAtBulk(\'r\')">Görünenleri reddet</button><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiAtBulk(\'a\')">Görünenleri hafızaya al</button>':'')+'</div>';
+  if(_bdiAtView==="p"){h+='<div class="bd-at-chips">'+[["all","Hepsi",P.length],["fix","Düzeltilecek",fix],["sens","WARNING",cnt.sens||0],["pref","Tercih",cnt.pref||0],["did","Butler Did It",cnt.did||0],["occ","Kutlama",cnt.occ||0],["iss","Issue",cnt.iss||0],["mail","Pre Arrival & Post Departure",cnt.mail||0],["title","Title",cnt.title||0],["other","Diğer",cnt.other||0]].map(function(x){return '<button type="button" class="bd-chip'+(_bdiAtFilter===x[0]?' on':'')+(x[0]==="fix"&&x[2]?' warn':'')+'" onclick="bdiAtSetFilter(\''+x[0]+'\')">'+esc(x[1])+' <b>'+x[2]+'</b></button>'}).join("")+'</div>'}
+  var V=bdiAtVisible(),by={},order=[];
+  V.forEach(function(c){if(!by[c.gid]){by[c.gid]={name:c.name,room:c.room,list:[]};order.push(c.gid)}by[c.gid].list.push(c)});
+  if(!V.length){el.innerHTML=h+'<p class="bd-empty">'+(_bdiAtView==="p"?"Bu filtrede bekleyen satır yok.":"Satır yok.")+'</p>';return}
+  var fopt=function(sel){return Object.keys(BDI_AT_F).map(function(k){return '<option value="'+k+'"'+(k===sel?' selected':'')+'>'+esc(BDI_AT_F[k])+'</option>'}).join("")};
+  var dopt=function(sel){return BDI_PROTEL_DEPTS.map(function(k){return '<option'+(k===sel?' selected':'')+'>'+k+'</option>'}).join("")};
+  order.slice(0,80).forEach(function(g){
+    var G=by[g];h+='<div class="bd-at-g"><div class="bd-at-gh"><b>'+esc(G.room)+'</b> '+esc(G.name)+' <span class="bd-sub">'+G.list.length+' satır</span>'+(bdiGMProfiles().byGid[g]?' <button type="button" class="bd-link" onclick="bdiGuestOpen(\''+g+'\')">profil</button>':'')+'</div>';
+    G.list.forEach(function(c){
+      var v=bdiAtVal(c),pr=c.st==="p"?bdiAtProblem(c):"",idq="'"+c.id+"'";
+      h+='<div class="bd-at-row'+(pr?' fix':'')+'"><div class="bd-at-raw" title="Protel\'deki orijinal satır">'+esc(c.raw)+'</div><div class="bd-at-std">';
+      if(c.st==="p"){
+        h+='<select onchange="bdiAtSetField('+idq+',this.value)" aria-label="Alan">'+fopt(v.f)+'</select>'+((v.f==="pref"||v.f==="avoid")?'<select onchange="bdiAtSetField('+idq+',null,this.value)" aria-label="Departman">'+dopt(v.d)+'</select>':'');
+        h+='<input class="bd-at-t" value="'+esc(v.t)+'" oninput="bdiAtEditText('+idq+',this.value)" aria-label="Standart metin"><span class="bd-sub">'+esc(bdiAtSigText(c))+'</span>';
+        h+='<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiAtAct('+idq+',\'r\')" title="Protel\'e girmez, hafızaya alınmaz">&#10005;</button><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiAtAct('+idq+',\'a\')"'+(pr?' disabled':'')+'>&#10003;</button>';
+      }else{
+        h+='<span class="bd-dept">'+esc(BDI_AT_F[v.f]||v.f)+(v.d?" · "+esc(v.d):"")+'</span> <span>'+esc(c.st==="a"?((bdiDnaOf(c.gid).items||{})[c.id]||{}).t||v.t:v.t)+'</span> <span class="bd-sub">'+esc(bdiAtSigText(c))+'</span><span style="flex:1"></span><button type="button" class="bd-link" onclick="bdiAtAct('+idq+',\'p\')">geri al</button>';
+      }
+      h+='</div>'+(pr?'<div class="bd-at-warn">'+esc(pr)+'</div>':'')+(c.rule?'<div class="bd-sub" style="font-size:11px">öğrenilmiş kuraldan</div>':'')+'</div>';
+    });
+    h+='</div>';
+  });
+  if(order.length>80)h+='<p class="bd-sub">… ve '+(order.length-80)+' misafir daha (arama ya da filtre kullan).</p>';
+  el.innerHTML=h;
+}
 // ---------- KAT TURU (2026-10-30, Haktan: "katlar bolununce butlerlar inhouse misafirlerin daily inspection'ini yapiyor;
 // arrival'larda girişte odaya birakabilecekleri seyleri yapiyorlar; burayi daha iyi kurgulamamiz lazim") ----------
 // Kat dagilimindan her butlera kendi katlarinin listesi:
@@ -10709,17 +10934,18 @@ function bdiKatClean(t){
   return t;
 }
 // Protel notlarinin (in-house raporu) kaba siniflamasi: kat turunda sadece odayla ilgili tercihler madde olur.
-function bdiKatNotes(groups){
+function bdiKatNotes(groups,skip){
   var o={pref:[],issues:[],did:0,mail:0,post:0,info:[],sens:false};
   (groups||[]).forEach(function(g){
     var issHdr=/issue recorded|guest issue/i.test(g[0]||"");
     g.forEach(function(l,i){
       if(issHdr&&i===0)return;
       if(BDI_KVKK_RE.test(l)){o.sens=true;return}
-      if(/\bmail\b/i.test(l)&&/(pre|post)[\s-]*(arr|arrival|departure)|sent|send/i.test(l)){o.mail++;if(/post[\s-]*dep/i.test(l))o.post++;return}
+      if(/\be?-?mail\b/i.test(l)&&/(pre|post)[\s-]*(arr|arrival|departure)|sent|send/i.test(l)){o.mail++;if(/post[\s-]*dep/i.test(l))o.post++;return}
       if(/^\s*\d*\s*[-.)]?\s*butler\s+(did|placed|prepared|performed|arranged|gifted|delivered|made)\b/i.test(l)){o.did++;return}
       var pref=/^\s*\*|\bprefer|does not|doesn't|\bdo not\b|please|make sure|\bplace\b|provide|\bextra\b|\bremove\b|always|never|\bshould\b|\bsleeps?\b|favou?rite/i.test(l);
       if(issHdr||(/^\s*\d+\s*[-.)]/.test(l)&&!pref)){var d=(/(\d{1,2}[./]\d{1,2}[./]\d{2,4})/.exec(l)||[])[1]||"";o.issues.push({t:bdiKatClean(l).replace(/\s+on\s*$/,""),d:d});return}
+      if(skip&&skip(l))return; // Atolye'de karar verildi: DNA'daki standart hali kullanilir
       if(pref)o.pref.push(bdiKatClean(l));else if(l.length<=90)o.info.push(bdiKatClean(l));
     });
   });
@@ -10727,7 +10953,7 @@ function bdiKatNotes(groups){
 }
 // Bir odanin listesi: DNA (onayli tercihler, sorulmadan yap, elle eklenenler) + Protel notu + Specials + cocuk
 function bdiKatItems(x){
-  var p=x.p,items=[],seen={},occ=[],warn=[];
+  var p=x.p,items=[],seen={},occ=[],warn=[],gid=p?p.gid:bdiGMGid(bdiGuestKey(x.pn.full)),dnaIt=bdiDnaOf(gid).items||{};
   var add=function(t,src){t=String(t||"").trim();if(!t)return;var k=t.toLowerCase().replace(/[^a-z0-9ğüşıöç]+/g,"");if(!k||seen[k])return;seen[k]=1;items.push({t:t,src:src})};
   if(p){
     var r=bdiProfileInsights(p);
@@ -10736,12 +10962,15 @@ function bdiKatItems(x){
       if(["occasion","bond","risk","topic"].indexOf(i.type)>=0||i.dept==="WARNING")return;
       add((i.type==="proactive"?"sorulmadan: ":"")+bdiKatClean(String(i.note||"").replace(/\s+without asking.*$/i,"")),"dna");
     });
-    bdiDnaManual(p.gid).forEach(function(it){
+  }
+  if(gid){
+    bdiDnaManual(gid).forEach(function(it){
       if(it.sec==="sens"){warn.push(String(it.t||"").replace(/^.*sensitive towards\s+/i,"").replace(/\.$/,""));return}
       if(it.sec==="delight"||it.sec==="rhythm")add(bdiKatClean(it.t),"dna");else if(it.sec==="avoid")add("✗ "+bdiKatClean(it.t).replace(/^✗\s*/,""),"dna");
     });
   }
-  var n=bdiKatNotes(x.g?x.g.notes:[]);
+  var n=bdiKatNotes(x.g?x.g.notes:[],gid?function(raw){var id=bdiAtId(gid,raw);return !!dnaIt[id]||bdiAtState(gid,id)!=="p"}:null);
+  if(gid)bdiDnaManual(gid).forEach(function(it){if(it.sec==="title")n.info.unshift(it.t)});
   n.pref.forEach(function(t){add(t,"protel")});
   ((x.g&&x.g.spec)||[]).forEach(function(s){if(/birthday|anniversary|honeymoon/i.test(s))occ.push(s)});
   if(x.arriving&&x.g&&x.g.chl)add("Çocuk amenity ("+x.g.chl+")","kids");
@@ -15052,7 +15281,7 @@ window.bdiLogs = bdiLogs;
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
   bdiGMSuggestAct, bdiGMUnmerge, bdiGMSaveNote, bdiGuestOpen, bdiGraphSelect, bdiGMDownload, bdiGMRestoreFile, bdiGMRestoreSnapshot,
-  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bdiProtelMarkIdx, bdiProtelMarkAll, bdiKatSetSel, bdiKatInspect, bdiKatWelcome, bdiKatUndo, bdiKatPrep, bdiKatLetter, bdiKatCopyLetter, bdiKatCard, bdiKatPrint, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
+  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bdiProtelMarkIdx, bdiProtelMarkAll, bdiAtAct, bdiAtBulk, bdiAtEditText, bdiAtSetField, bdiAtSetFilter, bdiAtSetView, bdiAtSearch, renderBdiAtelier, bdiKatSetSel, bdiKatInspect, bdiKatWelcome, bdiKatUndo, bdiKatPrep, bdiKatLetter, bdiKatCopyLetter, bdiKatCard, bdiKatPrint, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
   bdiAliceImportFile, bdiAliceSetPeriod, bdiStaffSet, renderBdiAlice,
   bdiSetReaction, bdiReactText, bdiReactQuick, bdiReactClose, bdiDnaAdd, bdiDnaDel, bdiDnaSaveAddr,
   renderBdiBriefTab, bdiBriefSetMode, bdiPrepMark, bdiShiftSet, bdiShiftSaveNote, bdiShiftCopy, bdiShiftPrint,
