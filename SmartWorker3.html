@@ -1000,6 +1000,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <button id="syncBtn" onclick="syncBtnClick()" style="cursor:pointer;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px" title="Ortak misafir hafizasi senkronu">Sync</button>
 <span id="syncStatus" style="color:rgba(255,255,255,.65);font-size:10px"></span>
 </span>
+<button id="swRepBtn" onclick="swRepOpen()" style="cursor:pointer;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px" title="Raporları tek yerden yükle">Raporlar</button>
 <label style="color:#fff;opacity:.8;font-size:12px">Tarih:</label>
 <input type="date" id="dateInput" style="font-size:12px">
 <span class="hint" id="datePreview" style="color:rgba(255,255,255,.7)"></span>
@@ -2300,7 +2301,7 @@ async function handleArrPDF(file){
   try{
     var buf=await file.arrayBuffer();
     var parsed=await parseResDetail(buf);
-    feedAllModules(parsed,"letters");
+    feedAllModules(parsed,"letters");swArrSave(parsed,file.name);swRepLog("arr",file.name,parsed.length,parsed.length+" misafir");
     document.getElementById("arrPdfStatus").innerHTML='<span style="color:#059669">&#10003; '+parsed.length+' misafir bulundu</span>';
   }catch(err){document.getElementById("arrPdfStatus").innerHTML='<span style="color:#dc2626">Hata: '+err.message+'</span>';console.error(err)}
 }
@@ -2494,7 +2495,7 @@ function setAccompanyTitle(i,ai,t){
 }
 
 // ===== EXCEL =====
-function handleXLS(file){if(!file)return;document.getElementById("xlsStatus").textContent="Okunuyor...";var r=new FileReader();r.onload=function(ev){try{var wb=XLSX.read(new Uint8Array(ev.target.result),{type:"array"});parseExcel(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""}));document.getElementById("xlsStatus").innerHTML='<span style="color:#059669">&#10003; '+guests.length+' misafir</span>'}catch(e){document.getElementById("xlsStatus").innerHTML='<span style="color:#dc2626">'+e.message+'</span>'}};r.readAsArrayBuffer(file)}
+function handleXLS(file){if(!file)return;document.getElementById("xlsStatus").textContent="Okunuyor...";var r=new FileReader();r.onload=function(ev){try{var wb=XLSX.read(new Uint8Array(ev.target.result),{type:"array"});parseExcel(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""}));document.getElementById("xlsStatus").innerHTML='<span style="color:#059669">&#10003; '+guests.length+' misafir</span>';swRepLog("xls",file.name,guests.length,guests.length+" misafir")}catch(e){document.getElementById("xlsStatus").innerHTML='<span style="color:#dc2626">'+e.message+'</span>'}};r.readAsArrayBuffer(file)}
 function parseExcel(rows){var seen={},result=[];for(var i=0;i<rows.length;i++){var r=rows[i];var nm=r["FULL_NAME_NO_SHR_IND"]||r["FULL_NAME"]||"";if(!nm||nm.indexOf(",")<0)continue;var nl=nm.toLowerCase();if(nl.indexOf("spare,spare")>=0||nl.indexOf("tba,tba")>=0||nl.indexOf("coach driver")>=0||nl.indexOf("hold,hold")>=0||nl.indexOf("valued guest")>=0||nl.indexOf("valued,guest")>=0)continue;var rid=String(r["RESV_NAME_ID"]||"");if(rid&&seen[rid])continue;if(rid)seen[rid]=true;var mc=String(r["MARKET_CODE"]||"").toUpperCase();var rn=parseInt(r["ROOM_NO"],10)||0;var isR=(rn>=300&&rn<=499)||(rn>=700&&rn<=2799);if(mc==="PM"&&!isR)continue;var ad=parseInt(r["ADULTS"],10)||0,pq=parseInt(r["PHYSICAL_QUANTITY"],10)||0;if(ad===0&&pq===0&&!isR)continue;var fl=Math.floor(rn/100),un=rn%100,isSu=false;if(fl>=7&&fl<=18)isSu=[2,3,12].indexOf(un)>=0;else if(fl>=19&&fl<=20)isSu=[2,3,4,12].indexOf(un)>=0;else if(fl>=21)isSu=[2,3,4,7,12].indexOf(un)>=0;if(isSu)continue;var ps=nm.split(",").map(function(s){return s.trim()});var ln=ps[0]||"",fn=ps[1]||"",ti=ps[2]||"";var st=parseInt(r["NO_OF_STAYS"],10)||0;var ty=st>1?"REPEAT":"NEW";var la="EN",tl=ti.toLowerCase().replace(/\.$/,"");if(["bay","bayan","sn"].indexOf(tl)>=0)la="TR";if(["mr","bay"].indexOf(tl)>=0)ti=la==="TR"?"":"Mr.";else if(["mrs","bayan"].indexOf(tl)>=0)ti=la==="TR"?"":"Mrs.";else if(["ms","miss"].indexOf(tl)>=0)ti=la==="TR"?"":"Ms.";else if(tl==="sn"){ti="";la="TR"}else if(ti&&!ti.endsWith("."))ti+=".";fn=fn.split(/\s+/).map(cap).join(" ");ln=ln.split(/\s+/).map(cap).join(" ");if(ln)result.push({id:"g"+Math.random().toString(36).slice(2),title:ti,firstName:fn,lastName:ln,lang:la,type:ty,stays:st,roomNo:rn})}applyGuestHistory(result);guests=result;window.guests=guests;renderGuestTable()}
 
 // ===== MANUAL =====
@@ -2792,6 +2793,7 @@ async function swSetupPickFolder(){
   swSetupTryPersist();
   try{await h.getDirectoryHandle(SW_BACKUP_DIR,{create:true})}catch(e){}
   try{var _rd=await h.getDirectoryHandle(BGD_DIR,{create:true});await _rd.getDirectoryHandle(BGD_IN,{create:true})}catch(e){} // iPad rehberi: Rehber/ ve Rehber/Gelen
+  try{await h.getDirectoryHandle(SW_REP_DIR,{create:true})}catch(e){} // Raporlar/: Opera'dan kaydedilen raporlar kendiliginden okunur
   await swEnsureGuestFile(h);
   try{if(_syncHandle)await syncNow(true)}catch(e){}
   await pySyncNow(false);
@@ -2918,6 +2920,7 @@ async function swSetupBoot(){
   if((await swPerm(h))==="granted"){if(!_syncHandle)await swEnsureGuestFile(h);await swBackupNow(true);await bgdScanFolder(true)} // klasor Expense'ten secildiyse mektup dosyasi burada kurulur
   setInterval(function(){swBackupNow(true)},3600000); // sayfa gunlerce acik kalirsa da her gun yedek
   setInterval(function(){bgdScanFolder(true)},600000); // iPad rehberi donusleri (Rehber/Gelen), izin sormadan
+  setInterval(function(){swRepScanFolder(true)},600000); // Raporlar/ klasoru (Opera'dan kaydedilen raporlar), izin sormadan
 }
 // ===== GUN DONUMU (2026-10-29, Haktan: "evet lutfen") =====
 // Sayfa gece boyu acik kalirsa "bugun"u gosteren tarih alanlari yeni gune gecer ve gorunumler tazelenir.
@@ -4065,7 +4068,7 @@ async function handleResDetailPDF(file){
   try{
     var buf=await file.arrayBuffer();
     var parsed=await parseResDetail(buf);
-    feedAllModules(parsed,"py");
+    feedAllModules(parsed,"py");swArrSave(parsed,file.name);swRepLog("arr",file.name,parsed.length,parsed.length+" misafir");
     document.getElementById("pyPdfStatus").innerHTML='<span style="color:#059669">&#10003; '+pyGuests.length+' PY misafiri bulundu</span>';
   }catch(err){document.getElementById("pyPdfStatus").innerHTML='<span style="color:#dc2626">Hata: '+err.message+'</span>';console.error(err)}
 }
@@ -6322,8 +6325,427 @@ async function bdiGihLoad(pdf,file){
   _bdiGih=null;if(typeof _bdiGMProf!=="undefined")_bdiGMProf=null;
   if(status)status.innerHTML=res.rows.length?bdiVacStatusHtml({day:rd,at:Date.now(),file:file.name,report:rep}):'<span style="color:#dc2626">In-house raporunda oda satırı bulunamadı. Rapor biçimini kontrol et.</span>';
   renderBdiVacConfidence();bdiGMSchedule();
+  if(res.rows.length)swRepLog("gih",file.name,res.rows.length,res.rows.length+" oda · "+rep.arrToday+" gelen");
   try{if(_bdiBriefMode==="kat"&&document.getElementById("bdiBriefBody"))renderBdiBriefTab()}catch(e){}
 }
+
+// ---------- RAPOR MERKEZI (2026-10-30, Haktan: "butun moduller uctan uca bagli, butun raporlar okunabilir bir mekanizma olsun") ----------
+// Tek kapi: dosya nereye birakilirsa birakilsin (sayfanin herhangi bir yeri, ust cubuktaki "Raporlar" ya da ortak klasordeki
+// Raporlar/ klasoru) icerigine bakilarak tanir ve ilgili okuyucuya verir; okuyucular her zamanki gibi butun modulleri besler.
+// Modullerin kendi yukleme kutulari da calismaya devam eder ve ayni deftere yazar (sw_reports_v1: tip -> {day,at,file,n,note}).
+// Varis raporu (ARR) sayfa yenilense de kalsin diye yalniz o gun icin AYRI bir yerel depoda tutulur (sw_reports IndexedDB):
+// gunluk yedege ve senkrona GIRMEZ (icinde kasa notlari var). Ortak klasordeki Raporlar/ dosyalari 7 gun sonra silinir (KVKK).
+var SW_REP_TYPES={
+  arr:["Varış raporu (ARR01102)","Mektuplar · Passionately Yours · Inspector Radar · Butler Alert · trace'ler · BDI varışlar · kat turu · Atölye"],
+  gih:["In-house raporu (GIH01102)","BDI oda-misafir · kat turu · iPad rehberi · Atölye"],
+  vac:["VAC listesi","BDI oda-misafir · kat turu · iPad rehberi"],
+  xls:["Opera misafir Excel'i","Mektuplar"],
+  alice:["Alice Ticket List","BDI Alice · sorulmadan yap"],
+  issue:["Issue Excel'i","BDI Issues · kat turu · Protel Issues"],
+  pref:["Tercih formu (PDF)","Atölye → misafir hafızası"],
+  ipad:["iPad rehberi dönüşü","BDI kayıtları · issue'lar · DNA önerileri"]
+};
+var SW_REP_DAILY=["arr","gih"],SW_REP_DIR="Raporlar",SW_REP_KEEP=7,_swRepBusy=false,_swRepLast=[];
+function swRepAll(){try{var o=JSON.parse(localStorage.getItem("sw_reports_v1")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return {}}}
+function swRepLog(type,file,n,note){if(!SW_REP_TYPES[type])return;var o=swRepAll();o[type]={day:getToday(),at:Date.now(),file:file||"",n:n||0,note:note||""};try{localStorage.setItem("sw_reports_v1",JSON.stringify(o))}catch(e){}swRepBadge();swRepRender()}
+function swRepMissing(){var o=swRepAll(),t=getToday();return SW_REP_DAILY.filter(function(k){var x=o[k];if(k==="gih"&&o.vac&&o.vac.day===t)return false;return !(x&&x.day===t)})}
+function swRepBadge(){var b=document.getElementById("swRepBtn");if(!b)return;var m=swRepMissing();b.innerHTML="Raporlar"+(m.length?' <span style="background:#f59e0b;color:#1b2a27;border-radius:9px;padding:0 6px;margin-left:3px">'+m.length+'</span>':' &#10003;');b.title=m.length?"Bugün yüklenmedi: "+m.map(function(k){return SW_REP_TYPES[k][0]}).join(", "):"Bugünün raporları yüklü"}
+// --- yerel depo (yalniz bu bilgisayar; yedek ve senkron disi) ---
+function swRepIdb(){return new Promise(function(res,rej){var r=indexedDB.open("sw_reports",1);r.onupgradeneeded=function(){r.result.createObjectStore("kv")};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
+function swRepIdbDo(mode,fn){return swRepIdb().then(function(db){return new Promise(function(res,rej){var tx=db.transaction("kv",mode),rq=fn(tx.objectStore("kv")),out;if(rq)rq.onsuccess=function(){out=rq.result};tx.oncomplete=function(){res(out)};tx.onerror=function(){rej(tx.error)}})})}
+function swArrSave(parsed,file){return swRepIdbDo("readwrite",function(st){return st.put({day:getToday(),at:Date.now(),file:file||"",guests:parsed},"arr")}).catch(function(e){console.warn("Varis raporu saklanamadi:",e)})}
+async function swArrRestore(){
+  if(typeof allGuests!=="undefined"&&allGuests.length)return false;
+  var o=null;try{o=await swRepIdbDo("readonly",function(st){return st.get("arr")})}catch(e){return false}
+  if(!o||!Array.isArray(o.guests)||!o.guests.length)return false;
+  if(o.day!==getToday()){try{await swRepIdbDo("readwrite",function(st){return st.delete("arr")})}catch(e){}return false} // dunun varis raporu bugun gecerli degil
+  try{feedAllModules(o.guests,"kayıt")}catch(e){console.warn("Varis raporu geri yuklenemedi:",e);return false}
+  var st=document.getElementById("arrPdfStatus");if(st)st.innerHTML='<span style="color:#059669">&#10003; '+o.guests.length+' misafir · bugünün varış raporu geri yüklendi ('+esc(o.file||"PDF")+', '+esc(bdiFmtTs(o.at))+')</span>';
+  return true;
+}
+// --- tanima: icerikten (dosya adindan degil) ---
+async function swRepDetect(file){
+  var n=String(file.name||"").toLowerCase();
+  if(/\.json$/.test(n)){var o=null;try{o=JSON.parse(await file.text())}catch(e){return {type:"bad"}}
+    if(o&&o.app===BGD_APP&&Array.isArray(o.events))return {type:"ipad",obj:o};return {type:"backup"}}
+  if(/\.(xlsx|xlsm|xls|csv)$/.test(n)){
+    var wb=XLSX.read(await file.arrayBuffer(),{type:"array"}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""}).slice(0,20).map(function(r){return r.map(function(x){return String(x==null?"":x).trim()})});
+    if(rows.some(function(r){return r.indexOf("Ticket ID")>=0&&r.indexOf("Date Created")>=0}))return {type:"alice"};
+    if(rows.some(function(r){return r.some(function(c){return /^(FULL_NAME(_NO_SHR_IND)?|ROOM_NO|RESV_NAME_ID)$/.test(c)})}))return {type:"xls"};
+    if(rows.some(function(r){var j=r.join(" ").toLowerCase();return /room|oda/.test(j)&&/guest|misafir/.test(j)&&/concern|detail|detay|sorun/.test(j)}))return {type:"issue"};
+    return {type:"unknown"};
+  }
+  if(/\.pdf$/.test(n)){
+    var pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise,L=await bdiPdfLines(pdf,1),txt=L.map(function(l){return l.map(function(x){return x.t}).join(" ")}).join("\n");
+    if(/GIH01102|Guests in House/i.test(txt))return {type:"gih",pdf:pdf};
+    if(/ARR0\d{4}/.test(txt)||L.some(function(l){return l[0]&&l[0].x<15&&l[0].t==="Arrival Date"}))return {type:"arr",pdf:pdf};
+    var an=[];try{an=await (await pdf.getPage(1)).getAnnotations()}catch(e){}
+    if(an.some(function(a){return a.fieldName}))return {type:"pref",pdf:pdf};
+    if(L.some(function(l){return l.some(function(x){return /^\d{4}$/.test(x.t)&&x.x<60})}))return {type:"vac",pdf:pdf};
+    return {type:"unknown"};
+  }
+  return {type:"unknown"};
+}
+async function swRepIngest(files,src){
+  var out=[],reg=swRepAll(),today=getToday();
+  for(var i=0;i<files.length;i++){
+    var file=files[i],r={file:file.name,type:"unknown",ok:false,msg:""};
+    try{
+      var d=await swRepDetect(file);r.type=d.type;
+      var daily=["arr","gih","vac","xls"].indexOf(d.type)>=0;
+      if(src==="klasör"&&daily&&bdiYmd(new Date(file.lastModified))!==today){r.msg="eski tarihli, atlandı";out.push(r);continue}
+      if(src==="klasör"&&reg[d.type]&&reg[d.type].day===today&&reg[d.type].at>file.lastModified&&daily){r.msg="daha yenisi zaten yüklü";out.push(r);continue}
+      if(d.type==="arr"){
+        var parsed=await parseResDetail(await file.arrayBuffer());feedAllModules(parsed,"rapor");swArrSave(parsed,file.name);
+        var as=document.getElementById("arrPdfStatus");if(as)as.innerHTML='<span style="color:#059669">&#10003; '+parsed.length+' misafir (Raporlar: '+esc(file.name)+')</span>';
+        var ps=document.getElementById("pyPdfStatus");if(ps)ps.innerHTML='<span style="color:#059669">&#10003; '+((typeof pyGuests!=="undefined"&&pyGuests.length)||0)+' PY misafiri (Raporlar)</span>';
+        swRepLog("arr",file.name,parsed.length,parsed.length+" misafir");r.ok=true;r.msg=parsed.length+" misafir";
+      }else if(d.type==="gih"||d.type==="vac"){
+        await handleVacPDF(file);var rp=bdiVacParserReport||{};
+        if(rp.source==="GIH"){r.type="gih";r.ok=true;r.msg=rp.rows+" oda · "+rp.arrToday+" gelen · "+rp.withNotes+" notlu"}else{r.type="vac";r.ok=!!rp.matched;r.msg=(rp.matched||0)+" oda"}
+      }else if(d.type==="xls"){r.ok=true;r.msg=(await swRepXls(file))+" misafir"}
+      else if(d.type==="alice"){await bdiAliceImportFile(file);r.ok=true;r.msg=((document.getElementById("bdiAliceStatus")||{}).textContent||"").slice(0,90)}
+      else if(d.type==="issue"){await bdiIssueImportFile(file);r.ok=true;r.msg=((document.getElementById("bdiIssueImportStatus")||{}).textContent||"").slice(0,90)}
+      else if(d.type==="ipad"){var R=await bgdImportObj(d.obj,file.name);r.ok=true;r.msg=bgdSummary(R)}
+      else if(d.type==="pref"){var pf=await bdiPrefFormLoad(d.pdf,file);r.ok=true;r.msg=pf.n+" tercih"+(pf.guess?" · "+pf.guess:" · misafir Atölye'de seçilecek")}
+      else if(d.type==="backup")r.msg="Yedek dosyası: Kurulum › Geri yükle'den yükle (rapor değil)";
+      else if(d.type==="bad")r.msg="Dosya okunamadı";
+      else r.msg="Tanınmadı: SmartWorker'ın okuduğu raporlardan biri değil";
+    }catch(e){r.msg="Hata: "+(e&&e.message||e);console.warn("Rapor okunamadi:",file.name,e)}
+    out.push(r);
+  }
+  _swRepLast=out.concat(_swRepLast).slice(0,12);swRepRender();
+  return out;
+}
+function swRepXls(file){return file.arrayBuffer().then(function(buf){var wb=XLSX.read(new Uint8Array(buf),{type:"array"});parseExcel(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""}));var st=document.getElementById("xlsStatus");if(st)st.innerHTML='<span style="color:#059669">&#10003; '+guests.length+' misafir</span>';swRepLog("xls",file.name,guests.length,guests.length+" misafir");return guests.length})}
+// --- ortak klasor: Raporlar/ (Opera'dan buraya kaydedilen raporlar kendiliginden okunur) ---
+async function swRepScanFolder(silent){
+  var dir=_pyDirHandle;if(!dir||_swRepBusy)return null;
+  if((await swPerm(dir,!silent))!=="granted")return null;
+  _swRepBusy=true;var out=[];
+  try{
+    var rd=await dir.getDirectoryHandle(SW_REP_DIR,{create:true}),seen={},now=Date.now(),files=[];try{seen=JSON.parse(localStorage.getItem("sw_rep_seen")||"{}")}catch(e){}
+    for await(var e of rd.values()){
+      if(e.kind!=="file"||!/\.(pdf|xlsx|xlsm|xls|json)$/i.test(e.name))continue;
+      var f=await e.getFile();
+      if(now-f.lastModified>SW_REP_KEEP*864e5){try{await rd.removeEntry(e.name)}catch(x){}continue} // KVKK: rapor dosyalari 7 gunden fazla tutulmaz
+      var k=e.name+"|"+f.size+"|"+f.lastModified;if(!seen[k])files.push({f:f,k:k});
+    }
+    files.sort(function(a,b){return a.f.lastModified-b.f.lastModified}); // en yenisi en son: gunun son hali gecerli
+    for(var i=0;i<files.length;i++){out.push((await swRepIngest([files[i].f],"klasör"))[0]);seen[files[i].k]=now}
+    Object.keys(seen).forEach(function(k){if(now-seen[k]>SW_REP_KEEP*2*864e5)delete seen[k]});
+    localStorage.setItem("sw_rep_seen",JSON.stringify(seen));localStorage.setItem("sw_rep_scan",String(now));
+  }catch(e){console.warn("Raporlar klasoru okunamadi:",e)}
+  _swRepBusy=false;
+  var ok=out.filter(function(r){return r.ok});if(ok.length&&typeof swToast==="function")swToast("Raporlar klasöründen okundu: "+ok.map(function(r){return SW_REP_TYPES[r.type][0]+(r.msg?" ("+r.msg+")":"")}).join(" · "));
+  swRepRender();return out;
+}
+// --- pencere ---
+function swRepOpen(files){
+  var m=document.getElementById("swRepModal");
+  if(!m){m=document.createElement("div");m.id="swRepModal";m.style.cssText="position:fixed;inset:0;background:rgba(15,30,26,.45);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto";
+    m.addEventListener("click",function(e){if(e.target===m)m.style.display="none"});document.body.appendChild(m)}
+  m.style.display="flex";swRepRender();
+  if(files&&files.length)swRepIngest(files,"elle");
+}
+function swRepPick(inp){var fs=Array.from(inp.files||[]);inp.value="";if(fs.length)swRepIngest(fs,"elle")}
+function swRepRender(){
+  var m=document.getElementById("swRepModal");if(!m||m.style.display==="none")return;
+  var o=swRepAll(),t=getToday(),folder=_pyDirHandle?_pyDirHandle.name:"",last=+localStorage.getItem("sw_rep_scan")||0;
+  var h='<div style="background:#fff;border-radius:14px;padding:18px 20px;width:min(860px,100%);font-family:\'Segoe UI\',system-ui,sans-serif;color:#1b2a27">';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><h3 style="margin:0;font-size:17px">Raporlar</h3><span style="flex:1"></span><button type="button" class="btn" style="font-size:12px" onclick="document.getElementById(\'swRepModal\').style.display=\'none\'">Kapat</button></div>';
+  h+='<p style="margin:0 0 10px;font-size:12.5px;color:#5d6d68">Raporu buraya <b>ya da sayfanın herhangi bir yerine</b> bırak. SmartWorker içeriğinden tanır ve ilgili bütün modüllere dağıtır; hangi modülün kutusuna yüklediğin fark etmez.</p>';
+  h+='<label style="display:block;border:2px dashed #b9d3ca;border-radius:12px;padding:16px;text-align:center;cursor:pointer;background:#f6fbf9;font-size:13px"><b>Rapor bırak ya da seç</b><br><span style="color:#5d6d68;font-size:12px">ARR · in-house (GIH) · VAC · Opera Excel · Alice · Issue Excel · tercih formu · iPad dönüşü · birden çok dosya olur</span><input type="file" multiple accept=".pdf,.xlsx,.xls,.xlsm,.csv,.json" style="display:none" onchange="swRepPick(this)"></label>';
+  if(_swRepLast.length)h+='<div style="margin-top:10px;font-size:12.5px">'+_swRepLast.slice(0,6).map(function(r){return '<div style="padding:3px 0;color:'+(r.ok?'#1e7b3a':'#9a5b00')+'">'+(r.ok?'&#10003; ':'&#9888; ')+'<b>'+esc((SW_REP_TYPES[r.type]||["Tanınmadı"])[0])+'</b> · '+esc(r.file)+(r.msg?' · '+esc(r.msg):'')+'</div>'}).join("")+'</div>';
+  h+='<table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:12.5px"><tr style="background:#eef3f1;text-align:left"><th style="padding:6px 8px">Rapor</th><th style="padding:6px 8px">Bugün</th><th style="padding:6px 8px">Beslediği modüller</th></tr>';
+  Object.keys(SW_REP_TYPES).forEach(function(k){var x=o[k],ok=x&&x.day===t,need=SW_REP_DAILY.indexOf(k)>=0&&!(k==="gih"&&o.vac&&o.vac.day===t);
+    h+='<tr style="border-top:1px solid #e3e9e7"><td style="padding:6px 8px"><b>'+esc(SW_REP_TYPES[k][0])+'</b></td><td style="padding:6px 8px;white-space:nowrap;color:'+(ok?'#1e7b3a':need?'#b45309':'#7a8a85')+'">'+(ok?'&#10003; '+esc(bdiFmtTs(x.at).slice(-5))+(x.note?' · '+esc(x.note):'')+'<br><span style="color:#7a8a85;font-size:11px">'+esc(x.file)+'</span>':x?'son: '+esc(bdiFmtTs(x.at)):need?'yüklenmedi':'—')+'</td><td style="padding:6px 8px;color:#5d6d68">'+esc(SW_REP_TYPES[k][1])+'</td></tr>'});
+  h+='</table>';
+  h+='<p style="margin:12px 0 0;font-size:12.5px;color:#5d6d68">'+(folder?'<b>Otomatik:</b> Opera\'dan raporları ortak klasördeki <b>'+esc(folder+"/"+SW_REP_DIR)+'</b> klasörüne kaydet; SmartWorker 10 dakikada bir kendisi okur'+(last?' (son tarama: '+esc(bdiFmtTs(last))+')':'')+'. Dosyalar 7 gün sonra silinir. <button type="button" class="btn" style="font-size:11px;padding:2px 8px" onclick="swRepScanFolder(false)">Şimdi tara</button>':'Ortak klasör kurulursa (üstteki Kurulum) Opera\'dan <b>Raporlar</b> klasörüne kaydedilen raporlar kendiliğinden okunur.')+'</p>';
+  m.innerHTML=h+'</div>';
+}
+// --- sayfanin her yerine birakma (modullerin kendi kutulari kendi isini yapar) ---
+(function(){
+  var ov=null,isF=function(e){return e.dataTransfer&&Array.prototype.indexOf.call(e.dataTransfer.types||[],"Files")>=0},own=function(e){return e.target&&e.target.closest&&e.target.closest(".upload-area,.bd-drop,[data-own-drop]")};
+  var show=function(on){if(!ov){ov=document.createElement("div");ov.style.cssText="position:fixed;inset:0;z-index:8999;background:rgba(15,84,70,.18);border:4px dashed #0f5446;display:none;align-items:center;justify-content:center;pointer-events:none;font:600 20px 'Segoe UI',system-ui,sans-serif;color:#0f5446";ov.textContent="Raporu bırak: SmartWorker tanır ve ilgili modüllere dağıtır";document.body.appendChild(ov)}ov.style.display=on?"flex":"none"};
+  document.addEventListener("dragover",function(e){if(!isF(e))return;e.preventDefault();show(!own(e))});
+  document.addEventListener("dragleave",function(e){if(!e.relatedTarget)show(false)});
+  document.addEventListener("drop",function(e){show(false);if(!isF(e)||own(e))return;e.preventDefault();var fs=Array.from(e.dataTransfer.files||[]);if(fs.length)swRepOpen(fs)});
+})();
+// ---------- TERCIH FORMU (doldurulabilir Preference Form PDF) -> Atolye (2026-10-30) ----------
+// NoteStandardizer'in form alan haritasi ve cumle kaliplari aynen tasindi (BDI_PF icinde, isim cakismasin diye).
+// Form misafire baglanir (form metninde adi geciyorsa kendiliginden, yoksa Atolye'de secilir); maddeler Atolye'de onaylanir.
+var BDI_PF=(function(){
+var FIELD_NAME_MAP={
+  // P1 — Special Occasion
+  "Check Box25":{dept:"BUT",subcat:"SPECIAL OCCASION",label:"Birthday"},
+  "Check Box90":{dept:"BUT",subcat:"SPECIAL OCCASION",label:"Honeymoon"},
+  "Check Box91":{dept:"BUT",subcat:"SPECIAL OCCASION",label:"Anniversary"},
+  // P1 — Art Tour
+  "Check Box111":{dept:"CON",subcat:"CURATED EXPERIENCES",label:"Raffles Art Tour 'The Dream of Istanbul'"},
+  // P1 — Illuminated Tours
+  "Check Box114":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Istanbul From the Domes of the Grand Bazaar"},
+  "Check Box115":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"A Cultural Mosaic: Fener and Balat"},
+  "Check Box116":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Maze of Stories: Galata - Karakoy"},
+  "Check Box117":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Center of Commerce: Spice Bazaar and Eminonu"},
+  "Check Box118":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"An Istanbul Classic: Buyukada"},
+  "Check Box119":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Upwards Istanbul"},
+  "Check Box120":{dept:"CON",subcat:"ILLUMINATED TOURS",label:"Jewish Culture in Istanbul"},
+  // P2 — Spa Treatments
+  "Check Box2":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Raffles Spa Journey Treatments"},
+  "Check Box3":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Facials"},
+  "Check Box4":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Body Treatments"},
+  "Check Box5":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Body Massages"},
+  "Check Box6":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Hammam Tradition"},
+  "Check Box7":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Wellness Program"},
+  "Check Box8":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Detox Program"},
+  "Check Box9":{dept:"SPA",subcat:"SPA TREATMENTS",label:"Sound Therapy"},
+  // P2 — Butler Rituals
+  "Check Box10":{dept:"BUT",subcat:"BUTLER RITUALS",label:"Sleep Ritual"},
+  "Check Box11":{dept:"BUT",subcat:"BUTLER RITUALS",label:"Bath Ritual"},
+  "Check Box12":{dept:"BUT",subcat:"BUTLER RITUALS",label:"Chocolate Serenity"},
+  // P2 — Restaurants
+  "Check Box13":{dept:"FB",subcat:"RESTAURANTS",label:"Isokyo"},
+  "Check Box14":{dept:"FB",subcat:"RESTAURANTS",label:"Lavinia (Afternoon Tea)"},
+  // P2 — Dietary
+  "Check Box15":{dept:"FB",subcat:"DIETARY PREFERENCES",label:"Gluten Free"},
+  "Check Box17":{dept:"FB",subcat:"DIETARY PREFERENCES",label:"Sugar Free"},
+  "Check Box18":{dept:"FB",subcat:"DIETARY PREFERENCES",label:"Lactose Free"},
+  // P3 — Minibar left column
+  "Check Box122":{dept:"PBR",subcat:"MINIBAR SETUP",label:"Raffles Minibar (Full)"},
+  "Check Box123":{dept:"PBR",subcat:"MINIBAR SETUP",label:"Healthy Minibar"},
+  "Check Box124":{dept:"PBR",subcat:"BEVERAGE / COFFEE",label:"Sparkling Water"},
+  "Check Box125":{dept:"PBR",subcat:"BEVERAGE / COFFEE",label:"Still Water"},
+  // P3 — Minibar right column
+  "Check Box135":{dept:"PBR",subcat:"MINIBAR SETUP",label:"Non-Alcoholic Minibar"},
+  "Check Box136":{dept:"PBR",subcat:"MINIBAR SETUP",label:"Empty Minibar"},
+  "Check Box137":{dept:"PBR",subcat:"BEVERAGE / COFFEE",label:"Caffeinated Nespresso Capsules"},
+  "Check Box138":{dept:"PBR",subcat:"BEVERAGE / COFFEE",label:"Decaffeinated Nespresso Capsules"},
+  // P3 — Tea left column
+  "Check Box126":{dept:"PBR",subcat:"TEA SELECTION",label:"Raffles Signature Tea"},
+  "Check Box127":{dept:"PBR",subcat:"TEA SELECTION",label:"Sweet Dreams Tea"},
+  "Check Box128":{dept:"PBR",subcat:"TEA SELECTION",label:"Immune Power Tea"},
+  "Check Box129":{dept:"PBR",subcat:"TEA SELECTION",label:"Turkish Breakfast Tea"},
+  // P3 — Tea right column
+  "Check Box139":{dept:"PBR",subcat:"TEA SELECTION",label:"Earl Grey Tea"},
+  "Check Box140":{dept:"PBR",subcat:"TEA SELECTION",label:"Turkish Green Tea"},
+  "Check Box141":{dept:"PBR",subcat:"TEA SELECTION",label:"Beauty Tea"},
+  "Check Box142":{dept:"PBR",subcat:"TEA SELECTION",label:"Digesting Tea"},
+  // P3 — Bedding
+  "Check Box130":{dept:"HSK",subcat:"BEDDING",label:"Hard Mattress"},
+  "Check Box143":{dept:"HSK",subcat:"BEDDING",label:"Semi-Hard Mattress"},
+  "Check Box144":{dept:"HSK",subcat:"BEDDING",label:"Regular Mattress"},
+  // P3 — Pillow Type
+  "Check Box131":{dept:"HSK",subcat:"PILLOW TYPE",label:"Hard"},
+  "Check Box132":{dept:"HSK",subcat:"PILLOW TYPE",label:"Latex"},
+  "Check Box145":{dept:"HSK",subcat:"PILLOW TYPE",label:"Semi-hard"},
+  "Check Box146":{dept:"HSK",subcat:"PILLOW TYPE",label:"Buckwheat"},
+  "Check Box147":{dept:"HSK",subcat:"PILLOW TYPE",label:"Memory Foam"},
+  "Check Box148":{dept:"HSK",subcat:"PILLOW TYPE",label:"Pregnancy"},
+  "Check Box149":{dept:"HSK",subcat:"PILLOW TYPE",label:"Ecological"},
+  "Check Box150":{dept:"HSK",subcat:"PILLOW TYPE",label:"Anti-aging"},
+  // P3 — Room Amenities
+  "Check Box133":{dept:"HSK",subcat:"ROOM AMENITIES",label:"Yoga Mat"},
+  "Check Box134":{dept:"HSK",subcat:"ROOM AMENITIES",label:"Room Fragrance"},
+  // P4 — Service
+  "Check Box24":{dept:"BUT",subcat:"SERVICE REQUIREMENTS",label:"Packing/Unpacking service"},
+  // P4 — Daily Cleaning
+  "Check Box26":{dept:"HSK",subcat:"DAILY CLEANING",label:"8:00am - 10:00am"},
+  "Check Box32":{dept:"HSK",subcat:"DAILY CLEANING",label:"10:00am - 12:00pm"},
+  "Check Box34":{dept:"HSK",subcat:"DAILY CLEANING",label:"12:00pm - 2:00pm"},
+  "Check Box27":{dept:"HSK",subcat:"DAILY CLEANING",label:"2:00pm - 4:00pm"},
+  "Check Box33":{dept:"HSK",subcat:"DAILY CLEANING",label:"4:00pm - 6:00pm"},
+  // P4 — Turndown
+  "Check Box28":{dept:"HSK",subcat:"TURNDOWN",label:"6:00pm - 7:00pm"},
+  "Check Box31":{dept:"HSK",subcat:"TURNDOWN",label:"7:00pm - 8:00pm"},
+  "Check Box35":{dept:"HSK",subcat:"TURNDOWN",label:"8:00pm - 9:00pm"}
+};
+
+// Text field fieldName → {dept, subcat} — label comes from the typed value
+var TEXT_FIELD_MAP={
+  "Metin96":{dept:"BUT",subcat:"SPECIAL OCCASION"},
+  "Metin95":{dept:"BUT",subcat:"CHILDREN",prefix:"Child name/age: "},
+  "Metin97":{dept:"BUT",subcat:"CHILDREN",prefix:"Favourites: "},
+  "Metin112":{dept:"CON",subcat:"CURATED EXPERIENCES",prefix:"Art Tour date/time: "},
+  "Metin1":{dept:"SPA",subcat:"SPA TREATMENTS",prefix:"Spa appointment: "},
+  "Metin19":{dept:"FB",subcat:"RESTAURANTS",prefix:"Isokyo reservation: "},
+  "Metin20":{dept:"FB",subcat:"RESTAURANTS",prefix:"Lavinia reservation: "},
+  "Metin21":{dept:"FB",subcat:"RESTAURANTS",prefix:"Number of people: "},
+  "Metin23":{dept:"FB",subcat:"DIETARY PREFERENCES"},
+  "Metin94":{dept:"HSK",subcat:"TURNDOWN",prefix:"Other time: "},
+  "Metin36":{dept:"BUT",subcat:"SERVICE REQUIREMENTS",prefix:"Other: "},
+  "Metin37":{dept:"BUT",subcat:"I WISH"}
+};
+
+// Form fields that are intentionally ignored because they are consent/privacy fields,
+// not operational guest preferences.
+var IGNORE_FIELD_NAMES={
+  "Check Box92":true,
+  "Check Box93":true,
+  "Check Box94":true
+};
+
+function normalizePreferenceLabel(subcat,label){
+  var clean=String(label||"").trim();
+  if(subcat==="SPECIAL OCCASION"){
+    // Keep the field generic. "Business trip" should become "Business";
+    // birthday, honeymoon, anniversary and custom occasions stay as entered.
+    if(/^business\s*trip$/i.test(clean))return "Business";
+  }
+  return clean;
+}
+
+function joinPreferenceLabels(labels,tmpl){
+  labels=labels||[];
+  if(labels.length<=1)return labels.join("");
+  if(tmpl&&tmpl.lastJoin){
+    return labels.slice(0,-1).join(tmpl.join||", ")+tmpl.lastJoin+labels[labels.length-1];
+  }
+  return labels.join((tmpl&&tmpl.join!==undefined)?tmpl.join:", ");
+}
+
+
+function normalizeLooseText(s){
+  return String(s||"").toLowerCase()
+    .replace(/[ıİ]/g,"i").replace(/[şŞ]/g,"s").replace(/[ğĞ]/g,"g")
+    .replace(/[üÜ]/g,"u").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c")
+    .replace(/\s+/g," ").trim();
+}
+
+function detectPreferenceFormLanguage(text){
+  var low=normalizeLooseText(text);
+  var trHits=0,enHits=0;
+  ["dogum gunu","balayi","evlilik yildonumu","cocuk","tercih","temizlik","aksam servisi","oda","seyahat"].forEach(function(k){if(low.indexOf(k)>=0)trHits++;});
+  ["birthday","honeymoon","anniversary","children","preferences","daily cleaning","turndown","your stay","dietary"].forEach(function(k){if(low.indexOf(k)>=0)enHits++;});
+  if(trHits>enHits)return "TR";
+  if(enHits>0)return "EN";
+  return "Unknown";
+}
+
+function ensureSentence(s){
+  s=String(s||"").trim();
+  if(!s)return s;
+  return /[.!?]$/.test(s)?s:s+".";
+}
+
+function normalizeDietaryFreeText(txt){
+  var raw=String(txt||"").trim();
+  var low=normalizeLooseText(raw);
+  if(!raw)return raw;
+  if(/no dietary allergies/i.test(raw)&&/mushroom/i.test(raw))return "Guest has no dietary allergies, however dislikes mushrooms";
+  if(low.indexOf("alerji")>=0&&low.indexOf("mantar")>=0&&/(yok|bulunmuyor|bulunmamaktadir)/.test(low))return "Guest has no dietary allergies, however dislikes mushrooms";
+  if(low.indexOf("mantar")>=0&&/(sevmiyor|sevmem|sevmez|dislike|does not like)/.test(low))return "Guest dislikes mushrooms";
+  if(low.indexOf("alerji")>=0&&/(yok|bulunmuyor|bulunmamaktadir|no allergy|no allergies)/.test(low))return "Guest has no dietary allergies";
+  return raw;
+}
+
+function isRoomAssignmentRequest(txt){
+  var low=normalizeLooseText(txt);
+  return /(higher floor|high floor|quiet room|away from elevator|connecting room|view|booked room type|yuksek kat|sessiz oda|asansorden uzak|manzara|baglantili oda|oda tipi)/.test(low);
+}
+
+function normalizeRoomAssignmentText(txt){
+  var raw=String(txt||"").trim();
+  var low=normalizeLooseText(raw);
+  if(!raw)return raw;
+  if(/higher floor/i.test(raw)&&/booked room type/i.test(raw))return "Guest requests a higher floor, if possible within the booked room type";
+  if(low.indexOf("yuksek kat")>=0&&low.indexOf("oda tipi")>=0)return "Guest requests a higher floor, if possible within the booked room type";
+  if(/higher floor|high floor/i.test(raw)||low.indexOf("yuksek kat")>=0)return "Guest requests a higher floor, if possible";
+  if(/quiet room/i.test(raw)||low.indexOf("sessiz oda")>=0)return "Guest requests a quiet room, if possible";
+  if(/away from elevator/i.test(raw)||low.indexOf("asansorden uzak")>=0)return "Guest requests a room away from the elevator, if possible";
+  return raw;
+}
+
+function mapTextPreference(fn,txt,m){
+  var label=(m.prefix||"")+String(txt||"").trim();
+  var dept=m.dept, subcat=m.subcat;
+  if(fn==="Metin23"){
+    label=normalizeDietaryFreeText(txt);
+  }
+  if(fn==="Metin37"&&isRoomAssignmentRequest(txt)){
+    dept="REC";
+    subcat="ROOM ASSIGNMENT";
+    label=normalizeRoomAssignmentText(txt);
+  }
+  return {dept:dept,subcat:subcat,label:label};
+}
+
+var SUBCAT_TEMPLATES={
+  "SPECIAL OCCASION":{prefix:"Guest is coming for ",join:" and ",suffix:""},
+  "CHILDREN":{prefix:"Guest is travelling with ",join:", ",suffix:""},
+  "BUTLER RITUALS":{prefix:"Guest requests ",join:" and ",suffix:""},
+  "SERVICE REQUIREMENTS":{prefix:"Guest requests ",join:" and ",suffix:""},
+  "I WISH":{prefix:"",join:". ",suffix:""},
+  "CURATED EXPERIENCES":{prefix:"Guest is interested in ",join:". Also interested in ",suffix:""},
+  "ILLUMINATED TOURS":{prefix:"Guest is interested in ",join:", ",suffix:""},
+  "SPA TREATMENTS":{prefix:"Guest requests ",join:", ",suffix:" at Raffles Spa"},
+  "RESTAURANTS":{prefix:"Guest requests reservation at ",join:" and ",suffix:""},
+  "DIETARY PREFERENCES":{prefix:"",join:", ",suffix:""},
+  "MINIBAR SETUP":{prefix:"Guest prefers ",join:" and ",suffix:"",lastJoin:" and "},
+  "BEVERAGE / COFFEE":{prefix:"Guest prefers ",join:", ",suffix:"",lastJoin:" and "},
+  "MINIBAR":{prefix:"Guest prefers ",join:", ",suffix:""},
+  "TEA SELECTION":{prefix:"Guest prefers ",join:" and ",suffix:""},
+  "BEDDING":{prefix:"Guest prefers ",join:" / ",suffix:""},
+  "PILLOW TYPE":{prefix:"Guest prefers ",join:" and ",suffix:" pillow"},
+  "ROOM AMENITIES":{prefix:"Guest requests ",join:" and ",suffix:""},
+  "SLEEPING PREFERENCE":{prefix:"Guest sleeps on the ",join:" or ",suffix:""},
+  "AMENITY PREFERENCES":{prefix:"Guest prefers ",join:", ",suffix:"",lastJoin:" and "},
+  "DAILY CLEANING":{prefix:"Guest prefers daily cleaning at ",join:" or ",suffix:""},
+  "TURNDOWN":{prefix:"Guest prefers turndown at ",join:" or ",suffix:""},
+  "ROOM ASSIGNMENT":{prefix:"",join:". ",suffix:""},
+  "OTHER":{prefix:"",join:". ",suffix:""}
+};
+return {FIELD_NAME_MAP:FIELD_NAME_MAP,TEXT_FIELD_MAP:TEXT_FIELD_MAP,IGNORE_FIELD_NAMES:IGNORE_FIELD_NAMES,mapTextPreference:mapTextPreference,normalizePreferenceLabel:normalizePreferenceLabel,SUBCAT_TEMPLATES:SUBCAT_TEMPLATES,joinPreferenceLabels:joinPreferenceLabels};
+})();
+var BDI_PF_KEY="bdi_prefforms_v1";
+function bdiPfAll(){try{var a=JSON.parse(BdiKV.get(BDI_PF_KEY)||"[]");return Array.isArray(a)?a:[]}catch(e){return []}}
+function bdiPfSave(a){BdiKV.set(BDI_PF_KEY,JSON.stringify(a.slice(-80)))}
+async function bdiPfParse(pdf){
+  var items=[],seen={},text="";
+  var add=function(dept,subcat,label){label=BDI_PF.normalizePreferenceLabel(subcat,label);var k=dept+"|"+subcat+"|"+label;if(!label||seen[k])return;seen[k]=1;items.push({dept:dept,subcat:subcat,label:label})};
+  for(var p=1;p<=pdf.numPages;p++){
+    var page=await pdf.getPage(p);
+    try{(await page.getTextContent()).items.forEach(function(it){if(it.str)text+=" "+it.str})}catch(e){}
+    var an=await page.getAnnotations({intent:"display"});
+    an.forEach(function(a){
+      var fn=a.fieldName||"",fv=a.fieldValue==null?"":String(a.fieldValue),ft=a.fieldType||a.subtype||"",btn=(ft==="Btn"||a.checkBox||a.radioButton),tx=(ft==="Tx"||ft==="Ch");
+      if(!fn||BDI_PF.IGNORE_FIELD_NAMES[fn])return;
+      if(btn){var cs=a.appearanceState?String(a.appearanceState):fv||(a.buttonValue?String(a.buttonValue):"")||(a.exportValue?String(a.exportValue):"");
+        if(cs&&!/^(off|0|false|null)$/i.test(cs)&&BDI_PF.FIELD_NAME_MAP[fn]){var m=BDI_PF.FIELD_NAME_MAP[fn];add(m.dept,m.subcat,m.label)}}
+      else if(tx||fv.trim()){var t=fv.trim()||String(a.defaultFieldValue||"").trim();if(t&&BDI_PF.TEXT_FIELD_MAP[fn]){var mt=BDI_PF.mapTextPreference(fn,t,BDI_PF.TEXT_FIELD_MAP[fn]);add(mt.dept,mt.subcat,mt.label)}}
+    });
+  }
+  return {items:items,text:text};
+}
+// Formdaki maddeler -> departman + kategori basina tek cumle (NoteStandardizer kaliplariyla)
+function bdiPfSentences(items){
+  var g={},order=[];
+  items.forEach(function(it){var k=it.dept+"|"+it.subcat;if(!g[k]){g[k]={dept:it.dept==="FB"?"F&B":it.dept,subcat:it.subcat,labels:[]};order.push(k)}g[k].labels.push(it.label)});
+  return order.map(function(k){var x=g[k],tm=BDI_PF.SUBCAT_TEMPLATES[x.subcat]||{prefix:"",join:", ",suffix:""};var s=(tm.prefix||"")+BDI_PF.joinPreferenceLabels(x.labels,tm)+(tm.suffix||"");return {dept:x.dept,subcat:x.subcat,t:s.replace(/\.+$/,""),raw:x.subcat+": "+x.labels.join(", ")}});
+}
+function bdiPfGuests(){ // forma baglanabilecek misafirler: in-house + bugun gelenler
+  var out=[],seen={};
+  try{var R=bdiKatRooms();Object.keys(R).sort().forEach(function(r){var x=R[r],gid=bdiGMGid(bdiGuestKey(x.pn.full));if(!gid||seen[gid])return;seen[gid]=1;out.push({gid:gid,name:x.pn.full,room:r,first:x.pn.first,last:x.pn.last})})}catch(e){}
+  return out;
+}
+function bdiPfGuess(text){
+  var T=" "+normTR(String(text||"")).replace(/[^a-z0-9ğüşıöç]+/g," ")+" ",hit=null;
+  bdiPfGuests().forEach(function(g){var l=normTR(g.last).trim(),f=normTR(String(g.first).split(" ")[0]).trim();if(l.length>=3&&T.indexOf(" "+l+" ")>=0&&(!f||T.indexOf(" "+f+" ")>=0)&&!hit)hit=g});
+  return hit;
+}
+async function bdiPrefFormLoad(pdf,file){
+  var r=await bdiPfParse(pdf),g=bdiPfGuess(r.text),a=bdiPfAll(),id="pf_"+bdiProtelHash(file.name+"|"+r.items.map(function(i){return i.label}).join("|")).replace(/\./g,"_");
+  a=a.filter(function(x){return x.id!==id});
+  a.push({id:id,file:file.name,at:Date.now(),items:r.items,gid:g?g.gid:"",name:g?g.name:"",room:g?g.room:""});
+  bdiPfSave(a);swRepLog("pref",file.name,r.items.length,r.items.length+" tercih"+(g?" · "+g.name:""));
+  try{if(document.getElementById("bdiTab_atelier")&&document.getElementById("bdiTab_atelier").style.display!=="none")renderBdiAtelier()}catch(e){}
+  return {n:r.items.length,guess:g?g.name+" ("+g.room+")":""};
+}
+function bdiPfAssign(id,gid){
+  var a=bdiPfAll(),f=a.filter(function(x){return x.id===id})[0];if(!f)return;
+  var g=bdiPfGuests().filter(function(x){return x.gid===gid})[0];f.gid=gid||"";f.name=g?g.name:"";f.room=g?g.room:"";bdiPfSave(a);renderBdiAtelier();
+}
+function bdiPfDelete(id){if(!confirm("Bu tercih formu listeden kaldırılsın mı? (Hafızaya alınmış maddeler kalır.)"))return;bdiPfSave(bdiPfAll().filter(function(x){return x.id!==id}));renderBdiAtelier()}
 
 // VAC PDF parser
 async function handleVacPDF(file){
@@ -6397,6 +6819,7 @@ async function handleVacPDF(file){
     bdiVacDay=getToday();bdiVacSave(file.name);if(typeof _bdiGMProf!=="undefined")_bdiGMProf=null;
     if(status)status.innerHTML=bdiVacStatusHtml({day:bdiVacDay,at:Date.now(),file:file.name,report:report});
     renderBdiVacConfidence();
+    swRepLog("vac",file.name,report.matched,report.matched+" oda");
     bdiGMSchedule(); // in-house gunu misafir hafizasina yazilir (konaklama gecmisi)
   }catch(err){
     if(status)status.innerHTML='<span style="color:#dc2626">Hata: '+esc(err.message)+'</span>';
@@ -6608,7 +7031,7 @@ function applyPmRooms(){
 (function(){renderPmRooms();applyPmRooms()})();
 // Depo hazir olunca (IndexedDB yuklendi, ilk tasima bitti) BDI ekrani gercek veriyle yeniden kurulur;
 // ayni dosya baska sekmede acikken orada yapilan kayit buradaki acik BDI ekranina da yansir.
-BdiKV.whenReady(function(){try{renderPmRooms();rebuildVacRooms();bdiVacRestore()}catch(e){}var pg=document.getElementById("page-didit");if(pg&&pg.classList.contains("active")){try{initDidIt()}catch(e){console.warn(e)}}});
+BdiKV.whenReady(function(){try{renderPmRooms();rebuildVacRooms();bdiVacRestore()}catch(e){}try{swArrRestore();swRepBadge();setTimeout(function(){swRepScanFolder(true)},5000)}catch(e){}var pg=document.getElementById("page-didit");if(pg&&pg.classList.contains("active")){try{initDidIt()}catch(e){console.warn(e)}}});
 var _bdiExtT=null;
 BdiKV.onExternal(function(){clearTimeout(_bdiExtT);_bdiExtT=setTimeout(function(){var pg=document.getElementById("page-didit");if(!pg||!pg.classList.contains("active"))return;try{loadBdiLogs();renderBdiLog();renderBdiCoverage();renderPmRooms();rebuildVacRooms();if(typeof bdiRefreshDerived==="function")bdiRefreshDerived()}catch(e){}},300)});
 
@@ -8436,6 +8859,7 @@ async function bdiIssueImportFile(file){
     var wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
     var res=bdiIssueImportRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""}));
     if(st)st.innerHTML='<span class="bd-ok">'+esc(file.name)+': '+res.added+' yeni, '+res.updated+' güncellendi, '+res.same+' zaten vardı'+(res.skipped?', '+res.skipped+' atlandı':'')+'.</span>';
+    swRepLog("issue",file.name,res.added+res.updated,res.added+" yeni, "+res.updated+" güncellendi");
   }catch(e){
     if(st)st.innerHTML='<span class="bd-err">Dosya okunamadı: '+esc(e.message||e)+'</span>';
   }
@@ -9544,7 +9968,7 @@ var BDI_DNA_SECS=[["addr","1","Hitap ve iletişim"],["rhythm","2","Ritim"],["del
 var BDI_DNA_EN={addr:"ADDRESS",rhythm:"RHYTHM",delight:"DELIGHTS",avoid:"AVOID",sens:"SENSITIVITY",moments:"MOMENTS",bond:"RELATIONSHIP",break:"PAST ISSUES"};
 var BDI_DNA_HINT={rhythm:"İngilizce yaz. ör. Breakfast in room around 07:30",delight:"İngilizce yaz. ör. Prefers fresh pomegranate juice",avoid:"İngilizce yaz. ör. Being in the room during turndown",sens:"Sadece neye karşı hassas olduğunu İngilizce yaz (ör. nuts, strong fragrances). Kayıt: Guest is highly sensitive towards X.",moments:"İngilizce yaz. ör. Wedding anniversary on 30/10",bond:"ör. Warm rapport with butler Tuna",break:"ör. 2025: corridor noise; room move worked"};
 var BDI_DNA_STALE_DAYS=1095;
-var BDI_KVKK_RE=/allerg|alerj|anaphyla|intoleran|diabet|diyabet|epipen|pregnan|hamile|\bgebe|medicat|\bila[cç]|disease|hastal|illness|cancer|kanser|asthma|ast[ıi]m|celiac|[cç][oö]lyak|halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|oru[cç]|ramadan|ramazan|church|kilise|mosque|\bcami\b|synagog|sinagog|faith|inan[cç]/i;
+var BDI_KVKK_RE=/allerg|alerj|anaphyla|intoleran|diabet|diyabet|epipen|pregnan|hamile|\bgebe|medicat|\bila[cç]|disease|hastal|illness|cancer|kanser|asthma|\bast[ıi]m|celiac|[cç][oö]lyak|halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|\boru[cç]|ramadan|ramazan|church|kilise|mosque|\bcami\b|synagog|sinagog|faith|\binan[cç]/i;
 function bdiKvkkOk(t,sens){
   if(!BDI_KVKK_RE.test(t||""))return true;
   alert("KVKK: tıbbi ya da inanç kelimesi yazma (alerji, hastalık, ilaç, din...)."+(sens?"\nSadece kaçınılacak öğeyi yaz (ör. nuts, strong fragrances); kayıt \"Guest is highly sensitive towards X.\" kalıbında tutulur (Protel'de WARNING).":"\nGerekiyorsa 5. bölüme sadece kaçınılacak öğeyi yaz."));
@@ -10122,6 +10546,7 @@ async function bdiAliceImportFile(file){
     var ev=await bdiAliceToMemory(put);
     var rng=tk.length?bdiFmtD(bdiYmd(new Date(Math.min.apply(null,tk.map(function(t){return t.created||now})))))+" - "+bdiFmtD(bdiYmd(new Date(Math.max.apply(null,tk.map(function(t){return t.created||0}))))):"";
     if(st)st.innerHTML='<span class="bd-ok">'+esc(file.name)+': '+tk.length+' ticket ('+esc(rng)+'). '+nw+' yeni, '+up+' güncellendi, '+same+' zaten vardı. Misafir hafızasına '+ev+' kayıt işlendi.</span>';
+    swRepLog("alice",file.name,tk.length,tk.length+" ticket");
   }catch(e){if(st)st.innerHTML='<span class="bd-err">Dosya okunamadı: '+esc(e.message||e)+'</span>';console.warn(e)}
   if(inp)inp.value="";
   renderBdiAlice();
@@ -10610,6 +11035,7 @@ async function bgdImportObj(o,src){
   var seen={};imp.pm=imp.pm.slice().reverse().filter(function(x){if(!x.room||!x.guest||seen[x.room])return false;seen[x.room]=1;return true}).reverse();
   imp.log.push(R);bgdSaveImp(imp);
   _bdiGMProf=null;try{bdiGMSchedule()}catch(e){}
+  try{swRepLog("ipad",src||"",R.touch+R.note+R.issue+R.follow,bgdSummary(R))}catch(e){}
   return R;
 }
 function bgdSummary(R){var p=[];if(R.touch)p.push(R.touch+" touch");if(R.follow)p.push(R.follow+" issue takibi");if(R.issue)p.push(R.issue+" yeni issue");if(R.note)p.push(R.note+" not (onaya düştü)");if(R.room)p.push(R.room+" oda bilgisi");if(R.undo)p.push(R.undo+" geri alma");return (p.join(", ")||"yeni kayıt yok")+(R.dup?" · "+R.dup+" kayıt zaten alınmıştı":"")}
@@ -10753,7 +11179,7 @@ var BDI_AT_DEPT=[
 ];
 var BDI_AT_PREF=/^\s*\*|\bprefer|does not|doesn't|\bdo not\b|please|make sure|\bplace\b|provide|\bextra\b|\bremove\b|always|never|\bshould\b|\bsleeps?\b|favou?rite|\bwants?\b|\blikes?\b|\buses?\b|consumes?|\bdrinks?\b|\beats?\b|\bloves?\b|enjoys?|requests?|asks? for|would like|istiyor|istemiyor|tercih|\bsever\b|sevmez|l[uü]tfen|koyul|konul|yerle[sş]tir|haz[iı]rla|olsun|olmas[iı]n|kullan/i;
 var BDI_AT_AVOID=/^(guest\s+)?(does not|doesn't|do not|did not|never)\s+(prefer|want|like|use|eat|drink|consume)s?\b|^(no|without)\s|istemiyor|sevmez|olmas[iı]n|kullanm[iı]yor/i;
-var BDI_AT_FAITH=/halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|oru[cç]|ramadan|ramazan|church|kilise|mosque|\bcami\b|synagog|sinagog|faith|inan[cç]/i;
+var BDI_AT_FAITH=/halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|\boru[cç]|ramadan|ramazan|church|kilise|mosque|\bcami\b|synagog|sinagog|faith|\binan[cç]/i;
 var _bdiAtEdit={},_bdiAtFilter="all",_bdiAtView="p",_bdiAtQ="";
 function bdiAtKey(t){return String(t||"").toLowerCase().replace(/\*\*.*$/,"").replace(/\d{1,2}[./]\d{1,2}[./]\d{2,4}/g," ").replace(/^\s*(\*|\d+\s*[-.)])\s*/,"").replace(/[^a-z0-9ğüşıöç]+/g," ").replace(/\s+/g," ").trim()}
 function bdiAtId(gid,raw){return "p_"+bdiProtelHash(gid+"|"+String(raw||"").toLowerCase().replace(/[^a-z0-9ğüşıöç]+/g," ").trim()).replace(/\./g,"_")} // tarih dahil: ayni cumle farkli tarih = ayri satir
@@ -10810,18 +11236,34 @@ function bdiAtState(gid,id){
   [it?{s:it.del?"r":"a",u:it.u||0}:null,dd?{s:dd.st,u:dd.u||0}:null].forEach(function(x){if(x&&(!best||x.u>best.u))best=x});
   return best?best.s:"p";
 }
+// Kaynaklar: in-house raporu (GIH), varis raporu (ARR, Web Notes satirlari) ve misafire baglanmis tercih formlari
+function bdiAtSources(){
+  var S=[];
+  bdiGihRows().forEach(function(r){if(r.notes&&r.notes.length)S.push({name:r.name,room:r.room,notes:r.notes,src:"gih"})});
+  ((typeof allGuests!=="undefined"&&allGuests)||[]).forEach(function(g){if(g.wnGroups&&g.wnGroups.length)S.push({name:(g.lastName||"")+","+(g.firstName||""),room:g.roomNo?String(g.roomNo).padStart(4,"0"):"",notes:g.wnGroups.filter(function(x){return x.length}),src:"arr"})});
+  return S;
+}
 function bdiAtCandidates(){
   var out=[],rules=_bdiGM.rules||{},seen={};
-  bdiGihRows().forEach(function(r){
-    if(!r.notes||!r.notes.length)return;
+  bdiAtSources().forEach(function(r){
     var pn=bdiKatPersonName(r.name),gid=bdiGMGid(bdiGuestKey(pn.full));if(!gid)return;
     r.notes.forEach(function(g){
       var inIss=/issues?\s+recorded|guest issue/i.test(g[0]||"");
       g.forEach(function(raw,i){
         var c=bdiAtClassify(raw,inIss&&i>0,rules);if(!c)return;
         var id=bdiAtId(gid,raw);if(seen[id])return;seen[id]=1;
-        c.id=id;c.gid=gid;c.name=pn.full;c.room=r.room;c.st=bdiAtState(gid,id);out.push(c);
+        c.id=id;c.gid=gid;c.name=pn.full;c.room=r.room;c.src=r.src;c.st=bdiAtState(gid,id);out.push(c);
       });
+    });
+  });
+  bdiPfAll().forEach(function(f){ // tercih formu: departman ve kategori formdan gelir
+    if(!f.gid)return;
+    bdiPfSentences(f.items).forEach(function(x){
+      var raw="[Tercih formu] "+x.raw,id=bdiAtId(f.gid,"pf|"+raw);if(seen[id])return;seen[id]=1;
+      var c={raw:raw,f:x.subcat==="SPECIAL OCCASION"?"occ":"pref",d:x.subcat==="SPECIAL OCCASION"?"":(BDI_PROTEL_DEPTS.indexOf(x.dept)>=0?x.dept:"BUT"),t:x.t,at:f.at,ini:"",warn:""};
+      if(BDI_AT_FAITH.test(x.t)){c.f="other";c.warn="İnanç bilgisi: Protel'e yazılmaz (KVKK)"}else if(BDI_KVKK_RE.test(x.t)){c.f="sens";c.d="";c.t=bdiAtText("sens",x.t,c)}
+      var R=rules[bdiAtKey(raw)];if(R&&R.f&&c.f!=="sens"){c.f=R.f;c.d=(R.f==="pref"||R.f==="avoid")?(R.d||c.d||"BUT"):"";c.rule=1}
+      c.id=id;c.gid=f.gid;c.name=f.name;c.room=f.room;c.src="pf";c.st=bdiAtState(f.gid,id);out.push(c);
     });
   });
   return out;
@@ -10879,12 +11321,16 @@ function bdiAtSigText(c){var d=c.at?bdiSigDate(c.at):"";return (d||c.ini)?"** "+
 async function renderBdiAtelier(){
   var el=document.getElementById("bdiAtBody");if(!el)return;
   try{await bdiGMIngest()}catch(e){}
-  var gih=bdiGih(),C=bdiAtCandidates(),h='';
-  if(!gih||!(gih.rows||[]).length){el.innerHTML='<p class="bd-empty">Kaynak yok. Kayıt sekmesindeki kutuya <b>in-house raporunu (GIH01102)</b> bırak; içindeki Protel notları burada standarda çevrilir.</p>';return}
+  var gih=bdiGih(),C=bdiAtCandidates(),h='',arrN=((typeof allGuests!=="undefined"&&allGuests)||[]).filter(function(g){return g.wnGroups&&g.wnGroups.length}).length,PF=bdiPfAll();
+  if(PF.length){
+    var gl=bdiPfGuests(),opt=function(sel){return '<option value="">Misafir seç…</option>'+gl.map(function(g){return '<option value="'+esc(g.gid)+'"'+(g.gid===sel?' selected':'')+'>'+esc(g.room+" · "+g.name)+'</option>'}).join("")};
+    h+='<div class="bd-at-g" style="margin-bottom:12px"><div class="bd-at-gh"><b>Tercih formları</b> <span class="bd-sub">'+PF.length+' form · misafire bağlanan formun maddeleri aşağıda onaya düşer</span></div>'+PF.slice().reverse().map(function(f){return '<div class="bd-at-row"><div class="bd-at-std"><b>'+esc(f.file)+'</b><span class="bd-sub">'+f.items.length+' madde · '+esc(bdiFmtTs(f.at))+'</span><span style="flex:1"></span><select onchange="bdiPfAssign(\''+f.id+'\',this.value)" aria-label="Formun misafiri">'+opt(f.gid)+'</select><button type="button" class="bd-link" onclick="bdiPfDelete(\''+f.id+'\')">kaldır</button></div>'+(f.gid?'':'<div class="bd-at-warn">Formda misafir adı bulunamadı: misafiri seç.</div>')+'</div>'}).join("")+'</div>';
+  }
+  if(!C.length&&!(gih&&(gih.rows||[]).length)&&!arrN){el.innerHTML=h+'<p class="bd-empty">Kaynak yok. Üstteki <b>Raporlar</b> düğmesinden ya da sayfanın herhangi bir yerine <b>in-house raporunu (GIH01102)</b>, <b>varış raporunu (ARR01102)</b> ya da bir <b>tercih formunu</b> bırak; içindeki notlar burada standarda çevrilir.</p>';return}
   var P=C.filter(function(c){return c.st==="p"}),cnt={},fix=P.filter(function(c){return bdiAtProblem(c)}).length;
   P.forEach(function(c){var f=bdiAtVal(c).f;f=f==="avoid"?"pref":f;cnt[f]=(cnt[f]||0)+1});
   var guests={};C.forEach(function(c){guests[c.gid]=1});
-  h+='<p class="bd-sub" style="margin:0 0 10px">Kaynak: in-house raporu '+esc(bdiFmtTs(gih.at))+' · '+Object.keys(guests).length+' misafir · '+C.length+' satır · bekleyen <b>'+P.length+'</b>, alınan '+C.filter(function(c){return c.st==="a"}).length+', reddedilen '+C.filter(function(c){return c.st==="r"}).length+'. Onaylanan satır misafirin DNA\'sına "Protel\'den" diye yazılır; Protel çıktısı, kat turu ve iPad oradan beslenir. Alan ya da departman düzeltmen kural olur.</p>';
+  h+='<p class="bd-sub" style="margin:0 0 10px">Kaynak: '+[gih&&(gih.rows||[]).length?'in-house raporu '+esc(bdiFmtTs(gih.at)):'',arrN?'varış raporu ('+arrN+' notlu misafir)':'',PF.filter(function(f){return f.gid}).length?PF.filter(function(f){return f.gid}).length+' tercih formu':''].filter(Boolean).join(" + ")+' · '+Object.keys(guests).length+' misafir · '+C.length+' satır · bekleyen <b>'+P.length+'</b>, alınan '+C.filter(function(c){return c.st==="a"}).length+', reddedilen '+C.filter(function(c){return c.st==="r"}).length+'. Onaylanan satır misafirin DNA\'sına "Protel\'den" diye yazılır; Protel çıktısı, kat turu ve iPad oradan beslenir. Alan ya da departman düzeltmen kural olur.</p>';
   h+='<div class="bd-toolbar" style="flex-wrap:wrap;gap:6px;margin-bottom:8px"><div class="bd-seg" role="group" aria-label="Durum">'+[["p","Bekleyen"],["a","Alınan"],["r","Reddedilen"]].map(function(v){return '<button type="button" class="'+(_bdiAtView===v[0]?'active':'')+'" onclick="bdiAtSetView(\''+v[0]+'\')">'+v[1]+'</button>'}).join("")+'</div>';
   h+='<input type="search" placeholder="Misafir, oda ya da kelime" value="'+esc(_bdiAtQ)+'" oninput="bdiAtSearch(this.value)" style="max-width:220px">';
   h+='<span style="flex:1"></span>'+(_bdiAtView==="p"?'<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiAtBulk(\'r\')">Görünenleri reddet</button><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiAtBulk(\'a\')">Görünenleri hafızaya al</button>':'')+'</div>';
@@ -10984,16 +11430,21 @@ function bdiKatRepeat(x,n){
 }
 function bdiKatRooms(){
   var today=bdiYmd(new Date()),gm=bdiGihByRoom(),out={},prof=_bdiGM.loaded?bdiGMProfiles():null;
-  Object.keys(vacRooms||{}).forEach(function(r){
-    var g=gm[r];if(g&&bdiGuestKey(g.name)!==bdiGuestKey(vacRooms[r]))g=null; // rapor eskiyse ve odada baska misafir varsa notlar ona gitmesin
+  var arrBy={};((typeof allGuests!=="undefined"&&allGuests)||[]).forEach(function(a){if(a.roomNo)arrBy[String(a.roomNo).padStart(4,"0")]=a});
+  var arrG=function(a){var dp=bdiVacDate(String(a.depDate||"").replace(/\//g,"-"));return {notes:(a.wnGroups||[]).filter(function(x){return x.length}),adl:a.adl||0,chl:a.chl||0,acc:String(a.accompany||"").split(/[;\/]/).map(function(n){return bdiGihPerson(n).trim()}).filter(Boolean),spec:String(a.specials||"").split(/\s*,\s*/).filter(Boolean),arr:today,dep:dp,depTime:a.etd||"",name:(a.lastName||"")+","+(a.firstName||"")}};
+  Object.keys(vacRooms||{}).forEach(function(r0){
+    var r=String(r0).padStart(4,"0");if(out[r])return; // ARR "812" ile GIH/VAC "0812" ayni oda
+    var g=gm[r];if(g&&bdiGuestKey(g.name)!==bdiGuestKey(vacRooms[r0]))g=null; // rapor eskiyse ve odada baska misafir varsa notlar ona gitmesin
+    if(!g&&arrBy[r]&&bdiGuestKey((arrBy[r].lastName||"")+" "+(arrBy[r].firstName||""))===bdiGuestKey(vacRooms[r0]))g=arrG(arrBy[r]); // in-house raporu yoksa varis raporunun notlari
     var dep=g?g.dep:(bdiPdfDep[r]||"");
-    out[r]={room:r,name:vacRooms[r],g:g,arr:g?g.arr:"",dep:dep,inhouse:true,arriving:!!(g&&g.arr===today),departing:dep===today};
+    out[r]={room:r,name:vacRooms[r0],g:g,arr:g?g.arr:"",dep:dep,inhouse:true,arriving:!!(g&&g.arr===today),departing:dep===today};
   });
   (window.guests||[]).forEach(function(a){
-    var r=String(a.roomNo||"");if(!r||r==="0")return;
+    var r=String(a.roomNo||"");if(!r||r==="0")return;r=r.padStart(4,"0");
     if(out[r]&&bdiGuestKey(out[r].name)===bdiGuestKey((a.lastName||"")+" "+(a.firstName||""))){out[r].arriving=true;return}
     if(out[r]&&!out[r].departing)return; // odada baska biri kaliyor: ARR satiri eski/yanlis oda
-    out[r]={room:r,name:(a.lastName||"")+","+(a.firstName||"")+(a.title?","+a.title:""),g:null,arr:today,dep:"",inhouse:false,arriving:true,departing:false,expected:true};
+    var ag=arrBy[r]?arrG(arrBy[r]):null;
+    out[r]={room:r,name:(a.lastName||"")+","+(a.firstName||"")+(a.title?","+a.title:""),g:ag,arr:today,dep:ag?ag.dep:"",inhouse:false,arriving:true,departing:false,expected:true};
   });
   Object.keys(out).forEach(function(r){var x=out[r];x.pn=bdiKatPersonName(x.name);x.floor=bdiRoomFloor(r);x.p=prof?bdiGMProfileByName(x.pn.full):null;x.key=x.p?x.p.gid:"r:"+r});
   return out;
@@ -12140,17 +12591,22 @@ async function parseResDetail(buf){
     var valText=items.slice(1).map(function(i){return i.t}).join(" ");
 
     if(lineText.indexOf("Res. Comments:")>=0){
+      curGuest._wl=0;
       curGuest.resComments+=(curGuest.resComments?" ":"")+lineText.substring(lineText.indexOf("Res. Comments:")+14).trim();
     }
     else if(lineText.indexOf("Profile Notes:")>=0||lineText.indexOf("Web Notes")>=0){
       var wi=lineText.indexOf("Web Notes");
+      var wnT=wi>=0?lineText.substring(wi+9).trim():valText;
       if(wi>=0){curGuest.webNotes+=(curGuest.webNotes?" ":"")+lineText.substring(wi+9).trim();}
       else{curGuest.webNotes+=(curGuest.webNotes?" ":"")+valText;}
+      curGuest.wnGroups=curGuest.wnGroups||[];curGuest.wnGroups.push(wnT?[wnT]:[]);curGuest._wl=1; // 2026-10-30: satir yapisi (Atolye)
     }
     else if(lineText.indexOf("Specials:")>=0){
+      curGuest._wl=0;
       curGuest.specials+=(curGuest.specials?" ":"")+lineText.replace("Specials:","").trim();
     }
     else if(lineText.indexOf("Accompanying Names:")>=0){
+      curGuest._wl=0;
       var accNames=lineText.replace(/.*Accompanying Names:\s*/,"").trim();
       curGuest.accompany=(curGuest.accompany?curGuest.accompany+"; ":"")+accNames;
       if(accNames&&curGuest.adl<=1){
@@ -12160,6 +12616,7 @@ async function parseResDetail(buf){
       }
     }
     else if(lineText.indexOf("Preferences:")>=0){
+      curGuest._wl=0;
       curGuest.preferences+=(curGuest.preferences?" ":"")+lineText.replace("Preferences:","").trim();
     }
     else if(lineText.indexOf("Membership Type:")>=0){
@@ -12185,6 +12642,7 @@ async function parseResDetail(buf){
       }
     }
     else if(labelItem.x>=200){
+      if(curGuest._wl&&curGuest.wnGroups&&curGuest.wnGroups.length){var wg=curGuest.wnGroups[curGuest.wnGroups.length-1],wt=lineText.replace(/\s+/g," ").trim();if(wg.length&&/^[a-zçğıöşü(]/.test(wt))wg[wg.length-1]+=" "+wt;else wg.push(wt)}
       if(curGuest.webNotes)curGuest.webNotes+=" "+lineText;
       else if(curGuest.resComments)curGuest.resComments+=" "+lineText;
     }
@@ -15281,7 +15739,7 @@ window.bdiLogs = bdiLogs;
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
   bdiGMSuggestAct, bdiGMUnmerge, bdiGMSaveNote, bdiGuestOpen, bdiGraphSelect, bdiGMDownload, bdiGMRestoreFile, bdiGMRestoreSnapshot,
-  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bdiProtelMarkIdx, bdiProtelMarkAll, bdiAtAct, bdiAtBulk, bdiAtEditText, bdiAtSetField, bdiAtSetFilter, bdiAtSetView, bdiAtSearch, renderBdiAtelier, bdiKatSetSel, bdiKatInspect, bdiKatWelcome, bdiKatUndo, bdiKatPrep, bdiKatLetter, bdiKatCopyLetter, bdiKatCard, bdiKatPrint, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
+  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bdiProtelMarkIdx, bdiProtelMarkAll, swRepOpen, swRepPick, swRepScanFolder, bdiPfAssign, bdiPfDelete, bdiAtAct, bdiAtBulk, bdiAtEditText, bdiAtSetField, bdiAtSetFilter, bdiAtSetView, bdiAtSearch, renderBdiAtelier, bdiKatSetSel, bdiKatInspect, bdiKatWelcome, bdiKatUndo, bdiKatPrep, bdiKatLetter, bdiKatCopyLetter, bdiKatCard, bdiKatPrint, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
   bdiAliceImportFile, bdiAliceSetPeriod, bdiStaffSet, renderBdiAlice,
   bdiSetReaction, bdiReactText, bdiReactQuick, bdiReactClose, bdiDnaAdd, bdiDnaDel, bdiDnaSaveAddr,
   renderBdiBriefTab, bdiBriefSetMode, bdiPrepMark, bdiShiftSet, bdiShiftSaveNote, bdiShiftCopy, bdiShiftPrint,
@@ -15463,7 +15921,7 @@ var CAT=[["pref","Tercih"],["sens","Hassasiyet (WARNING)"],["occ","Kutlama / öz
 var CAT_LBL={pref:"Tercih",sens:"WARNING",occ:"Kutlama",avoid:"İstemez",other:"Not"};
 var TOPICS=(G.topics&&G.topics.length)?G.topics:["Noise","Room temperature","Cleanliness","Maintenance","Delays","Laundry","F&B","Billing","Other"];
 var KVKK=null;try{if(G.kvkk)KVKK=new RegExp(G.kvkk,"i")}catch(e){}
-if(!KVKK)KVKK=/allerg|alerj|anaphyla|intoleran|diabet|diyabet|epipen|pregnan|hamile|\bgebe|medicat|\bila[cç]|disease|hastal|illness|cancer|kanser|asthma|ast[ıi]m|celiac|[cç][oö]lyak|halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|oru[cç]|ramadan|ramazan|church|kilise|mosque|\bcami\b|synagog|sinagog|faith|inan[cç]/i;
+if(!KVKK)KVKK=/allerg|alerj|anaphyla|intoleran|diabet|diyabet|epipen|pregnan|hamile|\bgebe|medicat|\bila[cç]|disease|hastal|illness|cancer|kanser|asthma|\bast[ıi]m|celiac|[cç][oö]lyak|halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|\boru[cç]|ramadan|ramazan|church|kilise|mosque|\bcami\b|synagog|sinagog|faith|\binan[cç]/i;
 
 /* ---------- depolama (try/catch: hafiza kapaliysa uygulama yine acilir) ---------- */
 function lsGet(k,d){try{var s=localStorage.getItem(P+k);return s?JSON.parse(s):d}catch(e){return d}}
