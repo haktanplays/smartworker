@@ -2452,7 +2452,7 @@ function getDefaultWNSettings(){
       py:"Passionately Yours",
       title:"Title",
       trustYou:"Trust You",
-      issue:"Issue",
+      issue:"Issues",
       butler:"Butler Did It",
       rec:"REC Preferences",
       pbr:"PBR Preferences",
@@ -2649,7 +2649,7 @@ function saveWNSettingsFromUI(rerun){
     py:document.getElementById("wnHeadPY").value.trim()||"Passionately Yours",
     title:document.getElementById("wnHeadTitle").value.trim()||"Title",
     trustYou:document.getElementById("wnHeadTrustYou").value.trim()||"Trust You",
-    issue:document.getElementById("wnHeadIssue").value.trim()||"Issue",
+    issue:document.getElementById("wnHeadIssue").value.trim()||"Issues",
     butler:document.getElementById("wnHeadButler").value.trim()||"Butler Did It",
     rec:document.getElementById("wnHeadREC").value.trim()||"REC Preferences",
     pbr:document.getElementById("wnHeadPBR").value.trim()||"PBR Preferences",
@@ -2786,14 +2786,15 @@ function buildOperaSections(data){
   sections.push(makeSection('py',h.py,data.pyLines,"No records.",show.py));
   sections.push(makeSection('title',h.title,data.titleLines,"No records.",show.title));
   sections.push(makeSection('trustYou',h.trustYou,data.trustYouLines,"No records.",true));
-  sections.push(makeSection('issue',h.issue,data.issueLines,"No records.",show.issue));
+  sections.push(makeSection('issue',(h.issue==="Issue"?"Issues":h.issue),data.issueLines,"No records.",show.issue)); // standart baslik "Issues" (eski kayitli ayar "Issue" de cevrilir)
   sections.push(makeSection('butler',h.butler,data.butlerLines,"No records.",show.butler));
   if(show.preferences){
-    sections.push(makeSection('rec',h.rec,prefGroups.rec,"No preferences.",true));
-    sections.push(makeSection('pbr',h.pbr,prefGroups.pbr,"No preferences.",true));
-    sections.push(makeSection('hsk',h.hsk,prefGroups.hsk,"No preferences.",true));
+    // Not standardi (2026-10-30): departman sirasi F&B, HSK, PBR, BUT, REC, CON, SPA (SmartWorker ile ayni)
     sections.push(makeSection('fb',h.fb,prefGroups.fb,"No preferences.",true));
+    sections.push(makeSection('hsk',h.hsk,prefGroups.hsk,"No preferences.",true));
+    sections.push(makeSection('pbr',h.pbr,prefGroups.pbr,"No preferences.",true));
     sections.push(makeSection('but',h.but,prefGroups.but,"No preferences.",true));
+    sections.push(makeSection('rec',h.rec,prefGroups.rec,"No preferences.",true));
     sections.push(makeSection('con',h.con,prefGroups.con,"No preferences.",true));
     sections.push(makeSection('spa',h.spa,prefGroups.spa,"No preferences.",true));
   }
