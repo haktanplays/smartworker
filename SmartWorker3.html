@@ -9556,7 +9556,9 @@ function bdiReactClose(){var el=document.getElementById("bdiReactBar");if(el)el.
 // Imza: satir sonunda "** dd.mm.yyyy XX" (onaylayan / ekleyen / isi yapan kisinin bas harfleri).
 // Ic risk notlari (dept WARNING: hizmete hassas misafir, acik issue) Protel'e girmez; brief ve risk radarinda kalir.
 var BDI_PROTEL_DEPTS=["F&B","HSK","PBR","BUT","REC","CON","SPA"];
-var BDI_PROTEL_ROUTINE=/turndown|laundry|\bice\b|water|shoe|unpack|\bpack|inspect|courtesy|touch call|welcome|check-?in|follow-?up|issue|alert/i;
+var BDI_PROTEL_DID_MAX=5; // Butler Did It: konaklama basina en fazla satir
+// Butler Did It'e girmeyen rutin isler. Haktan 2026-10-30: shoeshine, pack/unpack, inhouse inspection, welcome / in-room check-in (odaya eslik) GIRER.
+var BDI_PROTEL_ROUTINE=/turndown|laundry|\bice\b|water|courtesy|touch call|follow-?up|issue|alert/i;
 function bdiInitials(name){var w=String(name||"").trim().split(/\s+/).filter(Boolean);if(!w.length)return "";var f=function(s){return s.charAt(0).toLocaleUpperCase("tr-TR")};return w.length>1?f(w[0])+f(w[w.length-1]):f(w[0])}
 function bdiSigDate(ts){var d=ts?new Date(ts):new Date();return ("0"+d.getDate()).slice(-2)+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+d.getFullYear()}
 function bdiSig(ts,by){var i=bdiInitials(by);return "** "+bdiSigDate(ts)+(i?" "+i:"")}
@@ -9618,14 +9620,18 @@ function bdiProtelNotes(p){
   });
   var pb=BDI_PROTEL_DEPTS.filter(function(d){return prefs[d]}).map(function(d){var l=uniq(prefs[d]);np+=l.length;return block(d+" Preferences",l)});
   if(pb.length)out.push({title:"Guest Preferences",n:np,text:"***Guest Preferences***\n\n"+pb.join("\n\n")});
-  // 3) Butler Did It: bu (ya da son) konaklamanin kayda deger isleri; rutin girmez, en fazla 5 satir
-  var sy=p.currentStay||p.stays[p.stays.length-1],did=[],kv=0; // kv: KVKK kelimesi (tibbi/inanc) tasidigi icin Protel'e yazilmayan satir
-  if(sy)bdiEventsIn(p,sy).forEach(function(e){
-    if(e.kind==="pref"||BDI_PROTEL_ROUTINE.test(e.action||""))return;
-    if(BDI_KVKK_RE.test((e.text||"")+" "+(e.note||""))){kv++;return}
-    did.push({t:bdiProtelDid(e),ts:new Date(e.date+"T"+(e.time||"12:00")+":00").getTime(),by:e.butler,score:(e.kind==="occ"?3:0)+(e.react==="good"?2:0)+(e.note?1:0)});
+  // 3) Butler Did It: her konaklamadan en kayda deger en fazla 5 is (standart: konaklama basina ust sinir), konaklamalar eskiden yeniye.
+  // Ayni konaklamada tekrar eden ayni is (her gun shoeshine) bir kez yazilir. Secim: ozel gun > misafirin begendigi > notu olan > yeni.
+  var did=[],kv=0; // kv: KVKK kelimesi (tibbi/inanc) tasidigi icin Protel'e yazilmayan satir
+  p.stays.forEach(function(sy){
+    var part=[];
+    bdiEventsIn(p,sy).forEach(function(e){
+      if(e.kind==="pref"||BDI_PROTEL_ROUTINE.test(e.action||""))return;
+      if(BDI_KVKK_RE.test((e.text||"")+" "+(e.note||""))){kv++;return}
+      part.push({t:bdiProtelDid(e),ts:new Date(e.date+"T"+(e.time||"12:00")+":00").getTime(),by:e.butler,score:(e.kind==="occ"?3:0)+(e.react==="good"?2:0)+(e.note?1:0)});
+    });
+    did=did.concat(uniq(part.sort(function(x,y){return y.score-x.score||y.ts-x.ts})).slice(0,BDI_PROTEL_DID_MAX).sort(function(x,y){return x.ts-y.ts}));
   });
-  did=uniq(did.sort(function(x,y){return y.score-x.score||y.ts-x.ts})).slice(0,5).sort(function(x,y){return x.ts-y.ts});
   if(did.length)out.push({title:"Butler Did It",n:did.length,text:block("Butler Did It",did)});
   // 4) Special Occasions
   var occ=[];
