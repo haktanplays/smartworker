@@ -6225,7 +6225,8 @@ function bdiVacRestore(){
 // VAC kutusuna birakilinca basliktan taninir. VAC'in yaptigini yapar (oda-misafir eslesmesi, ayrilis) ve fazlasini saklar:
 // giris/cikis tarihi (+ EDT cikis saati), yetiskin/cocuk, refakatciler, Specials, Preferences kodlari, Profile Notes > Web Notes.
 // GIZLILIK: sirket/acente, odeme tipi, fiyat, bakiye, provizyon ve Res. Comments (kasa notlari) HIC saklanmaz.
-// bdi_gih_v1 {day,at,file,rows:[{room,name:"Soyad,Ad,Unvan",arr,dep,depTime,type,adl,chl,vip,acc[],spec[],pref[],notes[[satir]]}]}
+// VIP ve Preferences kodlari da alinmaz (Haktan 2026-10-30: "VIP ve preferences kullanmiyoruz").
+// bdi_gih_v1 {day,at,file,rows:[{room,name:"Soyad,Ad,Unvan",arr,dep,depTime,type,adl,chl,acc[],spec[],notes[[satir]]}]}
 var BDI_GIH_KEY="bdi_gih_v1",_bdiGih=null;
 function bdiGih(){if(_bdiGih)return _bdiGih;try{_bdiGih=JSON.parse(BdiKV.get(BDI_GIH_KEY)||"null")}catch(e){_bdiGih=null}return _bdiGih}
 function bdiGihRows(){var g=bdiGih();return g&&Array.isArray(g.rows)?g.rows:[]}
@@ -6264,7 +6265,7 @@ async function bdiGihParse(pdf){
         var dt=L.filter(function(x){return x.x>=C.arr-6&&x.x<C.adl-6}).map(function(x){return x.t}).join(" ");
         var ds=dt.match(/\d{2}-\d{2}-\d{2}/g)||[],ty=(dt.replace(/\d{2}-\d{2}-\d{2}/g,"").match(/\b[A-Z]{2,7}\b/)||[""])[0];
         var nu=L.filter(function(x){return x.x>=C.adl-14&&x.x<C.pay-2&&/^\d+$/.test(x.t)}).map(function(x){return +x.t});
-        cur={room:f.t,name:nm,arr:bdiVacDate(ds[0]||""),dep:bdiVacDate(ds[1]||""),depTime:"",type:ty,adl:nu[0]||0,chl:nu[1]||0,vip:"",acc:[],spec:[],pref:[],notes:[]};
+        cur={room:f.t,name:nm,arr:bdiVacDate(ds[0]||""),dep:bdiVacDate(ds[1]||""),depTime:"",type:ty,adl:nu[0]||0,chl:nu[1]||0,acc:[],spec:[],notes:[]};
         rows.push(cur);lab="row";continue;
       }
       if(!cur)continue;
@@ -6275,15 +6276,14 @@ async function bdiGihParse(pdf){
         if(lab==="Profile Notes"){cur.notes.push([]);addNote(rest.filter(function(x){return x.x>=C.comp+20}).map(function(x){return x.t}).join(" "))}
         else if(lab==="Accompanying Names")rest.map(function(x){return x.t}).join(" ").split("/").forEach(function(n){n=bdiGihPerson(n);if(n.trim())cur.acc.push(n.trim())});
         else if(lab==="Specials")rest.map(function(x){return x.t}).join(" ").split(/\s*,\s*/).forEach(function(v){if(v.trim())cur.spec.push(v.trim())});
-        else if(lab==="Preferences")rest.map(function(x){return x.t}).join(",").split(/\s*,\s*/).forEach(function(v){if(v.trim())cur.pref.push(v.trim())});
         continue; // Res. Comments ve digerleri: icerik alinmaz
       }
       if(f.t==="Web Notes"&&f.x<C.comp+10){lab="Profile Notes";cur.notes.push([]);addNote(L.filter(function(x){return x.x>=C.comp+20}).map(function(x){return x.t}).join(" "));continue}
       if(L.length===1&&/^\d{1,2}:\d{2}$/.test(f.t)&&Math.abs(f.x-C.dep)<20){cur.depTime=f.t;continue} // EDT: tahmini cikis saati
       if(f.x>=C.comp+20&&f.x>C.arr-140){if(lab==="Profile Notes")addNote(txt);continue} // icerik sutununda devam satiri (Res. Comments devami atlanir)
-      if(lab==="row"){ // isim sutununda ikinci satir: isim devami ya da VIP kodu; sirket/acente satirlari atlanir
+      if(lab==="row"){ // isim sutununda ikinci satir: isim devami (VIP kodu ve sirket/acente satirlari atlanir)
         var nc=L.filter(function(x){return x.x>=C.name-12&&x.x<C.comp-2}).map(function(x){return x.t}).join(" ");
-        if(nc){if((cur.name.match(/,/g)||[]).length<2)cur.name=(cur.name+" "+nc).replace(/\s*,\s*/g,",");else if(nc.length<=6&&!cur.vip)cur.vip=nc}
+        if(nc&&(cur.name.match(/,/g)||[]).length<2)cur.name=(cur.name+" "+nc).replace(/\s*,\s*/g,",");
       }
     }
   }
@@ -10781,7 +10781,6 @@ function bdiKatHead(x){
   if(x.departing)b.push("bugün çıkış"+(x.g&&x.g.depTime?" "+x.g.depTime:""));
   if(x.g)b.push(x.g.adl+(x.g.chl?"+"+x.g.chl+" çocuk":" kişi"));
   if(p&&p.prevStays.length)b.push((p.prevStays.length+1)+". konaklama");else if(bdiKatRepeat(x))b.push("tekrar misafir");
-  if(x.g&&x.g.vip)b.push("VIP "+x.g.vip);
   if(x.expected)b.push("henüz gelmedi");
   return {nm:nm,sub:b.join(" · ")};
 }
@@ -11246,7 +11245,7 @@ function bdiFloorLoadHtml(date,p){
   if(date!==bdiYmd(new Date())||!Object.keys(vacRooms||{}).length||p.blocks.length<2)return "";
   var L=bdiFloorLoad(p),tot=L.reduce(function(a,x){return a+x.load},0);if(!tot)return "";
   var mxL=Math.max.apply(null,L.map(function(x){return x.load})),fmt=function(n){return String(n).replace(".",",")};
-  var h='<div class="bd-fload"><div class="bd-sub" style="margin:10px 0 4px">Bugünkü yük: inspection 1 · varış 1 + hazırlık · çıkış 0,5 · alert/VIP +1,5 · tekrar +1 · açık issue +2</div>';
+  var h='<div class="bd-fload"><div class="bd-sub" style="margin:10px 0 4px">Bugünkü yük: inspection 1 · varış 1 + hazırlık · çıkış 0,5 · Butler Alert +1,5 · tekrar +1 · açık issue +2</div>';
   L.forEach(function(x){h+='<div class="bd-fload-row"><span>Kat '+bdiFloorLabel(x.b)+'</span><div class="bd-fload-bar"><i style="width:'+Math.round(x.load/mxL*100)+'%"></i></div><b>'+fmt(x.load)+'</b><span class="bd-sub">'+x.rooms+' oda'+(x.arr?' · '+x.arr+' varış':'')+(x.dep?' · '+x.dep+' çıkış':'')+(x.alert?' · '+x.alert+' alert':'')+(x.repeat?' · '+x.repeat+' tekrar':'')+(x.issue?' · '+x.issue+' issue':'')+'</span></div>'});
   var sg=bdiFloorSuggest(L.length),cur=Math.max.apply(null,L.map(function(x){return x.load}));
   if(sg&&sg.mx<cur-0.9)h+='<div class="bd-note">Daha dengeli bölme var: '+sg.bl.map(function(b,i){return "Kat "+(b[1]>=99?b[0]+"+":b[0]+"-"+b[1])+" ("+fmt(sg.ld[i])+")"}).join(", ")+' <button type="button" class="bd-link" onclick="bdiFloorApplySuggest()">uygula</button></div>';
