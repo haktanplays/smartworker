@@ -12135,13 +12135,12 @@ function downloadDidIt(){
   }
   // Table
   var hasDate=(bdiViewMode!=="day");
-  h+='<table><thead><tr>'+(hasDate?'<th>Date</th>':'')+'<th>Time</th><th>Butler</th><th>Room</th><th>Guest</th><th>Action</th><th>Details</th></tr></thead><tbody>';
+  h+='<table><thead><tr>'+(hasDate?'<th>Date</th>':'')+'<th>Butler</th><th>Room</th><th>Guest</th><th>Action</th><th>Details</th></tr></thead><tbody>';
   if(!hasDate)logs=logs.slice().sort(function(a,b){return String(a.time||"").localeCompare(String(b.time||""))});
   for(var i=0;i<logs.length;i++){
     var l=logs[i];
     var ld=l._date||ds;var dd2=new Date(ld+"T00:00:00");var fD2=("0"+dd2.getDate()).slice(-2)+"."+("0"+(dd2.getMonth()+1)).slice(-2)+"."+dd2.getFullYear();
     h+='<tr>'+(hasDate?'<td style="font-size:8pt;color:#8a6e47;white-space:nowrap">'+fD2+'</td>':'');
-    h+='<td style="white-space:nowrap;color:#8a6e47">'+esc(l.time||"")+'</td>';
     h+='<td>'+esc(l.butler)+'</td><td style="font-weight:700;text-align:center">'+esc(l.room)+'</td><td style="font-size:8.5pt;color:#8a6e47">'+esc(l.guest||"")+'</td><td><span class="badge">'+esc(l.action)+'</span></td><td>'+esc(l.sentence)+(l.note?' <i style="color:#999">'+esc(l.note)+'</i>':'')+'</td></tr>';
   }
   h+='</tbody></table>';
