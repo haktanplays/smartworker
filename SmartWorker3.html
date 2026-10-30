@@ -669,7 +669,9 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-fl.un{color:#7d8c86}
 #page-didit .bd-fl-edge{margin-top:3px}
 #page-didit .bd-fl-edge:first-child{margin-top:0}
-#page-didit .bd-fa-row{display:grid;grid-template-columns:10px 62px 1fr;gap:8px;align-items:center;margin-bottom:8px}
+#page-didit .bd-fa-row{display:grid;grid-template-columns:10px auto minmax(0,1fr);gap:8px;align-items:center;margin-bottom:8px}
+#page-didit .bd-fa-in{width:46px;height:28px;padding:0 3px;border:1px solid var(--line,#d6dcd9);border-radius:6px;font:inherit;font-weight:600;color:var(--ink);background:#fff;text-align:center}
+#page-didit .bd-fa-in:focus{outline:2px solid #0f5446;outline-offset:0}
 #page-didit .bd-fa-row select{height:32px}
 #page-didit .bd-fa-lbl{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap}
 #page-didit .bd-sw{width:10px;height:10px;border-radius:3px;background:var(--c)}
@@ -8864,6 +8866,28 @@ function bdiFloorAssign(i,butler){
   p.blocks[i].butler=butler;p.u=Date.now();
   bdiSetFloorPlan(date,p);renderBdiFloorPanel();bdiRefreshDerived();
 }
+// Kat araligini elle degistir (2026-10-30). "7-14", "15+", "13" kabul edilir. Komsu bloklar bosluk/cakisma
+// kalmasin diye kendiliginden kayar: bu blok 8-15 olursa ustteki 16'dan, alttaki 7'de biter.
+function bdiFloorParseRange(v){
+  var s=String(v||"").replace(/\s+/g,"").replace(/^kat/i,"").replace(/[–—]/g,"-");
+  var m=/^(\d{1,2})(?:-(\d{1,2}))?(\+)?$/.exec(s);if(!m||(m[2]&&m[3]))return null;
+  var a=+m[1],b=m[3]?99:(m[2]?+m[2]:a);
+  return a>=1&&b>=a?{from:a,to:b}:null;
+}
+function bdiFloorEditRange(i,v){
+  var date=bdiFloorDate(),p=bdiFloorPlan(date);if(!p||!p.blocks[i])return;
+  var r=bdiFloorParseRange(v);
+  if(!r){alert("Kat aralığını 7-14, 15+ ya da tek kat için 13 şeklinde yaz.");renderBdiFloorPanel();return}
+  var bl=p.blocks.map(function(b){return {from:b.from,to:b.to,butler:b.butler}});
+  bl[i].from=r.from;bl[i].to=r.to;
+  if(bl[i-1])bl[i-1].to=r.from-1;
+  if(bl[i+1]){if(r.to>=99){alert("\"+\" sadece en üst blokta kullanılabilir.");renderBdiFloorPanel();return}bl[i+1].from=r.to+1}
+  for(var k=0;k<bl.length;k++){
+    if(bl[k].from>bl[k].to||bl[k].from<1){alert("Bu aralıkla "+(k<i?"alttaki":"üstteki")+" blokta kat kalmıyor. Önce o bloğun aralığını değiştir.");renderBdiFloorPanel();return}
+  }
+  bdiSetFloorPlan(date,{n:bl.length,blocks:bl,start:p.start||BDI_FLOOR_WIN.start,end:p.end||BDI_FLOOR_WIN.end,u:Date.now()});
+  renderBdiFloorPanel();bdiRefreshDerived();
+}
 function bdiFloorPrevPlan(date){
   var all=bdiGetFloors(),d=new Date(date+"T00:00:00");
   for(var k=1;k<=14;k++){d.setDate(d.getDate()-1);var p=all[bdiYmd(d)];if(p&&p.blocks&&p.blocks.length)return {date:bdiYmd(d),plan:p}}
@@ -8909,7 +8933,7 @@ function renderBdiFloorPanel(){
   }
   h+='</div><div class="bd-fa">';
   p.blocks.forEach(function(b,i){
-    h+='<div class="bd-fa-row"><span class="bd-sw" style="--c:'+(b.butler?bdiButlerColor(b.butler):'#cfd8d4')+'"></span><span class="bd-fa-lbl">Kat '+bdiFloorLabel(b)+'</span>';
+    h+='<div class="bd-fa-row"><span class="bd-sw" style="--c:'+(b.butler?bdiButlerColor(b.butler):'#cfd8d4')+'"></span><label class="bd-fa-lbl">Kat <input class="bd-fa-in" value="'+bdiFloorLabel(b)+'" onchange="bdiFloorEditRange('+i+',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()" title="Kat aralığını elle değiştir: 7-14, 15+ ya da tek kat 13" aria-label="Blok '+(i+1)+' kat aralığı"></label>';
     h+='<select onchange="bdiFloorAssign('+i+',this.value)" aria-label="Kat '+bdiFloorLabel(b)+' butleri">'+bdiButlerOptions(b.butler,"Butler seç")+'</select></div>';
   });
   var missing=p.blocks.filter(function(b){return !b.butler}).length;
@@ -12181,7 +12205,7 @@ function downloadDidIt(){
   if(_single&&bdiFloorPlan(ds))_sumLogs=_sumLogs.concat([{_date:ds}]);
   var _bsum=bdiButlerSummary(_sumLogs);
   if(_bsum.length){
-    h+='<table class="bsum"><thead><tr><th>Butler</th><th>Floors (13-23)</th><th style="text-align:right">Touches</th><th style="text-align:right">Guests</th><th style="text-align:right">Issue follow-ups</th><th style="text-align:right">Issues closed</th></tr></thead><tbody>';
+    h+='<table class="bsum"><thead><tr><th>Butler</th><th>Floors</th><th style="text-align:right">Touches</th><th style="text-align:right">Guests</th><th style="text-align:right">Issue follow-ups</th><th style="text-align:right">Issues closed</th></tr></thead><tbody>';
     _bsum.forEach(function(x){h+='<tr><td><b>'+esc(x.name)+'</b></td><td>'+esc(Object.keys(x.floors).map(function(f){return f.replace("Kat ","")+(_single?"":" ("+x.floors[f]+"d)")}).join(", ")||"-")+'</td><td style="text-align:right">'+x.touches+'</td><td style="text-align:right">'+Object.keys(x.guests).length+'</td><td style="text-align:right">'+x.issueTouch+'</td><td style="text-align:right">'+x.issueClose+'</td></tr>'});
     h+='</tbody></table>';
   }
@@ -15888,7 +15912,7 @@ window.bdiLogs = bdiLogs;
 
 // BDI v2 (2026-10-23): kat dagilimi, issues, misafir iliskileri - inline handler'lar icin
 [
-  bdiFloorSetCount, bdiFloorAssign, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
+  bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
