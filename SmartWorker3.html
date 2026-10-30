@@ -10383,14 +10383,15 @@ function bgdBuild(day){
     else{if(st!=="inh")x.status=st;if(room&&!x.room)x.room=room;if(nm.length>x.name.length)x.name=nm}
     for(var e in (extra||{}))if(extra[e])x[e]=extra[e];
   };
-  Object.keys(vacRooms||{}).forEach(function(r){put(r,vacNameFmt(r),bdiPdfDep[r]===day?"dep":"inh")});
+  var gihR=bdiGihByRoom(); // in-house raporunda bugun gelmis gorunenler rehberde de "Varis" (odaya birak bolumu)
+  Object.keys(vacRooms||{}).forEach(function(r){var gr=gihR[r],ar=gr&&gr.arr===day&&bdiGuestKey(gr.name)===bdiGuestKey(vacRooms[r]);put(r,vacNameFmt(r),bdiPdfDep[r]===day?"dep":ar?"arr":"inh")});
   var ag=(typeof allGuests!=="undefined"&&Array.isArray(allGuests))?allGuests:[],nArr=0,nDep=0;
   ag.forEach(function(g){var a=bgdArrDate(g.arrDate),d=bgdArrDate(g.depDate),nm=bgdName(g);
     if(a===day){put(g.roomNo,nm,"arr",{eta:g.arrTime||""});nArr++}else if(d===day){put(g.roomNo,nm,"dep");nDep++}});
   if(!ag.length){var di=document.getElementById("dateInput");if(di&&di.value===day)(window.guests||[]).forEach(function(g){put(g.roomNo,bgdName(g),"arr");nArr++})}
   var prof=bdiGMProfiles(),inGuide={};order.forEach(function(k){inGuide[bdiGMGid(k)]=1});
   var mom={};bdiMoments(1,function(p){return inGuide[p.gid]}).forEach(function(m){(mom[m.p.gid]||(mom[m.p.gid]=[])).push(m)});
-  var prep=bdiGetPrep()[day]||{},guests=[],opps=[];
+  var prep=bdiGetPrep()[day]||{},guests=[],opps=[],katR={};try{katR=bdiKatRooms()}catch(e){}
   order.forEach(function(k){
     var x=rows[k],gid=bdiGMGid(k),p=prof.byGid[gid]||null,g={id:"k"+bgdHash(k),pid:gid,name:x.name,room:x.room,status:x.status}; // id sabit: ayni gun yeniden uretilen rehberde iPad kayitlari ayni karta duser
     if(x.eta)g.eta=x.eta;
@@ -10425,6 +10426,9 @@ function bgdBuild(day){
       if(x.status==="arr"&&p.stays.length>=1&&prefN&&!(prep[gid]&&!prep[gid].off))opps.push({id:"rp:"+gid,gid:g.id,pri:1,title:"Tekrar misafir: tercihlerini varıştan önce hazırla",why:notes.filter(function(z){return z.k==="pref"})[0].t,en:"prepared the known preferences of {g} before arrival"});
       if(g.risk)opps.push({id:"rk:"+gid,gid:g.id,pri:0,title:"Kişisel takip: "+g.risk.why[0],why:g.risk.why.join(", "),en:"followed up personally with {g}"});
     }
+    var kx=x.room&&katR[x.room]; // kat turu: in-house raporundaki Protel notundan kontrol / odaya birak maddeleri (DNA maddeleri zaten "Bilmen gerekenler"de)
+    if(kx&&bdiGuestKey(kx.pn.full)===k){var KI=bdiKatItems(Object.assign({},kx,{arriving:x.status==="arr"})),ck=KI.items.filter(function(i){return i.src!=="dna"}).map(function(i){return i.t.length>90?i.t.slice(0,88).replace(/\s+\S*$/,"")+"…":i.t});
+      if(ck.length)g.chk=ck.slice(0,10);if(KI.n.sens)g.psens=1;if(kx.g&&kx.g.depTime)g.dt=kx.g.depTime;if(kx.g&&kx.g.chl)g.kids=kx.g.chl;}
     if(warn.length)g.warn=warn.filter(function(w,i){return warn.indexOf(w)===i});
     if(notes.length)g.notes=notes.slice(0,12);
     if(ask.length)g.ask=ask.slice(0,4);
@@ -10433,7 +10437,8 @@ function bgdBuild(day){
   opps.sort(function(a,b){return a.pri-b.pri});opps=opps.slice(0,30);opps.forEach(function(o){delete o.pri});
   var topics=BDI_TOPICS.map(function(t){return t[1]}).filter(function(t){return t!=="Upgrade expectations"}).concat(["Other"]);
   return {v:2,app:BGD_APP,date:day,gen:{at:Date.now(),vac:bdiVacDay||"",rooms:Object.keys(vacRooms||{}).length,arr:nArr,dep:nDep},
-    butlers:getKW("butler")||[],actions:bgdActions(),kvkk:BDI_KVKK_RE.source,topics:topics,handover:bgdHandover(day),guests:guests,opps:opps};
+    butlers:getKW("butler")||[],actions:bgdActions(),kvkk:BDI_KVKK_RE.source,topics:topics,handover:bgdHandover(day),guests:guests,opps:opps,
+    floors:((bdiFloorPlan(day)||{}).blocks||[]).filter(function(b){return b.butler}).map(function(b){return {from:b.from,to:b.to,butler:b.butler}})};
 }
 function bgdHtml(data){
   var tpl=bgdTemplate(),anchor='<script id="guideData" type="application/json">',i=tpl.indexOf(anchor),j=i<0?-1:tpl.indexOf("<\/script>",i);
@@ -11192,24 +11197,59 @@ function bdiRiskText(){
 }
 function bdiRiskCopy(){bdiCopyText(bdiRiskText()).then(function(){bdiToast("Risk radarı panoya kopyalandı (DM / FOM).")})}
 // ---- Akilli kat dagilimi: oglen handover'inda bloklarin bugunku yuku + oneri (karar ekipte) ----
-function bdiFloorLoad(p){
+// Oda yuku (2026-10-30, kat turuyla): inhouse inspection 1 · varis 1 + hazirlik maddesi basina 0,25 (en fazla 6) · bugun cikis 0,5
+// + alert/VIP 1,5 · tekrar misafir 1 · acik issue 2. Varislar ARR listesinden de gelir (henuz odaya girmemis olanlar).
+function bdiFloorRoomLoads(){
   var openRooms={};bdiGetIssues().forEach(function(is){if(bdiIssueState(is).status==="open")openRooms[String(is.room||"")]=1});
-  var L=p.blocks.map(function(b){return {b:b,rooms:0,alert:0,repeat:0,issue:0,load:0}});
-  Object.keys(vacRooms||{}).forEach(function(r){
-    var f=bdiRoomFloor(r);if(f==null)return;var bi=-1;for(var i=0;i<p.blocks.length;i++)if(f>=p.blocks[i].from&&f<=p.blocks[i].to){bi=i;break}if(bi<0)return;
-    var x=L[bi];x.rooms++;if(getAlertForRoom(r))x.alert++;
-    var pp=_bdiGM.loaded?bdiGMProfileByName(vacNameFmt(r)):null;if(pp&&pp.prevStays.length)x.repeat++;
-    if(openRooms[r])x.issue++;
+  var rooms=bdiKatRooms(),out=[];
+  Object.keys(rooms).forEach(function(r){
+    var x=rooms[r],f=bdiRoomFloor(r);if(f==null)return;
+    var w=x.departing?0.5:1,ni=0;if(x.arriving&&!x.departing){try{ni=bdiKatItems(x).items.length}catch(e){}w=1+Math.min(ni,6)*0.25}
+    var al=!!getAlertForRoom(r),rp=!!(x.p&&x.p.prevStays.length)||bdiKatRepeat(x),is=!!openRooms[r];
+    w+=(al?1.5:0)+(rp?1:0)+(is?2:0);
+    out.push({room:r,floor:f,w:w,arr:x.arriving&&!x.departing,dep:x.departing,alert:al,repeat:rp,issue:is});
   });
-  L.forEach(function(x){x.load=Math.round((x.rooms+x.alert*1.5+x.repeat+x.issue*2)*10)/10});
+  return out;
+}
+function bdiFloorLoad(p){
+  var L=p.blocks.map(function(b){return {b:b,rooms:0,alert:0,repeat:0,issue:0,arr:0,dep:0,load:0}});
+  bdiFloorRoomLoads().forEach(function(o){
+    var bi=-1;for(var i=0;i<p.blocks.length;i++)if(o.floor>=p.blocks[i].from&&o.floor<=p.blocks[i].to){bi=i;break}if(bi<0)return;
+    var x=L[bi];x.rooms++;x.load+=o.w;if(o.alert)x.alert++;if(o.repeat)x.repeat++;if(o.issue)x.issue++;if(o.arr)x.arr++;if(o.dep)x.dep++;
+  });
+  L.forEach(function(x){x.load=Math.round(x.load*10)/10});
   return L;
+}
+// Yuku en dengeli bolen ardisik kat araliklari (2 ya da 3 blok): en agir blogu en hafif yapan kesim; esitlikte fark en az olan.
+function bdiFloorSuggest(n){
+  var fl={},top=bdiTopFloor();bdiFloorRoomLoads().forEach(function(o){fl[o.floor]=(fl[o.floor]||0)+o.w});
+  var F=[];for(var f=7;f<=top;f++)F.push(f);
+  var sum=function(a,b){var t=0;for(var f=a;f<=b;f++)t+=fl[f]||0;return Math.round(t*10)/10},best=null;
+  var cuts=n===2?F.slice(0,-1).map(function(c){return [c]}):[];
+  if(n===3)F.forEach(function(c1){F.forEach(function(c2){if(c2>c1&&c2<top)cuts.push([c1,c2])})});
+  cuts.forEach(function(c){
+    var bl=[],from=7;c.forEach(function(x){bl.push([from,x]);from=x+1});bl.push([from,99]);
+    var ld=bl.map(function(b){return sum(b[0],Math.min(b[1],top))}),mx=Math.max.apply(null,ld),mn=Math.min.apply(null,ld);
+    if(!best||mx<best.mx-0.01||(Math.abs(mx-best.mx)<0.01&&mx-mn<best.mx-best.mn))best={bl:bl,ld:ld,mx:mx,mn:mn};
+  });
+  return best;
+}
+function bdiFloorApplySuggest(){
+  var date=bdiFloorDate(),p=bdiFloorPlan(date);if(!p||p.blocks.length<2)return;
+  var s=bdiFloorSuggest(p.blocks.length);if(!s)return;
+  var fmt=function(n){return String(n).replace(".",",")},lbl=function(b){return b[1]>=99?b[0]+"+":b[0]+"-"+b[1]};
+  if(!confirm("Önerilen bölme (yük):\n"+s.bl.map(function(b,i){return "Kat "+lbl(b)+": "+fmt(s.ld[i])+(p.blocks[i].butler?" · "+p.blocks[i].butler:"")}).join("\n")+"\n\nUygulansın mı? Butlerlar sırayla aynı kalır."))return;
+  bdiSetFloorPlan(date,{n:p.blocks.length,blocks:s.bl.map(function(b,i){return {from:b[0],to:b[1],butler:p.blocks[i].butler||""}}),start:p.start||BDI_FLOOR_WIN.start,end:p.end||BDI_FLOOR_WIN.end,u:Date.now()});
+  renderBdiFloorPanel();bdiRefreshDerived();
 }
 function bdiFloorLoadHtml(date,p){
   if(date!==bdiYmd(new Date())||!Object.keys(vacRooms||{}).length||p.blocks.length<2)return "";
   var L=bdiFloorLoad(p),tot=L.reduce(function(a,x){return a+x.load},0);if(!tot)return "";
   var mxL=Math.max.apply(null,L.map(function(x){return x.load})),fmt=function(n){return String(n).replace(".",",")};
-  var h='<div class="bd-fload"><div class="bd-sub" style="margin:10px 0 4px">Bugünkü yük (VAC): oda + alert/VIP ×1,5 + tekrar misafir + açık issue ×2</div>';
-  L.forEach(function(x){h+='<div class="bd-fload-row"><span>Kat '+bdiFloorLabel(x.b)+'</span><div class="bd-fload-bar"><i style="width:'+Math.round(x.load/mxL*100)+'%"></i></div><b>'+fmt(x.load)+'</b><span class="bd-sub">'+x.rooms+' oda'+(x.alert?' · '+x.alert+' alert':'')+(x.repeat?' · '+x.repeat+' tekrar':'')+(x.issue?' · '+x.issue+' issue':'')+'</span></div>'});
+  var h='<div class="bd-fload"><div class="bd-sub" style="margin:10px 0 4px">Bugünkü yük: inspection 1 · varış 1 + hazırlık · çıkış 0,5 · alert/VIP +1,5 · tekrar +1 · açık issue +2</div>';
+  L.forEach(function(x){h+='<div class="bd-fload-row"><span>Kat '+bdiFloorLabel(x.b)+'</span><div class="bd-fload-bar"><i style="width:'+Math.round(x.load/mxL*100)+'%"></i></div><b>'+fmt(x.load)+'</b><span class="bd-sub">'+x.rooms+' oda'+(x.arr?' · '+x.arr+' varış':'')+(x.dep?' · '+x.dep+' çıkış':'')+(x.alert?' · '+x.alert+' alert':'')+(x.repeat?' · '+x.repeat+' tekrar':'')+(x.issue?' · '+x.issue+' issue':'')+'</span></div>'});
+  var sg=bdiFloorSuggest(L.length),cur=Math.max.apply(null,L.map(function(x){return x.load}));
+  if(sg&&sg.mx<cur-0.9)h+='<div class="bd-note">Daha dengeli bölme var: '+sg.bl.map(function(b,i){return "Kat "+(b[1]>=99?b[0]+"+":b[0]+"-"+b[1])+" ("+fmt(sg.ld[i])+")"}).join(", ")+' <button type="button" class="bd-link" onclick="bdiFloorApplySuggest()">uygula</button></div>';
   var mi=0;L.forEach(function(x,i){if(x.load>L[mi].load)mi=i});
   var others=(tot-L[mi].load)/(L.length-1),ratio=others?L[mi].load/others:0;
   if(ratio>=1.4){
@@ -15007,7 +15047,7 @@ window.bdiLogs = bdiLogs;
 
 // BDI v2 (2026-10-23): kat dagilimi, issues, misafir iliskileri - inline handler'lar icin
 [
-  bdiFloorSetCount, bdiFloorAssign, bdiFloorCopyPrev, bdiFloorClear, renderBdiFloorPanel, renderBdiTodayCard,
+  bdiFloorSetCount, bdiFloorAssign, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
@@ -15303,7 +15343,8 @@ function renderBanner(){
   b.hidden=!msg.length;b.innerHTML=msg.map(function(m){return '<div class="bl">'+m+'</div>'}).join("");
 }
 function flKey(){return "fl_"+DAY+"_"+(me||"")}
-function myFloors(){return lsGet(flKey(),[])}
+function planFloors(){if(!me||!G.floors||!G.floors.length)return [];var bl=G.floors.filter(function(b){return b.butler===me});return allFloors().filter(function(f){return f&&bl.some(function(b){return f>=b.from&&f<=b.to})})} // SmartWorker'daki ogle kat dagilimi
+function myFloors(){var m=lsGet(flKey(),null);return m&&m.length?m:planFloors()}
 function afterHandover(){var n=new Date();return ymdLocal(n)!==DAY||n.getHours()>=HANDOVER_H}
 function allFloors(){var fl={};guests().list.forEach(function(x){if(!x.left)fl[floorOf(x.room)]=1});return Object.keys(fl).map(Number).sort(function(a,b){return(a||999)-(b||999)})}
 function floorSheet(){
@@ -15351,11 +15392,12 @@ function card(x){
   var risky=(x.risk&&x.risk.s>=3)||openIss.length;
   if(x.left)b+='<span class="bd">Odadan ayrıldı</span>';
   else if(st==="arr")b+='<span class="bd arr">Varış'+(x.eta?" "+esc(x.eta):"")+'</span>';
-  else if(st==="dep")b+='<span class="bd dep">Ayrılış</span>';
+  else if(st==="dep")b+='<span class="bd dep">Ayrılış'+(x.dt?" "+esc(x.dt):"")+'</span>';
   else b+='<span class="bd">İçeride</span>';
   if(x.warn.length)b+='<span class="bd wn">WARNING</span>';
   if(risky)b+='<span class="bd rk">Dikkat</span>';
   if(x.stay>1)b+='<span class="bd rep">'+x.stay+'. konaklama</span>';
+  if(st!=="arr"&&!x.left&&tt.some(function(e){return /inspection/i.test(e.action||"")}))b+='<span class="bd dn">Inspection &#10003;</span>';
   var pend=x.ask.filter(function(a){return!doneAsk(x.id,a.item)}).length;
   if(pend)b+='<span class="bd do">Sorulmadan yap: '+pend+'</span>';
   if(x.moved)b+='<span class="bd">'+esc(x.moved)+' → '+esc(x.room)+'</span>';
@@ -15378,6 +15420,16 @@ function body(x,tt,openIss){
     openIss.forEach(function(o){var s=issueState(x.id,o.id);
       h+='<div class="isRow"><span><b>Açık issue:</b> '+esc(o.t)+(o.d&&o.d!==DAY?' <small>('+esc(trDate(o.d))+')</small>':'')+(s==="touched"?' <span class="bd dn">takip edildi</span>':'')+'</span>'+
         (o.mine?'':'<button class="mini" data-act="iss" data-g="'+esc(x.id)+'" data-iss="'+esc(o.id)+'" data-k="touch" type="button">Takip ettim</button><button class="mini pri" data-act="iss" data-g="'+esc(x.id)+'" data-iss="'+esc(o.id)+'" data-k="close" type="button">Çözüldü</button>')+'</div>'});
+    h+='</div>';
+  }
+  if(x.status!=="arr"||(x.chk&&x.chk.length)||x.psens||x.kids){ // kat turu (2026-10-30): Protel notundan odada kontrol edilecekler / girişte odaya birakilacaklar
+    var arrv=x.status==="arr",insD=tt.some(function(e){return /inspection/i.test(e.action||"")});
+    h+='<div class="sec"><h4>'+(arrv?"Odaya bırak":"Kontrol et")+' <small>Protel notundan</small></h4>';
+    if(x.psens)h+='<div class="note"><span class="dot sens"></span><span>Protel\'de hassasiyet notu var: Protel\'den kontrol et</span></div>';
+    (x.chk||[]).forEach(function(c){h+='<div class="note"><span class="dot pref"></span><span>'+esc(c)+'</span></div>'});
+    if(arrv&&x.kids)h+='<div class="note"><span class="dot pref"></span><span>Çocuk amenity ('+x.kids+')</span></div>';
+    if(!(x.chk&&x.chk.length)&&!x.psens&&!(arrv&&x.kids))h+='<div class="note"><span class="dot"></span><span>Misafire özel not yok: standart kontrol</span></div>';
+    if(!arrv)h+='<div class="row2">'+(insD?'<span class="bd dn">Inspection yapıldı</span>':'<button class="mini pri" data-act="touch" data-g="'+esc(x.id)+'" data-a="Room Inspection" type="button">Inspection &#10003;</button>')+'</div>';
     h+='</div>';
   }
   if(x.ask.length){
