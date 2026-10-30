@@ -12156,11 +12156,14 @@ function downloadDidIt(){
     '.toolbar{position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#af8d69,#8a6e47);color:#fff;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:100}' +
     '.toolbar button{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:#fff;color:#8a6e47}' +
     '.toolbar .xl{background:#8C7D6A;color:#fff}' +
-    '@media print{.toolbar{display:none!important}.page{min-height:auto;padding:0;padding-bottom:22mm}.footer{position:fixed;bottom:8mm;left:0;right:0;margin:0;padding:0;border:none}}' +
+    // Logo baskida her sayfanin dibinde sabit durur. Altina yazi kaymasin diye tum sayfa bir "kabuk" tabloya sarili:
+    // tfoot'taki bos satir her sayfanin sonunda tekrar eder ve logonun yerini ayirir (2026-10-30).
+    'table.wrap{margin:0;border-collapse:collapse}table.wrap>tbody>tr>td.wc,table.wrap>tfoot>tr>td.wc{padding:0;border:0;background:none}.fspace{height:0}' +
+    '@media print{.toolbar{display:none!important}.page{min-height:auto;padding:0}.fspace{height:28mm}.wc tr{break-inside:avoid}.footer{position:fixed;bottom:0;left:0;right:0;margin:0;padding:0;border:none}.footer img{width:34mm}}' +
     '@media screen{body{background:#e5e7eb;padding:60px 10px 20px}}';
   var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>The Butler Did It - '+dateStr+'</title><style>'+css+'</style></head><body>';
   h+='<div class="toolbar"><button onclick="window.print()">PDF Olarak Kaydet</button><span style="font-size:13px;opacity:.8">The Butler Did It. — '+dateStr+'</span></div>';
-  h+='<div class="page">';
+  h+='<div class="page"><table class="wrap"><tbody><tr><td class="wc">';
   h+='<div class="header"><h1>The <b>Butler</b> Did It.</h1><div class="date">Raffles Istanbul &mdash; '+dateStr+'</div></div>';
   // Summary
   var ds=document.getElementById("bdiDate").value;
@@ -12193,6 +12196,7 @@ function downloadDidIt(){
     h+='<td>'+esc(l.butler)+'</td><td style="font-weight:700;text-align:center">'+esc(l.room)+'</td><td style="font-size:8.5pt;color:#8a6e47">'+esc(l.guest||"")+'</td><td><span class="badge">'+esc(l.action)+'</span></td><td>'+esc(l.sentence)+(l.note?' <i style="color:#999">'+esc(l.note)+'</i>':'')+'</td></tr>';
   }
   h+='</tbody></table>';
+  h+='</td></tr></tbody><tfoot><tr><td class="wc"><div class="fspace"></div></td></tr></tfoot></table>';
   h+='<div class="footer"><img src="'+RLOGO+'" alt="Raffles Istanbul"></div>';
   h+='</div>';
   h+='</body></html>';
