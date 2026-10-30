@@ -6807,7 +6807,7 @@ function bdiPfGuess(text){
   return hit;
 }
 async function bdiPrefFormLoad(pdf,file){
-  var r=await bdiPfParse(pdf),g=bdiPfGuess(r.text),a=bdiPfAll(),id="pf_"+bdiProtelHash(file.name+"|"+r.items.map(function(i){return i.label}).join("|")).replace(/\./g,"_");
+  var r=await bdiPfParse(pdf),g=bdiPfGuess(r.text+" "+String(file.name||"").replace(/\.pdf$/i,"").replace(/[_\-.]+/g," ")),a=bdiPfAll(),id="pf_"+bdiProtelHash(file.name+"|"+r.items.map(function(i){return i.label}).join("|")).replace(/\./g,"_"); // formda ad alani yok: dosya adindaki ad da denenir (ör. Kalay_Kadir_Tercih.pdf)
   a=a.filter(function(x){return x.id!==id});
   a.push({id:id,file:file.name,at:Date.now(),items:r.items,lang:r.lang,unknown:r.unknown,gid:g?g.gid:"",name:g?g.name:"",room:g?g.room:""});
   bdiPfSave(a);swRepLog("pref",file.name,r.items.length,r.items.length+" tercih"+(g?" · "+g.name:""));
