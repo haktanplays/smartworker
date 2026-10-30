@@ -8465,25 +8465,64 @@ function renderBdiCoverage(){
 }
 
 // ===== STORAGE DASHBOARD =====
+// localStorage tum uygulamalarin (file://) ORTAK kutusudur. Edge/Chrome ~5 milyon karakter tutar; panel
+// karakter*2 ile olctugu icin limit 10240 KB. (Eski 5120 degeri dolulugu iki kat gosteriyordu - 2026-10-30.)
+var SW_LS_LIMIT_KB=10240;
+var SW_LS_NAMES={guest_history:"Misafir geçmişi (repeat tespiti)",py_history:"Previous Year listesi",acc_fixes:"İsim düzeltmeleri",
+  settings_sync_shadow:"Ayar senkron kopyası",mail_history:"Mail geçmişi",cc_contacts:"Rehber",email_images:"İmza/banner görselleri",
+  email_pdfs:"Mail PDF ekleri",email_tpl_overrides:"Düzenlenmiş mail şablonları",skip_notes:"Mail atlama notları",it_drafts:"Itinerary taslakları",
+  it_tents:"Tent kartları",it_templates:"Itinerary şablonları",sw_expense_v3_data:"Expense kayıtları",subcatTemplates:"Not şablonları",
+  note_learned_rules:"Not öğrenilmiş kurallar",radarVerification:"Radar doğrulamaları",ir_watchlist:"Radar izleme listesi"};
+function swLsOwner(k){
+  if(/^bdi_/.test(k))return "BDI (ayarlar)";
+  if(/^(sw_expense_|exp_)/.test(k))return "Expense";
+  if(/^(mb_|ld_|sw_last_import_)|^sw_closed_periods$|_rebate_reasons_/.test(k))return "Minibar & Laundry";
+  if(/^(it_|tent_)/.test(k))return "Itinerary";
+  if(/^(email_|km_)|^(mail_history|skip_notes|skip_reasons|cc_contacts|op_templates|op_foods|sender_address|pd_from_address|pa_from_address|banner_link)$/.test(k))return "Komünikasyon";
+  if(/^(subcatTemplates|webNotesSettings|preArrPatterns|note_learned_rules)$/.test(k))return "Note Standardizer";
+  if(/^mektupKalemi\./.test(k))return "Mektup Kalemi";
+  return "SmartWorker";
+}
+// Gunluk/aylik tekrarlanan anahtarlari tek satirda topla
+function swLsFamily(k){
+  if(/^printed_letters_/.test(k))return ["printed_letters_*","Basılan mektup işaretleri"];
+  if(/^alert_\d{4}-\d{2}-\d{2}$/.test(k))return ["alert_day_*","Radar günlük alarmları"];
+  if(/^alert_archive_/.test(k))return ["alert_archive_*","Radar aylık arşivi"];
+  if(/^mb_\d{4}_\d{2}$/.test(k))return ["mb_month_*","Minibar aylık kayıtları"];
+  if(/^ld_\d{4}_\d{2}$/.test(k))return ["ld_month_*","Laundry aylık kayıtları"];
+  return [k,SW_LS_NAMES[k]||k];
+}
 function getStorageUsage(){
-  var total=0;var items=[];
+  var total=0,items=[],groups={},fam={};
   for(var i=0;i<localStorage.length;i++){
     var key=localStorage.key(i);
-    var size=(localStorage.getItem(key).length*2)/1024; // KB
+    var size=((localStorage.getItem(key)||"").length+key.length)*2/1024; // KB
     items.push({key:key,kb:Math.round(size*10)/10});
     total+=size;
+    var app=swLsOwner(key);groups[app]=(groups[app]||0)+size;
+    var f=swLsFamily(key);
+    if(!fam[f[0]])fam[f[0]]={name:f[1],app:app,kb:0,n:0};
+    fam[f[0]].kb+=size;fam[f[0]].n++;
   }
   items.sort(function(a,b){return b.kb-a.kb});
-  // Group by prefix
-  var groups={"bdi_":0,"mb_":0,"exp_":0,"sw_expense_":0,"kw_":0,"ir_":0};
-  var other=0;
-  for(var i=0;i<items.length;i++){
-    var matched=false;
-    for(var p in groups){if(items[i].key.startsWith(p)){groups[p]+=items[i].kb;matched=true;break}}
-    if(!matched)other+=items[i].kb;
+  var top=Object.keys(fam).map(function(k){return fam[k]}).sort(function(a,b){return b.kb-a.kb});
+  return {totalKB:Math.round(total),limitKB:SW_LS_LIMIT_KB,items:items,groups:groups,top:top};
+}
+
+// Gunde bir kez: hic silinmeyen gunluk anahtarlari topla (2026-10-30)
+// - printed_letters_GG: 60 gunden eski mektup "basildi" isaretleri silinir
+// - alert_GG: 3 aydan eski radar gunleri aylik arsive sikistirilir (Radar sekmesindeki "Arsivle" ile ayni)
+function swLsHousekeeping(){
+  var today=new Date().toISOString().split("T")[0];
+  try{if(localStorage.getItem("sw_ls_hk")===today)return}catch(e){return}
+  var cut=new Date(Date.now()-60*864e5).toISOString().split("T")[0],del=[];
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i),m=/^printed_letters_(\d{4}-\d{2}-\d{2})$/.exec(k||"");
+    if(m&&m[1]<cut)del.push(k);
   }
-  groups["diger"]=other;
-  return {totalKB:Math.round(total),limitKB:5120,items:items,groups:groups};
+  del.forEach(function(k){try{localStorage.removeItem(k)}catch(e){}});
+  try{autoArchiveAlerts(true)}catch(e){console.warn("Radar arsivleme:",e)}
+  try{localStorage.setItem("sw_ls_hk",today)}catch(e){}
 }
 
 function renderStorageDashboard(){
@@ -8492,25 +8531,35 @@ function renderStorageDashboard(){
   var clr=pct>=90?"#dc2626":pct>=70?"#eab308":"#059669";
   var h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
   h+='<div style="flex:1;background:#f3f4f6;border-radius:4px;height:18px"><div style="height:100%;border-radius:4px;background:'+clr+';width:'+pct+'%;transition:width .3s"></div></div>';
-  h+='<span style="font-size:13px;font-weight:800;color:'+clr+';min-width:80px">'+u.totalKB+' KB / '+u.limitKB+' KB</span><span style="font-size:10px;color:#6b7280">localStorage (tüm uygulamalar ortak)</span>';
+  h+='<span style="font-size:13px;font-weight:800;color:'+clr+';min-width:80px">'+(u.totalKB/1024).toFixed(1)+' MB / '+Math.round(u.limitKB/1024)+' MB</span><span style="font-size:10px;color:#6b7280">localStorage (tüm uygulamalar ortak)</span>';
   h+='</div>';
-  if(pct>=90)h+='<div style="padding:6px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:11px;color:#991b1b;margin-bottom:8px">&#9888; Depolama neredeyse dolu! Yedekleme yapin ve eski verileri arsivleyin.</div>';
-  else if(pct>=70)h+='<div style="padding:6px 10px;background:#fefce8;border:1px solid #fde68a;border-radius:6px;font-size:11px;color:#92400e;margin-bottom:8px">&#9888; Depolama %'+pct+' dolu. Yedekleme yapmaniz onerilir.</div>';
-  // Breakdown
-  var labels={"bdi_":"BDI Kayitlari","mb_":"Minibar","exp_":"Expense (eski)","sw_expense_":"Expense","kw_":"Anahtar Kelimeler","ir_":"Radar Ayarlari","diger":"Diger"};
+  if(pct>=90)h+='<div style="padding:6px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:11px;color:#991b1b;margin-bottom:8px">&#9888; Ortak kutu neredeyse dolu. Aşağıdaki listede en çok yer tutan kayıt görünüyor.</div>';
+  else if(pct>=70)h+='<div style="padding:6px 10px;background:#fefce8;border:1px solid #fde68a;border-radius:6px;font-size:11px;color:#92400e;margin-bottom:8px">&#9888; Ortak kutu %'+pct+' dolu. Aşağıdaki listede en çok yer tutan kayıt görünüyor.</div>';
+  // Uygulamalara gore dagilim
+  var apps=Object.keys(u.groups).sort(function(a,b){return u.groups[b]-u.groups[a]});
   h+='<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px">';
-  for(var p in u.groups){
-    if(u.groups[p]<0.1)continue;
-    h+='<span style="padding:3px 10px;background:#f3f4f6;border-radius:6px">'+labels[p]+': <b>'+Math.round(u.groups[p])+' KB</b></span>';
+  for(var i=0;i<apps.length;i++){
+    if(u.groups[apps[i]]<0.1)continue;
+    h+='<span style="padding:3px 10px;background:#f3f4f6;border-radius:6px">'+esc(apps[i])+': <b>'+(u.groups[apps[i]]<1?'&lt;1':Math.round(u.groups[apps[i]]))+' KB</b></span>';
   }
   h+='</div>';
+  // En cok yer tutan kayitlar
+  var top=u.top.filter(function(t){return t.kb>=20}).slice(0,8);
+  if(top.length){
+    h+='<div style="margin-top:8px;font-size:11px;color:#374151"><div style="font-weight:700;margin-bottom:3px">En çok yer tutanlar</div>';
+    for(var j=0;j<top.length;j++){
+      var t=top[j];
+      h+='<div style="display:flex;gap:8px;padding:2px 0;border-bottom:1px dashed #e5e7eb"><span style="flex:1">'+esc(t.name)+(t.n>1?' <span style="color:#9ca3af">· '+t.n+' kayıt</span>':'')+'</span><span style="color:#6b7280">'+esc(t.app)+'</span><b style="min-width:64px;text-align:right">'+(t.kb>=1024?(t.kb/1024).toFixed(1)+' MB':Math.round(t.kb)+' KB')+'</b></div>';
+    }
+    h+='</div>';
+  }
   document.getElementById("storageDashboard").innerHTML=h;
   // BDI kayitlari 2026-10-29'dan beri IndexedDB'de: localStorage cubugu onlari icermez
   if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(function(est){
     var el=document.getElementById("storageDashboard");if(!el)return;
     var kb=0;BdiKV.keys().forEach(function(k){if(BdiKV.isData(k)){var v=BdiKV.get(k);kb+=v?v.length*2/1024:0}});
     var mb=(est.usage||0)/1048576,q=(est.quota||0)/1048576;
-    el.insertAdjacentHTML("beforeend",'<div style="margin-top:8px;font-size:11px;color:#374151">IndexedDB: <b>'+mb.toFixed(1)+' MB</b>'+(q?' / '+Math.round(q)+' MB':'')+' · BDI kayıtları '+Math.round(kb)+' KB'+(BdiKV.mode()==="idb"?'':' · <span style="color:#b45309">IndexedDB açılamadı, localStorage kullanılıyor</span>')+(BdiKV.info.migrated?' · '+BdiKV.info.migrated+' anahtar localStorage\'dan taşındı':'')+'</div>');
+    el.insertAdjacentHTML("beforeend",'<div style="margin-top:8px;font-size:11px;color:#374151">IndexedDB (ayrı ve çok daha büyük kutu, üstteki çubuğa dahil değil): <b>'+mb.toFixed(1)+' MB</b>'+(q?' / '+Math.round(q)+' MB':'')+' · BDI kayıtları '+Math.round(kb)+' KB · PY fotoğrafları, mail PDF/görselleri, Itinerary fotoğrafları da burada'+(BdiKV.mode()==="idb"?'':' · <span style="color:#b45309">IndexedDB açılamadı, localStorage kullanılıyor</span>')+(BdiKV.info.migrated?' · '+BdiKV.info.migrated+' anahtar localStorage\'dan taşındı':'')+'</div>');
   }).catch(function(){});
 }
 
@@ -15384,7 +15433,7 @@ function importAlertBackup(files){
 }
 
 // ===== ALERT ARCHIVE =====
-function autoArchiveAlerts(){
+function autoArchiveAlerts(silent){
   var now=new Date();
   var cutoff=new Date(now.getFullYear(),now.getMonth()-3,1).toISOString().split("T")[0];
   var prefix="alert_";
@@ -15397,8 +15446,17 @@ function autoArchiveAlerts(){
     var ym=dp.substring(0,4)+dp.substring(5,7);
     try{var items=JSON.parse(localStorage.getItem(key));
       if(!Array.isArray(items))continue;
-      if(!months[ym])months[ym]={total:0,visited:0,notVisited:0,pending:0,reasons:{},notVisitedReasons:{}};
+      if(!months[ym]){
+        // ayni ayin arsivi zaten varsa uzerine yazma, ustune ekle
+        var prev=null;try{prev=JSON.parse(localStorage.getItem("alert_archive_"+ym)||"null")}catch(e){}
+        months[ym]=prev&&typeof prev==="object"?prev:{total:0,visited:0,notVisited:0,pending:0,reasons:{},notVisitedReasons:{}};
+        if(!months[ym].reasons)months[ym].reasons={};if(!months[ym].notVisitedReasons)months[ym].notVisitedReasons={};
+        if(!months[ym].days)months[ym].days={};
+      }
       var m=months[ym];
+      // yedekten geri gelen, zaten arsivlenmis gun iki kez sayilmasin
+      if(m.days[dp]){keysToDelete.push(key);continue}
+      m.days[dp]=1;
       for(var j=0;j<items.length;j++){
         m.total++;
         if(items[j].visited===true)m.visited++;
@@ -15409,9 +15467,10 @@ function autoArchiveAlerts(){
       keysToDelete.push(key);
     }catch(e){}
   }
-  if(!keysToDelete.length){alert("Arsivlenecek eski veri yok.");return}
+  if(!keysToDelete.length){if(!silent)alert("Arsivlenecek eski veri yok.");return}
   for(var ym in months)localStorage.setItem("alert_archive_"+ym,JSON.stringify(months[ym]));
   for(var i=0;i<keysToDelete.length;i++)localStorage.removeItem(keysToDelete[i]);
+  if(silent)return keysToDelete.length;
   alert(Object.keys(months).length+" ay arsivlendi, "+keysToDelete.length+" gunluk kayit sikistirildi.");
   renderAlertStorageDash();
 }
@@ -15424,7 +15483,7 @@ function renderAlertStorageDash(){
     total+=size;
     if(key.startsWith("alert_"))alertTotal+=size;
   }
-  var pct=Math.min(100,Math.round(total/5120*100));
+  var pct=Math.min(100,Math.round(total/SW_LS_LIMIT_KB*100));
   var el=document.getElementById("alertStorageDash");
   if(!el)return;
   el.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:11px"><span>Alert: <b>'+Math.round(alertTotal)+' KB</b></span><span style="color:#9ca3af">|</span><span>Toplam: <b>'+Math.round(total)+' KB</b> / 5 MB ('+pct+'%)</span></div>';
@@ -15738,6 +15797,7 @@ window.swSetupSnooze = swSetupSnooze;
 window.swBackupNow = swBackupNow;
 window.swRestoreFile = swRestoreFile;
 swSetupBoot();
+setTimeout(swLsHousekeeping,4000);
 window.removeKW = removeKW;
 window.removePmRoom = removePmRoom;
 window.removeRadarKW = removeRadarKW;

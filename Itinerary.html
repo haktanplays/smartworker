@@ -1192,16 +1192,18 @@ function handleItPhoto(inp){
   var f=inp.files[0];if(!f)return;
   var r=new FileReader();
   r.onload=function(e){
-    itPhoto=e.target.result;
-    document.getElementById("itPhotoPreview").src=itPhoto;
-    document.getElementById("itPhotoPreview").style.display="inline";
-    document.getElementById("itPhotoRm").style.display="inline";
-    markDirty();
+    itShrinkPhoto(e.target.result,function(du){
+      itPhoto=du;itPhotoPendingId=null;
+      document.getElementById("itPhotoPreview").src=itPhoto;
+      document.getElementById("itPhotoPreview").style.display="inline";
+      document.getElementById("itPhotoRm").style.display="inline";
+      markDirty();
+    });
   };
   r.readAsDataURL(f);
 }
 function removeItPhoto(){
-  itPhoto=null;
+  itPhoto=null;itPhotoPendingId=null;
   document.getElementById("itPhotoPreview").style.display="none";
   document.getElementById("itPhotoRm").style.display="none";
   document.getElementById("itPhotoInput").value="";
@@ -1457,12 +1459,97 @@ function exportItPPTX(){
 // ================================================================
 // DRAFT (Itinerary) MANAGEMENT
 // ================================================================
-function getDrafts(){
+// ===== TASLAK FOTOGRAFLARI: IndexedDB (2026-10-30) =====
+// Eskiden fotograf taslagin icinde localStorage'a yaziliyordu (tek telefon fotografi birkac MB; kutu tum
+// uygulamalarla ortak). Artik IndexedDB'de (SmartWorkerIT/photos, anahtar = taslak id); localStorage'daki
+// taslakta sadece photoRef:1 kalir. getDrafts() fotografi bellekten geri takar: export/onizleme/PPTX ayni.
+// Guvenlik: fotograf once eskisi gibi taslakla yazilir, IndexedDB kaydi onaylaninca taslaktan cikarilir.
+var itPhotoStore={},itPhotoDbP=null,itPhotoDbOk=null,itPhotoWait=[],itPhotoPendingId=null;
+function itPhotoDb(){
+  if(itPhotoDbP)return itPhotoDbP;
+  itPhotoDbP=new Promise(function(res,rej){
+    if(!window.indexedDB){rej(new Error("IndexedDB yok"));return}
+    var r=indexedDB.open("SmartWorkerIT",1);
+    r.onupgradeneeded=function(){if(!r.result.objectStoreNames.contains("photos"))r.result.createObjectStore("photos",{keyPath:"key"})};
+    r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)};
+  });
+  return itPhotoDbP;
+}
+function itPhotoTx(mode,fn){
+  return itPhotoDb().then(function(db){return new Promise(function(res,rej){
+    var tx=db.transaction("photos",mode),rq=fn(tx.objectStore("photos"));
+    tx.oncomplete=function(){res(rq&&rq.result)};tx.onerror=tx.onabort=function(){rej(tx.error||new Error("IndexedDB hatasi"))};
+  })});
+}
+function itPhotoWhenReady(fn){if(itPhotoDbOk!==null)fn();else itPhotoWait.push(fn)}
+function readDraftsRaw(){
   try{return JSON.parse(localStorage.getItem(LS_DRAFTS)||"{}")}
   catch(e){return {}}
 }
+// IndexedDB'de onayli olan fotograflari taslaktan cikarir (kopya uzerinde; asil nesneye dokunmaz)
+function itStripDrafts(d){
+  var out={};
+  for(var k in d){
+    var x=d[k];
+    if(x&&x.data&&x.data.photo&&itPhotoStore[k]===x.data.photo){
+      var c={};for(var p in x)c[p]=x[p];
+      var cd={};for(var q in x.data)cd[q]=x.data[q];
+      cd.photo=null;cd.photoRef=1;c.data=cd;out[k]=c;
+    }else out[k]=x;
+  }
+  return out;
+}
+function getDrafts(){
+  var d=readDraftsRaw();
+  for(var k in d){var x=d[k]&&d[k].data;if(x&&!x.photo&&x.photoRef&&itPhotoStore[k])x.photo=itPhotoStore[k]}
+  return d;
+}
 function saveDraftsData(d){
-  localStorage.setItem(LS_DRAFTS, JSON.stringify(d));
+  var pend={},n=0,lsFailed=false,k;
+  if(itPhotoDbOk!==false)for(k in d){var x=d[k]&&d[k].data;if(x&&x.photo&&itPhotoStore[k]!==x.photo){pend[k]=x.photo;n++}}
+  try{localStorage.setItem(LS_DRAFTS,JSON.stringify(itStripDrafts(d)))}
+  catch(e){if(!n)throw e;lsFailed=true}
+  // Silinen taslagin / kaldirilan fotografin IndexedDB kopyasini da sil
+  if(itPhotoDbOk)for(k in itPhotoStore){
+    var y=d[k]&&d[k].data;
+    if(!y||(!y.photo&&!y.photoRef)){delete itPhotoStore[k];(function(id){itPhotoTx("readwrite",function(st){return st.delete(id)}).catch(function(){})})(k)}
+  }
+  if(!n)return;
+  itPhotoTx("readwrite",function(st){for(var id in pend)st.put({key:id,data:pend[id],updatedAt:new Date().toISOString()})}).then(function(){
+    for(var id in pend)itPhotoStore[id]=pend[id];
+    var cur=lsFailed?d:readDraftsRaw();
+    try{localStorage.setItem(LS_DRAFTS,JSON.stringify(itStripDrafts(cur)))}catch(e){}
+  }).catch(function(err){
+    console.warn("Taslak fotografi IndexedDB'ye yazilamadi:",err);
+    if(lsFailed)alert("Taslak kaydedilemedi: tarayici depolamasi dolu. Fotografi kaldirip tekrar deneyin.");
+  });
+}
+// Acilista: IndexedDB'deki fotograflari bellege al, localStorage'da kalmis eski fotograflari tasi
+itPhotoTx("readonly",function(st){return st.getAll()}).then(function(rows){
+  (rows||[]).forEach(function(r){if(r&&r.key&&r.data)itPhotoStore[r.key]=r.data});
+  itPhotoDbOk=true;
+  var raw=readDraftsRaw(),old=false;
+  for(var k in raw){var x=raw[k]&&raw[k].data;if(x&&x.photo){old=true;break}}
+  if(old)saveDraftsData(getDrafts());
+}).catch(function(err){console.warn("Itinerary IndexedDB kullanilamadi, fotograflar taslakta kalacak:",err);itPhotoDbOk=false})
+.then(function(){var w=itPhotoWait;itPhotoWait=[];w.forEach(function(f){try{f()}catch(e){}})});
+
+// Yuklenen fotografi kucult (baski icin 1000px yeter; telefon fotografi 3-5 MB yerine ~150 KB)
+function itShrinkPhoto(dataUrl,cb){
+  var img=new Image();
+  img.onload=function(){
+    try{
+      var w=img.naturalWidth,h=img.naturalHeight,m=1000;
+      if(!w||!h){cb(dataUrl);return}
+      if(w>m||h>m){var r=Math.min(m/w,m/h);w=Math.round(w*r);h=Math.round(h*r)}
+      var c=document.createElement("canvas");c.width=w;c.height=h;
+      var ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+      var out=c.toDataURL("image/jpeg",0.85);
+      cb(out.length<dataUrl.length?out:dataUrl);
+    }catch(e){cb(dataUrl)}
+  };
+  img.onerror=function(){cb(dataUrl)};
+  img.src=dataUrl;
 }
 
 function saveDraft(){
@@ -1478,7 +1565,9 @@ function saveDraft(){
       gn: d.gn, gt: d.gt, sd: d.sd, gb: d.gb,
       rooms: JSON.parse(JSON.stringify(itRooms)),
       days: JSON.parse(JSON.stringify(itDays)),
-      photo: itPhoto
+      photo: itPhoto,
+      // fotograf IndexedDB'den henuz gelmediyse (acilisin ilk anlari) referansi kaybetme
+      photoRef: (!itPhoto && itPhotoPendingId===id) ? 1 : undefined
     }
   };
   saveDraftsData(drafts);
@@ -1507,6 +1596,19 @@ function loadDraft(id){
   itRooms = d.data.rooms && d.data.rooms.length ? d.data.rooms : [{number:"",guests:"",isPrimary:true}];
   itDays = d.data.days && d.data.days.length ? d.data.days : [{date:"",label:"",sections:[{title:"",note:"",items:[{time:"",text:""}]}]}];
   itPhoto = d.data.photo || null;
+  itPhotoPendingId = (!itPhoto && d.data.photoRef) ? id : null;
+  if(itPhotoPendingId){
+    // IndexedDB henuz okunmadiysa fotograf hazir olunca gelsin
+    itPhotoWhenReady(function(){
+      if(currentDraftId!==id||itPhotoPendingId!==id)return;
+      itPhotoPendingId=null;
+      var ph=itPhotoStore[id];if(!ph||itPhoto)return;
+      itPhoto=ph;
+      document.getElementById("itPhotoPreview").src=itPhoto;
+      document.getElementById("itPhotoPreview").style.display="inline";
+      document.getElementById("itPhotoRm").style.display="inline";
+    });
+  }
   if(itPhoto){
     document.getElementById("itPhotoPreview").src = itPhoto;
     document.getElementById("itPhotoPreview").style.display = "inline";
@@ -1532,6 +1634,7 @@ function newDraft(){
   itRooms = [{number:"",guests:"",isPrimary:true}];
   itDays = [{date:"",label:"",sections:[{title:"",note:"",items:[{time:"",text:""}]}]}];
   itPhoto = null;
+  itPhotoPendingId = null;
   document.getElementById("itPhotoPreview").style.display = "none";
   document.getElementById("itPhotoRm").style.display = "none";
   document.getElementById("itPhotoInput").value = "";
