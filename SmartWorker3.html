@@ -9919,6 +9919,27 @@ function bdiIssueUnpark(is){
 }
 // Acilista ve senkrondan sonra: silinmis olayin kaydi bir yerde kaldiysa (eski surumde mezar tasi yazilmadan silinip
 // senkronla geri gelen) temizlenir; silinmis issue'nun kayitlari kenara alinir, geri getirilmisinkiler yerine doner.
+// Yetim kayit: Butler Did It kaydi bir issue'ya bagli ama issue gecmisinde karsiligi yok. Eski surumde silinen issue
+// dosyadan yeniden geldiginde gecmisi bos geliyordu; kayitlari raporda kaliyor ama kartta "sil" ile silinemiyordu.
+// Bu kayitlar gecmise geri eklenir (u:-1: diger bilgisayardaki gercek olay her zaman kazanir; kapanis kaydi durumu degistirmez).
+function bdiIssueAdoptOrphans(list){
+  var byId={},known={},tombs={},n=0;
+  list.forEach(function(is){if(is&&is.id&&!is.del){byId[is.id]=is;(is.events||[]).forEach(function(e){if(!e)return;if(e.id)known[e.id]=1;if(e.touchId)known["t:"+e.touchId]=1})}});
+  bdiGetTombs().forEach(function(t){tombs[t]=1});
+  var from=bdiYmd(new Date(Date.now()-120*864e5));
+  _bdiLocalDateKeys().filter(function(d){return d>=from}).forEach(function(d){
+    var arr;try{arr=JSON.parse(BdiKV.get("bdi_"+d)||"[]")}catch(e){return}
+    (Array.isArray(arr)?arr:[]).forEach(function(l){
+      if(!l||!l.id||!l.meta||!l.meta.issueId||tombs[l.id])return;
+      var is=byId[l.meta.issueId],eid=l.meta.issueEventId;if(!is)return;
+      if(eid?known[eid]:known["t:"+l.id])return;
+      var ts=l.ts||new Date(d+"T"+(/^\d\d:\d\d$/.test(l.time||"")?l.time:"12:00")+":00").getTime();
+      var ev={id:eid||bdiEvId(),ts:ts,type:l.action==="Issue Closed"?"confirm":"touch",butler:l.butler||"",text:l.source==="Issues"?(l.note||""):((l.meta.butlerAction)||l.note||""),touchId:l.id,logDate:d,src:"manual",u:-1,adopted:1};
+      is.events=is.events||[];is.events.push(ev);known[ev.id]=1;known["t:"+l.id]=1;n++;
+    });
+  });
+  return n;
+}
 function bdiIssueSweep(){
   var list=bdiGetIssuesAll(),ch=false,n=0,old=Date.now()-120*864e5;
   list.forEach(function(is){
@@ -9929,6 +9950,7 @@ function bdiIssueSweep(){
     (is.events||[]).forEach(function(ev){if(!ev||!ev.del||(ev.del||0)<old)return;
       bdiIssueEvLogs(is,ev,function(arr){var keep=arr.filter(function(l){if(bdiIssueEvLinked(l,ev)){bdiAddTomb(l.id);n++;return false}return true});return keep.length!==arr.length?keep:null})});
   });
+  if(bdiIssueAdoptOrphans(list))ch=true;
   if(ch){BdiKV.set(BDI_ISSUES_KEY,JSON.stringify(list));if(typeof schedulePyAutoSync==="function")schedulePyAutoSync()}
   if(ch||n){try{renderBdiIssues();bdiIssueBadge();bdiRefreshDerived()}catch(e){}}
   return n;
@@ -10049,7 +10071,7 @@ function renderBdiIssues(){
         var edt=e.butler&&/^(touch|close|confirm)$/.test(e.type),rmv=e.type!=="import";
         h+='<li style="--c:'+(BDI_EV_COLOR[e.type]||"#9fb0aa")+'"><time>'+esc(bdiFmtTs(e.ts))+'</time><b>'+esc(BDI_EV_LABEL[e.type]||e.type)+'</b>'+
           (edt?' &middot; <select class="bd-tl-sel" title="Yanlış butler seçildiyse düzelt" onchange="bdiIssueEvEdit(\''+is.id+'\',\''+e.id+'\',this.value)">'+bdiButlerOptions(e.butler,"Butler")+'</select>':(e.butler?' &middot; '+esc(e.butler):''))+
-          (e.by?' &middot; '+esc(e.by):'')+(e.src==="report"?' <span class="bd-sub">(rapor)</span>':'')+(e.prev?' <span class="bd-sub">(düzeltildi, önce: '+esc(e.prev)+')</span>':'')+
+          (e.by?' &middot; '+esc(e.by):'')+(e.src==="report"?' <span class="bd-sub">(rapor)</span>':'')+(e.adopted?' <span class="bd-sub" title="Bu kayıt Butler Did It\'te vardı ama issue geçmişinde yoktu (eski sürümde silinip geri gelen issue). Yanlışsa sil.">(Butler Did It kaydından)</span>':'')+(e.prev?' <span class="bd-sub">(düzeltildi, önce: '+esc(e.prev)+')</span>':'')+
           (edt?' <button type="button" class="bd-tl-note" title="Butler ne yaptı? (Butler Did It\'te görünür)" onclick="bdiIssueEvText(\''+is.id+'\',\''+e.id+'\')">'+(e.text?'notu düzelt':'+ ne yapıldı')+'</button>':'')+
           (rmv?' <button type="button" class="bd-tl-x" title="Yanlış girilen bu kaydı sil (Butler Did It\'teki karşılığı da silinir)" onclick="bdiIssueEvDelete(\''+is.id+'\',\''+e.id+'\')">sil</button>':'')+
           (e.text?'<div class="bd-tl-text">'+esc(e.text)+'</div>':'')+'</li>';
@@ -13260,10 +13282,11 @@ function bdiReportIssueHtml(groups,hasDate,endTs){
   var fD=function(d){d=String(d||"");return d.slice(8,10)+"."+d.slice(5,7)};
   var h='<div class="isec"><div class="isec-h"><h2>Guest Issues</h2><div class="isec-sum">'+groups.length+' issue'+(groups.length>1?'s':'')+' · '+nAct+' butler action'+(nAct>1?'s':'')+(nOk?' · <b class="ok">'+nOk+' resolved</b>':'')+(nOpen?' · <b class="op">'+nOpen+' still open</b>':'')+'</div></div>';
   groups.forEach(function(g){
-    var meta=[];if(g.dept)meta.push(g.dept);if(g.cat)meta.push(g.cat);
-    if(g.createdAt)meta.push("Reported "+bdiFmtShort(g.createdAt));
-    if(g.status==="closed"&&g.closedAt){meta.push("Resolved "+bdiFmtShort(g.closedAt)+(g.createdAt&&g.closedAt>g.createdAt?" · in "+bdiDurTxt(g.closedAt-g.createdAt):""))}
-    else if(g.status==="open"&&g.createdAt)meta.push("Open for "+bdiDurTxt(Math.min(endTs,Date.now())-g.createdAt));
+    var meta=[],dD=function(ts){return fD(bdiYmd(new Date(ts)))},nD=function(a,b){return Math.round((new Date(bdiYmd(new Date(b))+"T12:00:00")-new Date(bdiYmd(new Date(a))+"T12:00:00"))/864e5)},dy=function(n){return n+" day"+(n>1?"s":"")};
+    if(g.dept)meta.push(g.dept);if(g.cat)meta.push(g.cat);
+    if(g.createdAt)meta.push("Reported "+dD(g.createdAt));
+    if(g.status==="closed"&&g.closedAt){var rd=g.createdAt?nD(g.createdAt,g.closedAt):0;meta.push("Resolved "+(rd>0?dD(g.closedAt)+" · in "+dy(rd):"same day"))}
+    else if(g.status==="open"&&g.createdAt){var od=nD(g.createdAt,Math.min(endTs,Date.now()));if(od>0)meta.push("Open "+dy(od))}
     var pills=g.status==="closed"?'<span class="ip ip-ok">Resolved</span>':g.status==="open"?'<span class="ip ip-op">Open</span>':'<span class="ip">'+esc(g.acts[0].lab)+'</span>';
     if(g.sat)pills+='<span class="ip '+(/not|dis|un/i.test(g.sat)?'ip-bad':'ip-sat')+'">'+esc(g.sat)+'</span>';
     h+='<div class="iss"><div class="iss-h"><div class="iss-room">'+esc(g.room||"—")+'</div><div class="iss-who"><b>'+esc(g.guest||"Guest")+'</b>'+(meta.length?'<span>'+esc(meta.join(" · "))+'</span>':'')+'</div><div class="iss-pills">'+pills+'</div></div>';
@@ -13271,7 +13294,7 @@ function bdiReportIssueHtml(groups,hasDate,endTs){
     g.updates.forEach(function(u){h+='<div class="iupd"><span>Update · '+esc(u.by||"")+'</span>'+esc(M(u.text))+'</div>'});
     h+='</div><div class="iss-a"><div class="ilbl">What the butler did</div>';
     g.acts.forEach(function(a){
-      h+='<div class="iact"><div class="it">'+(hasDate?fD(a.l._date)+'<br>':'')+esc(a.l.time||"")+'</div><div class="ib">'+esc(a.l.butler||"")+'<span>'+esc(a.lab)+'</span></div><div class="idet">'+
+      h+='<div class="iact">'+(hasDate?'<div class="it">'+fD(a.l._date)+'</div>':'')+'<div class="ib">'+esc(a.l.butler||"")+'<span>'+esc(a.lab)+'</span></div><div class="idet">'+
         (a.said?'<i class="imut">Guest: “'+esc(M(a.said))+'”</i> ':'')+(a.det?esc(M(a.det)):'<i class="imut">—</i>')+'</div></div>';
     });
     h+='</div></div>';
@@ -13387,11 +13410,11 @@ function downloadDidItXlsx(){
   var data=logs.slice().sort(bdiLogRoomSort).map(function(l){
     var row={};
     if(bdiViewMode!=="day"){var dd3=new Date((l._date||ds)+"T00:00:00");row.Date=("0"+dd3.getDate()).slice(-2)+"."+("0"+(dd3.getMonth()+1)).slice(-2)+"."+dd3.getFullYear()}
-    row.Time=l.time;row.Butler=l.butler;row.Room=l.room;row.Guest=l.guest||"";row.Action=l.action;row.Details=l.sentence;row.Note=l.note||"";
+    row.Butler=l.butler;row.Room=l.room;row.Guest=l.guest||"";row.Action=l.action;row.Details=l.sentence;row.Note=l.note||"";
     return row;
   });
   var ws=XLSX.utils.json_to_sheet(data);
-  var cols=bdiViewMode!=="day"?[{wch:10},{wch:6},{wch:12},{wch:6},{wch:22},{wch:20},{wch:60},{wch:30}]:[{wch:6},{wch:12},{wch:6},{wch:22},{wch:20},{wch:60},{wch:30}];
+  var cols=bdiViewMode!=="day"?[{wch:10},{wch:16},{wch:6},{wch:22},{wch:20},{wch:60},{wch:30}]:[{wch:16},{wch:6},{wch:22},{wch:20},{wch:60},{wch:30}];
   ws["!cols"]=cols;
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Butler Did It");
@@ -13399,11 +13422,11 @@ function downloadDidItXlsx(){
   bdiReportIssueGroups(logs.filter(bdiLogIsIssue),_endTs).forEach(function(g){g.acts.forEach(function(a){
     var dd=new Date((a.l._date||ds)+"T00:00:00");
     IR.push({Room:g.room||"",Guest:g.guest||"",Issue:M(g.text),"Updates (source)":g.updates.map(function(u){return u.by+": "+M(u.text)}).join(" | "),
-      Department:g.dept,Category:g.cat,Reported:g.createdAt?bdiFmtTs(g.createdAt):"",Status:g.status==="closed"?"Resolved":g.status==="open"?"Open":"",
-      Resolved:g.status==="closed"&&g.closedAt?bdiFmtTs(g.closedAt):"",Satisfaction:g.sat,
-      Date:("0"+dd.getDate()).slice(-2)+"."+("0"+(dd.getMonth()+1)).slice(-2)+"."+dd.getFullYear(),Time:a.l.time||"",Butler:a.l.butler||"",Action:a.lab,"What the butler did":M((a.said?"Guest: \u201c"+a.said+"\u201d ":"")+a.det)});
+      Department:g.dept,Category:g.cat,Reported:g.createdAt?bdiFmtD(bdiYmd(new Date(g.createdAt))):"",Status:g.status==="closed"?"Resolved":g.status==="open"?"Open":"",
+      Resolved:g.status==="closed"&&g.closedAt?bdiFmtD(bdiYmd(new Date(g.closedAt))):"",Satisfaction:g.sat,
+      Date:("0"+dd.getDate()).slice(-2)+"."+("0"+(dd.getMonth()+1)).slice(-2)+"."+dd.getFullYear(),Butler:a.l.butler||"",Action:a.lab,"What the butler did":M((a.said?"Guest: \u201c"+a.said+"\u201d ":"")+a.det)});
   })});
-  if(IR.length){var ws2=XLSX.utils.json_to_sheet(IR);ws2["!cols"]=[{wch:6},{wch:22},{wch:70},{wch:50},{wch:14},{wch:16},{wch:16},{wch:9},{wch:16},{wch:12},{wch:10},{wch:6},{wch:18},{wch:16},{wch:60}];XLSX.utils.book_append_sheet(wb,ws2,"Issues")}
+  if(IR.length){var ws2=XLSX.utils.json_to_sheet(IR);ws2["!cols"]=[{wch:6},{wch:22},{wch:70},{wch:50},{wch:14},{wch:16},{wch:11},{wch:9},{wch:11},{wch:12},{wch:10},{wch:18},{wch:16},{wch:60}];XLSX.utils.book_append_sheet(wb,ws2,"Issues")}
   XLSX.writeFile(wb,"ButlerDidIt_"+dateStr.replace(/[\.\s—\/]/g,"_").replace(/_+/g,"_")+".xlsx");
 }
 
