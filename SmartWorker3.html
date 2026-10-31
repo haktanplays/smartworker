@@ -980,6 +980,8 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-isedit-row input:first-child{width:80px;flex:none}
 #page-didit .bd-isedit-row input:nth-child(2){flex:1}
 #page-didit .bd-issue-del{opacity:.85}
+#page-didit .bd-isfix{font-size:12px;margin-top:4px;padding:4px 8px;border-radius:6px;background:var(--amber-t);color:var(--amber);display:inline-block}
+#page-didit .bd-isfix b{color:var(--ink)}
 #page-didit .bd-isimp{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin:2px 0 10px;color:var(--ink)}
 #page-didit .bd-away-dep{margin-top:10px;padding-top:8px;border-top:1px dashed #cfd9d5}
 #page-didit .bd-away-dephead{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
@@ -1921,6 +1923,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <span>&#128221; Butler Did It</span><span class="settings-arrow">&#9660;</span>
 </div>
 <div class="settings-body" style="display:none">
+<div class="settings-info" id="swAdminRow"></div>
 <div class="settings-info">Butler isimleri dropdown'larda kullanilir. Kategoriler ise islem etiketi + fiil olarak cumle icinde yer alir. Format: <b>islem|fiil</b> (orn: Sleep Ritual|performed).</div>
 
 <div class="section">
@@ -3382,6 +3385,7 @@ var SETTINGS_SYNC_KEYS=[
   "kw_equip","kw_amenity","kw_action","kw_deco","kw_butler","kw_bdiaction",   // chip/keyword listeleri + BDI action sablonlari + butler isimleri
   "bdi_chip_hidden",                                                          // hizli balon gizleme
   "bdi_staff_roles",                                                          // Alice personel grup/departman tablosu (2026-10-28)
+  "sw_admin_pin",                                                             // yonetici sifresi (ozet; 2026-11-01) - butun bilgisayarlarda ayni
   "pyTitleKW","pyAutoUpdateZip",                                              // PY title keywordleri + otomatik ZIP tercihi
   "ir_elimKW","ir_thresholds","ir_midRooms","ir_forbesBlocked","ir_lqaBlocked","ir_companyIgnore","ir_lqaInspectors", // Inspector Radar listeleri
   "alertReasons","alert_kw_ota","alert_kw_transfer","alert_kw_transferEx","alert_target" // Butler Alert ayarlari
@@ -6535,6 +6539,15 @@ async function bdiDepLoad(pdf,file){
 // Isim yakinligi: ayni anahtar, ya da kisa olanin tum kelimeleri uzun olanda (Alhaddi,Mohammed ~ Mohammed Mubarak Alhaddi),
 // ya da 1-2 harflik yazim farki (Rhaman/Rahman). Yalniz oda/tarih de tutan yerlerde kullanilir.
 function bdiLev(a,b){if(a===b)return 0;var m=a.length,n=b.length;if(!m||!n)return m||n;var p=[],i,j;for(j=0;j<=n;j++)p[j]=j;for(i=1;i<=m;i++){var prev=p[0];p[0]=i;for(j=1;j<=n;j++){var t=p[j];p[j]=Math.min(p[j]+1,p[j-1]+1,prev+(a.charAt(i-1)===b.charAt(j-1)?0:1));prev=t}}return p[n]}
+// Yazim farki: ayni sayida kelime, tek kelimede 1-2 harf fark (Fuad/Suad Demirtas, Alhadi/Alhaddi). Biri digerini
+// kapsayan isimler (Mohammed Alhaddi ~ Mohammed Mubarak Alhaddi) yazim hatasi sayilmaz.
+function bdiNameTypo(a,b){
+  var ta=bdiGuestKey(a).split(" ").filter(Boolean),tb=bdiGuestKey(b).split(" ").filter(Boolean);
+  if(!ta.length||ta.length!==tb.length||ta.join(" ")===tb.join(" "))return "";
+  var oa=ta.filter(function(t){return tb.indexOf(t)<0}),ob=tb.filter(function(t){return ta.indexOf(t)<0});
+  if(oa.length!==1||ob.length!==1||oa[0].length<3||ob[0].length<3)return "";
+  return bdiLev(oa[0],ob[0])<=(Math.min(oa[0].length,ob[0].length)>=6?2:1)?oa[0]+" / "+ob[0]:"";
+}
 function bdiNameNear(a,b){
   var ka=bdiGuestKey(a),kb=bdiGuestKey(b);if(!ka||!kb)return false;if(ka===kb)return true;
   var ta=ka.split(" "),tb=kb.split(" "),sh=ta.length<=tb.length?ta:tb,lo=sh===ta?tb:ta;
@@ -9425,6 +9438,32 @@ async function bdiIssueImportFile(file){
   renderBdiIssues();bdiRefreshDerived();
 }
 function bdiIssueById(list,id){for(var i=0;i<list.length;i++)if(list[i].id===id)return list[i];return null}
+
+// ---------- YONETICI SIFRESI (2026-11-01) ----------
+// Geri alinamaz islemler (misafir kaydini tamamen silmek) icin. Sifrenin kendisi degil ozeti saklanir; ayarlarla birlikte
+// ortak klasorden butun bilgisayarlara dagilir. Birlestirme / duzeltme gibi geri alinabilen islemler sifre istemez.
+function swPinHash(p){var s="sw-admin|"+String(p),h1=0x811c9dc5,h2=0x9e3779b1;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^c,2246822507)}return (h1>>>0).toString(16)+"."+(h2>>>0).toString(16)}
+function swAdminHas(){try{return !!localStorage.getItem("sw_admin_pin")}catch(e){return false}}
+function renderSwAdminRow(){
+  var el=document.getElementById("swAdminRow");if(!el)return;
+  el.innerHTML='<b>Yönetici şifresi:</b> '+(swAdminHas()?'<span style="color:#059669">belirlendi &#10003;</span> <button type="button" class="btn-sm" onclick="swAdminSet()">Değiştir</button>':'<span style="color:#b45309">belirlenmedi</span> <button type="button" class="btn-sm" onclick="swAdminSet()">Belirle</button>')+
+    '<div style="margin-top:4px">Misafir kaydını tamamen silmek gibi geri alınamaz işlemler için sorulur. Bütün bilgisayarlarda aynıdır. Birleştirme ve düzeltme şifre istemez.</div>';
+}
+function swAdminSet(){
+  if(swAdminHas()){var old=prompt("Mevcut yönetici şifresi:");if(old===null)return;if(swPinHash(old)!==localStorage.getItem("sw_admin_pin")){alert("Şifre yanlış.");return}}
+  var p=prompt("Yeni yönetici şifresi (en az 4 karakter):");if(p===null)return;p=String(p).trim();
+  if(p.length<4){alert("Şifre en az 4 karakter olmalı.");return}
+  var p2=prompt("Yeni şifreyi bir kez daha yaz:");if(p2===null)return;if(String(p2).trim()!==p){alert("İki şifre aynı değil.");return}
+  localStorage.setItem("sw_admin_pin",swPinHash(p));renderSwAdminRow();
+  try{if(typeof scheduleAutoSync==="function")scheduleAutoSync()}catch(e){}
+  try{bdiToast("Yönetici şifresi kaydedildi; ortak klasörle diğer bilgisayarlara da geçer.")}catch(e){}
+}
+function swAdminCheck(what){
+  if(!swAdminHas()){alert(what+" için yönetici şifresi gerekiyor.\n\nAyarlar › Butler Did It bölümünden şifreyi belirle.");return false}
+  var p=prompt(what+" için yönetici şifresi:");if(p===null)return false;
+  if(swPinHash(String(p).trim())!==localStorage.getItem("sw_admin_pin")){alert("Şifre yanlış.");return false}
+  return true;
+}
 // ---------- Issue raporu yardimcilari (2026-10-31) ----------
 // Excel tarih hucresi (seri sayi ya da "31.10.2026 14:05" / "2026-10-31 2:05 PM") -> yerel ms. Saat yoksa 12:00.
 function bdiXlTs(v,t){
@@ -9525,7 +9564,25 @@ function bdiIssueEditFields(id){
   if(!g){alert("Misafir adı boş olamaz.");return}
   if(r===String(is.room||"")&&g===is.guest)return;
   var now=Date.now();is.events=is.events||[];is.events.push({id:bdiEvId(),ts:now,type:"edit",butler:"",text:(r!==String(is.room||"")?"Oda "+(is.room||"?")+" → "+r+" ":"")+(g!==is.guest?"Misafir "+is.guest+" → "+g:""),src:"manual"});
-  is.room=r;is.guest=g;is.u=now;bdiSaveIssues(list);renderBdiIssues();bdiRefreshDerived();
+  var oldG=is.guest;is.room=r;is.guest=g;is.u=now;bdiSaveIssues(list);
+  if(oldG!==g)bdiGMLoad().then(function(){var ok=bdiGuestKey(oldG),nk=bdiGuestKey(g);if(ok&&nk&&ok!==nk){_bdiGM.aliases[ok]={g:bdiGMGid(nk),u:now};_bdiGMProf=null;return _gmPutMeta("aliases",_bdiGM.aliases)}}).then(function(){bdiGMBackupSoon();bdiGMSchedule()}).catch(function(e){console.warn(e)});
+  renderBdiIssues();bdiRefreshDerived();
+}
+// Issue'daki isim, o saatte odada kalan misafirin (Opera) adindan yalnizca yazimla farkliysa onu oner (Fuad -> Suad Demirtas)
+function bdiIssueOccupantTypo(is){
+  if(!is||!is.room||bdiGuestBad(is.guest))return "";
+  var ts=is.createdAt||Date.now(),occ=bdiGuestAt(is.room,bdiYmd(new Date(ts)),ts);
+  if(!occ){var raw=vacRooms[String(is.room)]||vacRooms[("000"+is.room).slice(-4)]||vacRooms[String(+is.room)];if(raw)occ=bdiGihPerson(raw)}
+  return occ&&bdiNameTypo(occ,is.guest)?occ:"";
+}
+// Issue'yu dogru isimle duzelt; misafir hafizasinda eski yazim dogru kisiye yonlenir (sonraki dosyalarda da)
+async function bdiIssueUseName(id,name){
+  var list=bdiGetIssues(),is=bdiIssueById(list,id);if(!is||!name||name===is.guest)return;
+  var old=is.guest,now=Date.now();
+  is.events=is.events||[];is.events.push({id:bdiEvId(),ts:now,type:"edit",butler:"",text:"Misafir "+old+" → "+name,src:"manual"});
+  is.guest=name;is.u=now;bdiSaveIssues(list);
+  try{await bdiGMLoad();var ok=bdiGuestKey(old),nk=bdiGuestKey(name);if(ok&&nk&&ok!==nk){_bdiGM.aliases[ok]={g:bdiGMGid(nk),u:now};await _gmPutMeta("aliases",_bdiGM.aliases);_bdiGMProf=null;bdiGMBackupSoon()}}catch(e){console.warn(e)}
+  bdiGMSchedule();renderBdiIssues();bdiRefreshDerived();
 }
 // Kartta secilen butler ve yazilan not yeniden cizimde (senkron, klasor taramasi) kaybolmasin
 var _bdiIssueDraft={};
@@ -9835,6 +9892,8 @@ function renderBdiIssues(){
     var conflict=is.rep&&is.rep.st&&is.rep.st!==s.status;
     h+='<div class="bd-issue-main"><div class="bd-issue-guest">'+esc(is.guest)+' <span class="bd-pill bd-pill-'+s.status+'">'+(s.status==="open"?'Açık':'Kapandı')+'</span>'+(conflict?'<span class="bd-pill bd-pill-open" title="Son yüklenen raporda durum farklı; uygulamadaki durum korunur.">Raporda: '+(is.rep.st==="open"?'açık':'kapalı')+'</span>':'')+bdiIssueSatPill(is)+(is.srcSt&&s.status==="open"&&!/^(new|open|yeni|açık|acik)$/i.test(is.srcSt)?'<span class="bd-pill bd-pill-dep" title="Kaynak sistemdeki durum">kaynakta: '+esc(is.srcSt)+'</span>':'')+'</div>';
     if(is.dept||is.cat)h+='<div class="bd-sub">'+esc([is.dept,is.cat].filter(function(x){return x&&x!=="All"}).join(" · ")||is.dept||"")+'</div>';
+    var occN=bdiIssueOccupantTypo(is);
+    if(occN)h+='<div class="bd-isfix" onclick="event.stopPropagation()">Otelde bu odada: <b>'+esc(occN)+'</b> (yazım farkı) <button type="button" class="bd-link" data-n="'+esc(occN)+'" onclick="bdiIssueUseName(\''+is.id+'\',this.getAttribute(\'data-n\'))">bu isimle düzelt</button></div>';
     h+='<div class="bd-issue-snip">'+esc((is.concern||"").slice(0,260))+'</div></div>';
     h+='<div class="bd-issue-meta">'+bdiIssueDepTag(is)+'<span>'+(s.status==="closed"?'Kapandı '+esc(bdiFmtShort(s.closedAt))+(s.closedBy?' · '+esc(s.closedBy):''):'Açıldı: '+esc(bdiDaysAgo(is.createdAt)))+'</span>';
     if(hs.length)h+='<span>'+hs.map(function(b){return '<span class="bd-bond"><i style="--c:'+bdiButlerColor(b)+'"></i>'+esc(b)+'</span>'}).join('')+'</span>';
@@ -10039,6 +10098,8 @@ async function bdiGMLoad(){
   _bdiGM.protel=(await _gmGetMeta("protel"))||{};
   _bdiGM.imp=(await _gmGetMeta("imp"))||{}; // Veri Atolyesi kararlari (red / geri al)
   _bdiGM.rules=(await _gmGetMeta("rules"))||{}; // Veri Atolyesi ogrenilmis alan/departman kurallari
+  _bdiGM.pname=(await _gmGetMeta("pname"))||{}; // birlestirmede / elle secilen dogru isim {gid:{n,u}}
+  _bdiGM.forget=(await _gmGetMeta("forget"))||{}; // yonetici silmesi: {anahtar: zaman} - o gune kadarki kaynaklar profili yeniden olusturmaz
   _bdiGM.loaded=true;
   if(!_bdiGM.state.migratedV1){ // eski localStorage birlestirmeleri ve notlari tasinir (bir kez)
     var now=Date.now();
@@ -10056,6 +10117,7 @@ function bdiGMGid(key){
   while(guard++<12){var a=_bdiGM.aliases[g.slice(2)];if(!a||!a.g||a.g===g)break;g=a.g}
   return g;
 }
+function bdiGMForgotten(e){var f=e&&(_bdiGM.forget||{})[e.key];return !!f&&String(e.date||"")<=bdiYmd(new Date(f))}
 function bdiGMKind(l){
   var cat=l.touchCategory||"Service";
   if(cat==="Alert Visit")return "alert";
@@ -10108,12 +10170,12 @@ async function bdiGMIngest(){
     bdiGetTombs().forEach(function(t){tt["t:"+t]=1});
     Object.keys(itombs).forEach(function(t){tt["is:"+t]=1});
     Object.keys(src).forEach(function(id){
-      if(tt[id])return;
+      if(tt[id]||bdiGMForgotten(src[id]))return;
       var e=src[id],ex=_bdiGM.events[id];
       if(ex){var a=JSON.stringify(e),b2;var c={};for(var kk in ex)if(kk!=="u")c[kk]=ex[kk];b2=JSON.stringify(c);if(a===b2)return}
       e.u=now;_bdiGM.events[id]=e;put.push(e);
     });
-    Object.keys(_bdiGM.events).forEach(function(id){if(tt[id]){del.push(id);delete _bdiGM.events[id]}});
+    Object.keys(_bdiGM.events).forEach(function(id){if(tt[id]||bdiGMForgotten(_bdiGM.events[id])){del.push(id);delete _bdiGM.events[id]}});
     await _gmPutEvents(put);await _gmDelEvents(del);
     if(put.length||del.length)_bdiGMProf=null;
     await bdiGMDailySnapshot();
@@ -10141,6 +10203,7 @@ function bdiGMProfiles(){
     var e=_bdiGM.events[id],gid=bdiGMGid(e.key);if(!gid)return;
     var p=P[gid]||(P[gid]={gid:gid,names:{},keys:{},rooms:{},dates:{},dayRooms:{},events:[],issues:[],bonds:{},prefs:[],occasions:[],touches:0,actions:{},butlers:{},logs:[],firstSeen:"",lastSeen:"",lastStamp:"",inhouse:false});
     p.keys[e.key]=1;p.names[e.name]=(p.names[e.name]||0)+1;
+    if(e.kind==="stay")(p.opNames||(p.opNames={}))[e.name]=1; // Opera'dan (in-house / VAC) gelen yazim
     if(e.room){p.rooms[e.room]=1;(p.dayRooms[e.date]||(p.dayRooms[e.date]={}))[e.room]=1}
     p.dates[e.date]=1;
     if(!p.firstSeen||e.date<p.firstSeen)p.firstSeen=e.date;
@@ -10161,8 +10224,9 @@ function bdiGMProfiles(){
   });
   var list=Object.keys(P).map(function(g){
     var p=P[g];
-    var nm=Object.keys(p.names).sort(function(a,b){var ta=a.trim().split(/\s+/).length>=2,tb=b.trim().split(/\s+/).length>=2;if(ta!==tb)return ta?-1:1;return p.names[b]-p.names[a]||b.length-a.length});
-    p.name=nm[0]||"";p.rawNames={};nm.forEach(function(n){p.rawNames[n]=1});
+    var op=p.opNames||{},nm=Object.keys(p.names).sort(function(a,b){if(!!op[a]!==!!op[b])return op[a]?-1:1;var ta=a.trim().split(/\s+/).length>=2,tb=b.trim().split(/\s+/).length>=2;if(ta!==tb)return ta?-1:1;return p.names[b]-p.names[a]||b.length-a.length});
+    var pn=(_bdiGM.pname||{})[g];
+    p.name=(pn&&pn.n)||nm[0]||"";p.rawNames={};nm.forEach(function(n){p.rawNames[n]=1});
     p.events.sort(function(a,b){var x=a.date+" "+a.time,y=b.date+" "+b.time;return x<y?1:x>y?-1:0});
     p.issues.sort(function(a,b){return a.date<b.date?1:-1});
     // konaklamalar: ardisik gunler (2 gunden buyuk bosluk = yeni konaklama)
@@ -10211,8 +10275,12 @@ function bdiGMSuggestions(){
       if(pairs[pk]||_bdiGM.dismissed[pk])continue;
       var ta=Object.keys(a._toks),tb=Object.keys(b._toks),shared=ta.filter(function(x){return b._toks[x]}).length;
       var small=Math.min(ta.length,tb.length),why="";
+      var typo=bdiNameTypo(a.name,b.name);
       if(shared===small&&small>=2)why="İsimlerden biri diğerini kapsıyor";
-      else{
+      else if(typo){
+        var sameR="";for(var r0 in a.rooms)if(b.rooms[r0])sameR=r0; // yazim farkinda ayni gun sart degil: ayni odada kalmis olmasi yeter
+        why="Yazım farkı ("+typo+")"+(sameR?" · aynı oda "+sameR:"");
+      }else{
         var rooms=false;
         for(var d in a.dayRooms){if(b.dayRooms[d]){for(var r in a.dayRooms[d])if(b.dayRooms[d][r])rooms=d+" | Oda "+r}}
         if(rooms&&shared>=1)why="Aynı gün aynı odada ("+bdiFmtD(rooms.split(" | ")[0])+", "+rooms.split(" | ")[1]+")";
@@ -10221,6 +10289,52 @@ function bdiGMSuggestions(){
     }
   });
   return out.slice(0,30);
+}
+// Birlestirmede hangi isim dogru: Opera raporlarinda (in-house/VAC/varis) gecen tek bir yazim varsa o; yoksa kullaniciya sorulur.
+function bdiGMPickName(ps){
+  var op={},all={};ps.forEach(function(p){Object.keys(p.opNames||{}).forEach(function(n){op[n]=p.gid});Object.keys(p.rawNames||p.names||{}).forEach(function(n){if(!all[n])all[n]=p.gid})});
+  var ok=Object.keys(op);if(ok.length===1)return {gid:op[ok[0]],name:ok[0]};
+  var names=Object.keys(all);if(names.length<2)return {gid:ps[0].gid,name:names[0]||ps[0].name};
+  var ans=prompt("Doğru isim hangisi? Numarasını yaz:\n\n"+names.map(function(n,i){return (i+1)+") "+n}).join("\n"),"1");if(ans===null)return null;
+  var i=parseInt(ans,10)-1;if(!(i>=0&&i<names.length)){alert("Listeden bir numara yaz.");return null}
+  return {gid:all[names[i]],name:names[i]};
+}
+async function bdiGMSetName(gid,name){await bdiGMLoad();_bdiGM.pname=_bdiGM.pname||{};_bdiGM.pname[gid]={n:name,u:Date.now()};await _gmPutMeta("pname",_bdiGM.pname);_bdiGMProf=null;bdiGMBackupSoon();try{filterGuestLibrary()}catch(e){}}
+
+// Yonetici: misafir kaydini tamamen sil (KVKK silme talebi, hatali / deneme kaydi). Hafizadaki her sey silinir; Butler Did It
+// kayitlarinda ve issue'larda isim kaldirilir (kayitlar ve sayilar kalir). "Unutuldu" isareti esitlenir: bu gune kadarki
+// kaynaklar (loglar, issue'lar, Alice, diger bilgisayarlar) profili yeniden olusturmaz; misafir sonra tekrar gelirse yeni kayit baslar.
+async function bdiGMPurgeForgotten(){
+  var del=[];Object.keys(_bdiGM.events).forEach(function(id){if(bdiGMForgotten(_bdiGM.events[id])){del.push(id);delete _bdiGM.events[id]}});
+  var gids={};Object.keys(_bdiGM.forget||{}).forEach(function(k){gids["g_"+k]=1});
+  var ch=false;["notes","insights","dna","protel","imp","pname"].forEach(function(f){var o=_bdiGM[f]||{};Object.keys(o).forEach(function(g){if(gids[g]&&!Object.keys(_bdiGM.events).some(function(id){return bdiGMGid(_bdiGM.events[id].key)===g})){delete o[g];ch=true}})});
+  Object.keys(_bdiGM.aliases).forEach(function(k){var a=_bdiGM.aliases[k];if((_bdiGM.forget||{})[k]||(a&&gids[a.g]&&!Object.keys(_bdiGM.events).some(function(id){return bdiGMGid(_bdiGM.events[id].key)===a.g}))){delete _bdiGM.aliases[k];ch=true}});
+  if(del.length)await _gmDelEvents(del);
+  if(ch){for(var f2 of ["notes","insights","dna","protel","imp","pname","aliases"])await _gmPutMeta(f2,_bdiGM[f2]||{})}
+  _bdiGMProf=null;
+}
+async function bdiGMForget(gid){
+  await bdiGMLoad();var p=bdiGMProfiles().byGid[gid];if(!p)return;
+  if(!swAdminCheck("Misafir kaydını tamamen silmek"))return;
+  if(!confirm(p.name+" kaydı tamamen silinsin mi?\n\n• Notlar, DNA, tercihler ve Protel işaretleri silinir\n• Butler Did It kayıtlarında ve issue'larda isim kaldırılır (kayıtlar ve sayılar kalır)\n• Bütün bilgisayarlarda silinir, geri alınamaz\n\nYazım hatası ise silmek yerine doğru isimle birleştir."))return;
+  var keys=Object.keys(p.keys),now=Date.now(),kset={},names=Object.keys(p.rawNames||p.names||{}).concat([p.name]).filter(Boolean);
+  keys.forEach(function(k){kset[k]=1});
+  _bdiGM.forget=_bdiGM.forget||{};keys.forEach(function(k){_bdiGM.forget[k]=now});
+  await _gmPutMeta("forget",_bdiGM.forget);
+  await bdiGMPurgeForgotten();
+  var strip=function(t){t=String(t||"");names.forEach(function(n){if(n.length>=4)t=t.split(n).join("")});return t.replace(/\s+/g," ").trim()};
+  // Butler Did It gun kayitlari
+  BdiKV.keys().forEach(function(key){
+    if(!BDI_DAY_KEY_RE.test(key))return;var arr;try{arr=JSON.parse(BdiKV.get(key)||"[]")}catch(e){return}if(!Array.isArray(arr))return;
+    var ch=false;arr.forEach(function(l){if(l&&!bdiGuestBad(l.guest)&&kset[bdiGuestKey(l.guest)]){l.sentence=bdiCleanSentence(strip(l.sentence));l.guest="";ch=true}});
+    if(ch){BdiKV.set(key,JSON.stringify(arr));delete _bdiGMDayRaw[key]}
+  });
+  // issue'lar (silinenler dahil)
+  var il=bdiGetIssuesAll(),ich=false;il.forEach(function(is){if(!bdiGuestBad(is.guest)&&kset[bdiGuestKey(is.guest)]){is.guest="—";is.concern=strip(is.concern);is.u=now;ich=true}});
+  if(ich)BdiKV.set(BDI_ISSUES_KEY,JSON.stringify(il));
+  bdiGMBackupSoon();if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();
+  try{bdiToast(p.name+" kaydı silindi.")}catch(e){}
+  try{filterGuestLibrary();renderBdiIssues();bdiRefreshDerived()}catch(e){}
 }
 async function bdiGMMerge(gids,target){
   await bdiGMLoad();var now=Date.now(),prof=bdiGMProfiles();
@@ -10243,7 +10357,7 @@ async function bdiGMUnmerge(key){
 }
 async function bdiGMSuggestAct(pk,merge){
   var s=bdiGMSuggestions().filter(function(x){return x.pk===pk})[0];
-  if(merge&&s){var t=s.a.touches+s.a.issues.length>=s.b.touches+s.b.issues.length?s.a:s.b;await bdiGMMerge([s.a.gid,s.b.gid],t.gid)}
+  if(merge&&s){var pk2=bdiGMPickName([s.a,s.b]);if(!pk2)return;await bdiGMMerge([s.a.gid,s.b.gid],pk2.gid);await bdiGMSetName(pk2.gid,pk2.name)}
   else{_bdiGM.dismissed[pk]=Date.now();await _gmPutMeta("dismissed",_bdiGM.dismissed);bdiGMBackupSoon()}
   filterGuestLibrary();
 }
@@ -10252,8 +10366,9 @@ async function showBdiMergeMode(){
   if(sel.length<2){alert("Birlestirilecek en az 2 misafir sec.");return}
   var prof=bdiGMProfiles(),ps=sel.map(function(g){return prof.byGid[g]}).filter(Boolean);
   ps.sort(function(a,b){return (b.touches+b.issues.length)-(a.touches+a.issues.length)});
-  if(!confirm(ps.map(function(p){return p.name}).join(" + ")+"\n\nBu kayitlar tek misafir olarak birlestirilsin mi? Ana isim: "+ps[0].name+"\n(Profil detayindan geri ayrilabilir.)"))return;
-  await bdiGMMerge(ps.map(function(p){return p.gid}),ps[0].gid);
+  var pick=bdiGMPickName(ps);if(!pick)return;
+  if(!confirm(ps.map(function(p){return p.name}).join(" + ")+"\n\nBu kayıtlar tek misafir olarak birleştirilsin mi? Doğru isim: "+pick.name+"\n(Profil detayından geri ayrılabilir.)"))return;
+  await bdiGMMerge(ps.map(function(p){return p.gid}),pick.gid);await bdiGMSetName(pick.gid,pick.name);
   filterGuestLibrary();
 }
 // ----- notlar (gid bazli; eski isim bazli notlar ilk acilista tasinir) -----
@@ -10444,9 +10559,12 @@ function bdiGuestDetailHtml(g){
   if(keys.length>1){
     h+='<h4 class="bd-h4">Birleşmiş yazımlar</h4>';
     keys.forEach(function(k){var own=("g_"+k)===g.gid;h+='<div class="bd-gissue">'+esc(k)+(own?' <span class="bd-sub">(ana)</span>':' <button type="button" class="bd-link" style="margin:0 0 0 6px" onclick="bdiGMUnmerge(\''+esc(k).replace(/'/g,"")+'\')">Ayır</button>')+'</div>'});
+    var rn=Object.keys(g.rawNames||{});
+    if(rn.length>1)h+='<div class="bd-gissue">Gösterilen isim: <select onchange="bdiGMSetName(\''+esc(g.gid)+'\',this.value)">'+rn.map(function(n){return '<option'+(n===g.name?' selected':'')+'>'+esc(n)+'</option>'}).join("")+'</select></div>';
   }
   h+='<h4 class="bd-h4">Notlar ve tercihler</h4><textarea class="bd-ta" data-gnote="'+esc(g.gid)+'" onchange="bdiGMSaveNote(this.getAttribute(\'data-gnote\'),this)" placeholder="Tercihler, alerjiler, özel istekler...">'+esc((_bdiGM.notes[g.gid]||{}).t||"")+'</textarea>';
   h+='<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" data-gname="'+esc(g.name)+'" onclick="exportGuestProfile(this.getAttribute(\'data-gname\'))">Profil PDF indir</button>';
+  h+=' <button type="button" class="bd-link bd-link-danger" onclick="bdiGMForget(\''+esc(g.gid)+'\')" title="KVKK silme talebi ya da hatalı kayıt için; yönetici şifresi ister">Misafir kaydını sil (yönetici)</button>';
   h+='</div>';
   return h;
 }
@@ -11444,7 +11562,7 @@ async function bdiAliceImportFile(file){
 }
 async function bdiAliceToMemory(list){
   await bdiGMLoad();var put=[],now=Date.now();
-  list.forEach(function(t){var e=bdiAliceEvent(t);if(!e)return;var ex=_bdiGM.events[e.id];if(ex){var c={};for(var k in ex)if(k!=="u")c[k]=ex[k];if(JSON.stringify(c)===JSON.stringify(e))return}e.u=now;_bdiGM.events[e.id]=e;put.push(e)});
+  list.forEach(function(t){var e=bdiAliceEvent(t);if(!e||bdiGMForgotten(e))return;var ex=_bdiGM.events[e.id];if(ex){var c={};for(var k in ex)if(k!=="u")c[k]=ex[k];if(JSON.stringify(c)===JSON.stringify(e))return}e.u=now;_bdiGM.events[e.id]=e;put.push(e)});
   await _gmPutEvents(put);if(put.length){_bdiGMProf=null;bdiGMBackupSoon()}
   return put.length;
 }
@@ -11544,7 +11662,7 @@ async function renderBdiAlice(){
 // ----- yedek: yerel gunluk kopya + ortak klasor dosyasi -----
 function bdiGMExportObj(){
   var ev=Object.keys(_bdiGM.events).map(function(k){return _bdiGM.events[k]});
-  return {version:1,app:"SmartWorker",kind:"guest-memory",updated:new Date().toISOString(),events:ev,aliases:_bdiGM.aliases,notes:_bdiGM.notes,dismissed:_bdiGM.dismissed,insights:_bdiGM.insights,dna:_bdiGM.dna||{},protel:_bdiGM.protel||{},imp:_bdiGM.imp||{},rules:_bdiGM.rules||{}};
+  return {version:1,app:"SmartWorker",kind:"guest-memory",updated:new Date().toISOString(),events:ev,forget:_bdiGM.forget||{},pname:_bdiGM.pname||{},aliases:_bdiGM.aliases,notes:_bdiGM.notes,dismissed:_bdiGM.dismissed,insights:_bdiGM.insights,dna:_bdiGM.dna||{},protel:_bdiGM.protel||{},imp:_bdiGM.imp||{},rules:_bdiGM.rules||{}};
 }
 async function bdiGMDailySnapshot(){
   var today=bdiYmd(new Date());
@@ -11562,6 +11680,8 @@ async function bdiGMMergeObj(obj){
   var tt={};bdiGetTombs().forEach(function(t){tt["t:"+t]=1});bdiGetIssueTombs().forEach(function(t){tt["is:"+t]=1});
   (obj.events||[]).forEach(function(e){
     if(!e||!e.id||tt[e.id])return;var ex=_bdiGM.events[e.id];
+    if(obj.forget&&obj.forget[e.key]&&!(_bdiGM.forget||{})[e.key]){_bdiGM.forget=_bdiGM.forget||{};_bdiGM.forget[e.key]=obj.forget[e.key]}
+    if(bdiGMForgotten(e))return;
     if(!ex||(e.u||0)>(ex.u||0)){_bdiGM.events[e.id]=e;put.push(e);got++}
   });
   var metaCh=false;
@@ -11581,13 +11701,19 @@ async function bdiGMMergeObj(obj){
   var rr=obj.rules||{};_bdiGM.rules=_bdiGM.rules||{};var ruCh=false; // Atolye kurallari: ifade bazinda yeni-u
   for(var rk in rr){var a4=rr[rk],b4=_bdiGM.rules[rk];if(a4&&(!b4||(a4.u||0)>(b4.u||0))){_bdiGM.rules[rk]=a4;ruCh=true;got++}}
   if(ruCh)await _gmPutMeta("rules",_bdiGM.rules);
+  var rf=obj.forget||{},fCh=false;_bdiGM.forget=_bdiGM.forget||{}; // silinen misafir: en yeni zaman kazanir, sonra yerelde de temizlenir
+  for(var fk in rf){if((rf[fk]||0)>(_bdiGM.forget[fk]||0)){_bdiGM.forget[fk]=rf[fk];fCh=true;got++}}
+  var rpn=obj.pname||{},pnCh=false;_bdiGM.pname=_bdiGM.pname||{};
+  for(var pg2 in rpn){var A=rpn[pg2],B=_bdiGM.pname[pg2];if(A&&(!B||(A.u||0)>(B.u||0))){_bdiGM.pname[pg2]=A;pnCh=true;got++}}
+  if(pnCh)await _gmPutMeta("pname",_bdiGM.pname);
+  if(fCh){await _gmPutMeta("forget",_bdiGM.forget);await bdiGMPurgeForgotten()}
   var ri=obj.insights||{};for(var ig in ri){var lm=_bdiGM.insights[ig]||(_bdiGM.insights[ig]={});for(var ii in ri[ig]){var a2=ri[ig][ii],b2=lm[ii];if(a2&&(!b2||(a2.u||0)>(b2.u||0))){lm[ii]=a2;metaCh=true;got++}}}
   await _gmPutEvents(put);
   if(metaCh){_bdiRuleCache=null;await _gmPutMeta("aliases",_bdiGM.aliases);await _gmPutMeta("notes",_bdiGM.notes);await _gmPutMeta("dismissed",_bdiGM.dismissed);await _gmPutMeta("insights",_bdiGM.insights)}
   if(got)_bdiGMProf=null;
   return got;
 }
-function bdiGMSig(o){var n=0,mu=0;(o.events||[]).forEach(function(e){n++;if((e.u||0)>mu)mu=e.u||0});return JSON.stringify(o.dna||{}).length+"|"+n+"|"+mu+"|"+JSON.stringify(o.aliases||{}).length+"|"+JSON.stringify(o.notes||{}).length+"|"+Object.keys(o.dismissed||{}).length+"|"+JSON.stringify(o.insights||{}).length+"|"+bdiProtelSig(o.protel)+"|"+bdiProtelSig(o.imp)+"|"+bdiProtelSig({r:o.rules||{}})}
+function bdiGMSig(o){var n=0,mu=0;(o.events||[]).forEach(function(e){n++;if((e.u||0)>mu)mu=e.u||0});return JSON.stringify(o.forget||{}).length+"/"+JSON.stringify(o.pname||{}).length+"|"+JSON.stringify(o.dna||{}).length+"|"+n+"|"+mu+"|"+JSON.stringify(o.aliases||{}).length+"|"+JSON.stringify(o.notes||{}).length+"|"+Object.keys(o.dismissed||{}).length+"|"+JSON.stringify(o.insights||{}).length+"|"+bdiProtelSig(o.protel)+"|"+bdiProtelSig(o.imp)+"|"+bdiProtelSig({r:o.rules||{}})}
 function bdiProtelSig(m){var n=0,mu=0;for(var g in (m||{}))for(var t in (m[g]||{})){n++;var u=(m[g][t]||{}).u||0;if(u>mu)mu=u}return n+"/"+mu} // uzunluk degil en yeni damga: ayni uzunlukta yeniden isaretleme de yazilir
 async function _bdiGuestMemSyncFile(dir){
   var res={got:0,sent:0};
@@ -16611,6 +16737,7 @@ window.swBackupNow = swBackupNow;
 window.swRestoreFile = swRestoreFile;
 swSetupBoot();
 setTimeout(swLsHousekeeping,4000);
+setTimeout(renderSwAdminRow,0);
 window.removeKW = removeKW;
 window.removePmRoom = removePmRoom;
 window.removeRadarKW = removeRadarKW;
@@ -16700,7 +16827,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueEvEdit, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueEvEdit, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
