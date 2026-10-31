@@ -6339,6 +6339,7 @@ function rebuildVacRooms(){
   if(bdiGihInUse())bdiGihRows().forEach(function(r){vacRooms[r.room]=r.name}); // in-house raporu: oteldekilerin adi
   try{bdiDepApplyToRooms()}catch(e){console.warn("Cikis raporu oda listesine uygulanamadi:",e)} // cikis saati gecen odadan duser
   applyPmRooms();
+  try{bdiIssueFollowMoves()}catch(e){console.warn("Oda degisikligi issue'lara uygulanamadi:",e)}
 }
 // VAC satirindaki tarih (dd-mm-yy, dd.mm.yyyy, dd/mm/yy) -> yyyy-mm-dd. Satirda 2+ tarih varsa sonuncusu ayrilis kabul edilir.
 function bdiVacDate(t){var m=/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{2}|\d{4})$/.exec(String(t||"").trim());if(!m)return "";var y=m[3].length===2?"20"+m[3]:m[3];return y+"-"+m[2]+"-"+m[1]}
@@ -6586,6 +6587,26 @@ function bdiIssueDep(is){
     var sc=(rk&&r.room===rk?2:0)+(bdiGuestKey(bdiDepName(r))===bdiGuestKey(is.guest)?1:0);if(sc>score){score=sc;best=r}
   });
   return best;
+}
+// Oda degisikligi (2026-11-01): yeni rapor misafiri baska odada gosteriyorsa ACIK issue'su misafiri takip eder
+// ("Oda 1201 → 1505" olayi). BDI loglari DEGISMEZ: touch hangi odada yapildiysa o oda kalir (denetim kaydi).
+// Misafir hala eski odadaysa, birden cok odada gorunuyorsa (aile/iki oda) ya da ciktiysa dokunulmaz.
+function bdiIssueFollowMoves(){
+  var list=bdiGetIssues();if(!list.length)return 0;
+  var rooms=Object.keys(vacRooms||{}),now=Date.now(),moved=0;
+  list.forEach(function(is){
+    if(!is.room||bdiGuestBad(is.guest)||bdiIssueState(is).status!=="open")return;
+    var cur=vacRooms[String(is.room)]||vacRooms[("000"+is.room).slice(-4)]||vacRooms[String(+is.room)];
+    if(cur&&bdiNameNear(bdiGihPerson(cur),is.guest))return;
+    var hits=rooms.filter(function(r){return bdiNameNear(bdiGihPerson(vacRooms[r]),is.guest)});
+    if(hits.length!==1)return;
+    var nr=hits[0];if(("000"+nr).slice(-4)===("000"+is.room).slice(-4))return;
+    var d=bdiIssueDep(is);if(d&&bdiDepOut(d)&&bdiDepOut(d)<=now)return;
+    is.events=is.events||[];is.events.push({id:bdiEvId(),ts:now,type:"move",butler:"",text:"Oda "+is.room+" → "+nr,src:"report"});
+    is.room=nr;is.u=now;moved++;
+  });
+  if(moved)bdiSaveIssues(list);
+  return moved;
 }
 // Issue hala bu odadaki misafire mi ait (misafir ciktiysa ya da odaya baskasi geldiyse hayir): kat turu, kat yuku, touch baglama
 function bdiIssueLive(is){
@@ -9633,8 +9654,8 @@ function bdiIssueAddManual(){
   document.getElementById("bdiIssueNew").style.display="none";
   _bdiIssueFilter=stV==="closed"?"all":"open";renderBdiIssues();bdiIssueBadge();
 }
-var BDI_EV_LABEL={import:"Açıldı",update:"Metin güncellendi (Excel)",touch:"İlgilendi",close:"Kapandı",reopen:"Yeniden açıldı",confirm:"Temas eden"};
-var BDI_EV_COLOR={import:"#9fb0aa",update:"#9fb0aa",touch:"#4f6d9a",close:"#0f5446",reopen:"#b45309",confirm:"#4f6d9a"};
+var BDI_EV_LABEL={import:"Açıldı",update:"Metin güncellendi (Excel)",touch:"İlgilendi",close:"Kapandı",reopen:"Yeniden açıldı",confirm:"Temas eden",move:"Oda değişti"};
+var BDI_EV_COLOR={import:"#9fb0aa",update:"#9fb0aa",touch:"#4f6d9a",close:"#0f5446",reopen:"#b45309",confirm:"#4f6d9a",move:"#a8865a"};
 function bdiDaysAgo(ts){if(!ts)return "";var d0=new Date(bdiYmd(new Date())+"T00:00:00"),d1=new Date(bdiYmd(new Date(ts))+"T00:00:00");var n=Math.round((d0-d1)/864e5);return n<=0?"bugün":n===1?"dün":n+" gün önce"}
 function renderBdiIssues(){
   var wrap=document.getElementById("bdiIssueList");if(!wrap)return;
@@ -12814,7 +12835,7 @@ function downloadDidIt(){
   // Table
   var hasDate=(bdiViewMode!=="day");
   h+='<table><thead><tr>'+(hasDate?'<th>Date</th>':'')+'<th>Butler</th><th>Room</th><th>Guest</th><th>Action</th><th>Details</th></tr></thead><tbody>';
-  if(!hasDate)logs=logs.slice().sort(function(a,b){return String(a.time||"").localeCompare(String(b.time||""))});
+  logs=logs.slice().sort(bdiLogRoomSort); // gun -> oda numarasi -> saat (ayni odada cikan ve yeni gelen saat sirasiyla ayrilir)
   for(var i=0;i<logs.length;i++){
     var l=logs[i];
     var ld=l._date||ds;var dd2=new Date(ld+"T00:00:00");var fD2=("0"+dd2.getDate()).slice(-2)+"."+("0"+(dd2.getMonth()+1)).slice(-2)+"."+dd2.getFullYear();
@@ -12830,12 +12851,19 @@ function downloadDidIt(){
   dl(h,fn+".html");
 }
 
+// Rapor siralamasi (2026-11-01): once gun, sonra oda numarasi (0802 = 802; odasiz kayitlar sona), oda icinde saat
+function bdiLogRoomSort(a,b){
+  var da=a._date||"",db=b._date||"";if(da!==db)return da<db?-1:1;
+  var ra=parseInt(String(a.room||"").replace(/\D/g,""),10),rb=parseInt(String(b.room||"").replace(/\D/g,""),10);
+  if(isNaN(ra))ra=1e9;if(isNaN(rb))rb=1e9;if(ra!==rb)return ra-rb;
+  return String(a.time||"").localeCompare(String(b.time||""));
+}
 function downloadDidItXlsx(){
   var logs=getBdiFilteredLogs();
   if(!logs.length)return alert("Kayit yok!");
   var ds=document.getElementById("bdiDate").value;
   var dateStr=getBdiPeriodLabel();
-  var data=logs.map(function(l){
+  var data=logs.slice().sort(bdiLogRoomSort).map(function(l){
     var row={};
     if(bdiViewMode!=="day"){var dd3=new Date((l._date||ds)+"T00:00:00");row.Date=("0"+dd3.getDate()).slice(-2)+"."+("0"+(dd3.getMonth()+1)).slice(-2)+"."+dd3.getFullYear()}
     row.Time=l.time;row.Butler=l.butler;row.Room=l.room;row.Guest=l.guest||"";row.Action=l.action;row.Details=l.sentence;row.Note=l.note||"";
