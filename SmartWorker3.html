@@ -973,7 +973,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-tl-sel{width:auto;height:24px;font-size:12px;padding:0 4px;border:1px dashed #b9c6c1;border-radius:6px;background:#fff;font-weight:600}
 #page-didit .bd-tl-note{border:0;background:none;color:#4f6d9a;cursor:pointer;font-size:11.5px;padding:0 4px;text-decoration:underline dotted}
 #page-didit .bd-isconf input{width:170px;height:26px;font-size:12px;padding:0 6px;border:1px dashed #b9c6c1;border-radius:6px}
-#page-didit .bd-tl-x{border:0;background:none;color:#9fb0aa;cursor:pointer;font-size:15px;line-height:1;padding:0 4px}
+#page-didit .bd-tl-x{border:0;background:none;color:#9a6b62;cursor:pointer;font-size:11.5px;padding:0 4px;text-decoration:underline dotted}
 #page-didit .bd-tl-x:hover{color:var(--red)}
 #page-didit .bd-isedit{margin:8px 0 4px;font-size:12px}
 #page-didit .bd-isedit summary{cursor:pointer;color:var(--mut)}
@@ -8046,8 +8046,12 @@ function bdiPowerSubmit(){
 
 function removeBdiLogById(id,datePart){
   if(!id)return;
-  bdiAddTomb(id); // sync mezar tasi: silinen kayit diger makinelerden geri gelmesin
   var curDate=document.getElementById("bdiDate").value;
+  // issue'ya bagli kayitsa issue gecmisindeki olay da silinir; issue'yu kapatan kayitsa once sorulur
+  var _src=(!datePart||datePart===curDate)?bdiLogs:loadBdiArrayForDate(datePart),_lg=(_src||[]).filter(function(l){return l&&l.id===id})[0],lk=bdiIssueEvForLog(_lg);
+  if(lk&&lk.ev.type==="close"&&!confirm("Bu kayıt Oda "+(lk.is.room||"?")+" ("+(lk.is.guest||"")+") issue'sunu kapatan kayıt.\n\nSilinirse issue yeniden açık görünür. Silinsin mi?"))return;
+  if(lk){var _now=Date.now();lk.ev.del=_now;lk.ev.u=_now;lk.is.u=_now;bdiSaveIssues(lk.list);try{renderBdiIssues();bdiIssueBadge()}catch(e){}}
+  bdiAddTomb(id); // sync mezar tasi: silinen kayit diger makinelerden geri gelmesin
   var key="bdi_"+(datePart||curDate);
   if(datePart&&datePart!==curDate){
     try{
@@ -9413,7 +9417,7 @@ function bdiIssueRepair(){
   if(n){bdiSaveIssues(list);try{renderBdiIssues()}catch(e){}}
   return n;
 }
-try{BdiKV.ready().then(function(){try{bdiIssueRepair()}catch(e){console.warn(e)}})}catch(e){}
+try{BdiKV.ready().then(function(){try{bdiIssueRepair()}catch(e){console.warn(e)}try{bdiIssueSweep()}catch(e){console.warn(e)}})}catch(e){}
 // Silinmis oldugu icin dosyadan alinmayan satir: Silinenler listesinde "dosyada tekrar geldi" olarak durur, tek tikla geri gelir.
 // (Eski surumde silinenlerin cop kutusu kaydi yok; bu not olmadan geri getirmenin tek yolu yukleme mesajindaki baglantiydi.)
 function bdiIssueSkipped(){try{var o=JSON.parse(BdiKV.get("bdi_issue_skipped")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return {}}}
@@ -9596,9 +9600,18 @@ function bdiIssueSatPill(is){
 }
 // Issue gecmisindeki yanlis kaydi duzelt: butler degisir ya da olay silinir. Bagli BDI kaydi (meta.issueEventId) da ayni
 // sekilde duzelir/silinir. Olay silinmez, isaretlenir (e.del) ki diger bilgisayarlardan eski hali geri gelmesin.
+// Bir BDI kaydi bu olaya mi ait? Issue kartindan girilen: meta.issueEventId; kayit formundan girilip baglanan: olayin touchId'si
+function bdiIssueEvLinked(l,ev){return !!(l&&ev&&((l.meta&&l.meta.issueEventId&&l.meta.issueEventId===ev.id)||(ev.touchId&&l.id===ev.touchId)))}
+function bdiIssueEvDays(is,ev){var days={},s=bdiIssueState(is);days[bdiYmd(new Date(ev.ts||Date.now()))]=1;if(ev.logDate)days[ev.logDate]=1;if(s.closedAt)days[bdiYmd(new Date(s.closedAt))]=1;return Object.keys(days)}
+// BDI kaydindan bagli issue olayina (silinmemis)
+function bdiIssueEvForLog(l){
+  if(!l||!l.meta||!l.meta.issueId)return null;
+  var list=bdiGetIssuesAll(),is=bdiIssueById(list,l.meta.issueId);if(!is)return null;
+  var ev=(is.events||[]).filter(function(e){return e&&!e.del&&bdiIssueEvLinked(l,e)})[0];
+  return ev?{list:list,is:is,ev:ev}:null;
+}
 function bdiIssueEvLogs(is,ev,fn){
-  var days={},s=bdiIssueState(is);days[bdiYmd(new Date(ev.ts||Date.now()))]=1;if(ev.logDate)days[ev.logDate]=1;if(s.closedAt)days[bdiYmd(new Date(s.closedAt))]=1;
-  Object.keys(days).forEach(function(d){var arr=loadBdiArrayForDate(d),out=fn(arr);if(out){saveBdiArrayForDate(d,out===true?arr:out);refreshBdiIfSameDate(d,out===true?arr:out)}});
+  bdiIssueEvDays(is,ev).forEach(function(d){var arr=loadBdiArrayForDate(d),out=fn(arr);if(out){saveBdiArrayForDate(d,out===true?arr:out);refreshBdiIfSameDate(d,out===true?arr:out)}});
 }
 function bdiIssueEvEdit(id,evId,butler){
   var list=bdiGetIssues(),is=bdiIssueById(list,id);if(!is||!butler)return;
@@ -9622,7 +9635,8 @@ function bdiIssueEvDelete(id,evId){
   var ev=(is.events||[]).filter(function(e){return e.id===evId})[0];if(!ev)return;
   if(!confirm((BDI_EV_LABEL[ev.type]||ev.type)+(ev.butler?" · "+ev.butler:"")+" kaydı silinsin mi?"+(ev.type==="close"?"\n\nIssue yeniden açık görünür.":"")+"\nButler Did It'teki karşılığı da silinir."))return;
   var now=Date.now();ev.del=now;ev.u=now;is.u=now;bdiSaveIssues(list);
-  bdiIssueEvLogs(is,ev,function(arr){var keep=arr.filter(function(l){return !(l&&l.meta&&l.meta.issueEventId===evId)});return keep.length!==arr.length?keep:null});
+  bdiIssueEvLogs(is,ev,function(arr){var keep=arr.filter(function(l){if(bdiIssueEvLinked(l,ev)){bdiAddTomb(l.id);return false}return true});return keep.length!==arr.length?keep:null});
+  if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();
   renderBdiIssues();bdiIssueBadge();bdiRefreshDerived();
 }
 // Oda / misafir adi yanlis girildiyse
@@ -9877,9 +9891,53 @@ function bdiIssueLinkFromTouch(entry){
   hit.events.push({id:bdiEvId(),ts:entry.ts||Date.now(),type:"touch",butler:entry.butler,text:(entry.meta.butlerAction||entry.note||""),touchId:entry.id});
   hit.u=Date.now();bdiSaveIssues(list);
 }
+// Issue silinince issue kartindan girilmis BDI kayitlari (source "Issues") issue'nun icine kenara alinir: raporda ve
+// sayilarda gorunmez, mezar tasiyla diger bilgisayardan da kalkar. Geri getirince yeni kimlikle yerlerine doner.
+// Kayit formundan girilip issue'ya baglanan touch'lar kendi basina kayittir, yerinde kalir.
+function bdiIssueParkable(is){
+  var out=[],seen={};
+  (is.events||[]).forEach(function(ev){if(!ev||ev.del)return;
+    bdiIssueEvDays(is,ev).forEach(function(d){loadBdiArrayForDate(d).forEach(function(l){if(l&&l.id&&!seen[l.id]&&l.source==="Issues"&&bdiIssueEvLinked(l,ev)){seen[l.id]=1;out.push({d:d,l:l})}})});
+  });
+  return out;
+}
+function bdiIssuePark(is,park){
+  park=park||bdiIssueParkable(is);var byDay={};
+  park.forEach(function(p){(byDay[p.d]=byDay[p.d]||{})[p.l.id]=1;bdiAddTomb(p.l.id)});
+  Object.keys(byDay).forEach(function(d){var arr=loadBdiArrayForDate(d),keep=arr.filter(function(l){return !(l&&byDay[d][l.id])});if(keep.length!==arr.length){saveBdiArrayForDate(d,keep);refreshBdiIfSameDate(d,keep)}});
+  is.parked=park;
+}
+function bdiIssueUnpark(is){
+  var P=is.parked||[];delete is.parked;if(!P.length)return 0;
+  var byDay={},stamp=Date.now().toString(36);
+  P.forEach(function(p,i){var l=p.l,old=l.id;if(!l||!old)return;l.id=String(old).replace(/_r[a-z0-9]+$/,"")+"_r"+stamp+i;
+    (is.events||[]).forEach(function(e){if(e.touchId===old){e.touchId=l.id;e.logDate=p.d}});(byDay[p.d]=byDay[p.d]||[]).push(l)});
+  Object.keys(byDay).forEach(function(d){var arr=loadBdiArrayForDate(d),ids={};arr.forEach(function(l){if(l&&l.meta&&l.meta.issueEventId)ids[l.meta.issueEventId]=1});
+    var add=byDay[d].filter(function(l){return !(l.meta&&l.meta.issueEventId&&ids[l.meta.issueEventId])});if(add.length){arr=arr.concat(add);saveBdiArrayForDate(d,arr);refreshBdiIfSameDate(d,arr)}});
+  if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();
+  return P.length;
+}
+// Acilista ve senkrondan sonra: silinmis olayin kaydi bir yerde kaldiysa (eski surumde mezar tasi yazilmadan silinip
+// senkronla geri gelen) temizlenir; silinmis issue'nun kayitlari kenara alinir, geri getirilmisinkiler yerine doner.
+function bdiIssueSweep(){
+  var list=bdiGetIssuesAll(),ch=false,n=0,old=Date.now()-120*864e5;
+  list.forEach(function(is){
+    if(!is||!is.id)return;
+    if(is.del&&!is.parked){bdiIssuePark(is);is.u=Date.now();ch=true}
+    else if(!is.del&&is.parked){bdiIssueUnpark(is);is.u=Date.now();ch=true}
+    if(is.del)return;
+    (is.events||[]).forEach(function(ev){if(!ev||!ev.del||(ev.del||0)<old)return;
+      bdiIssueEvLogs(is,ev,function(arr){var keep=arr.filter(function(l){if(bdiIssueEvLinked(l,ev)){bdiAddTomb(l.id);n++;return false}return true});return keep.length!==arr.length?keep:null})});
+  });
+  if(ch){BdiKV.set(BDI_ISSUES_KEY,JSON.stringify(list));if(typeof schedulePyAutoSync==="function")schedulePyAutoSync()}
+  if(ch||n){try{renderBdiIssues();bdiIssueBadge();bdiRefreshDerived()}catch(e){}}
+  return n;
+}
 function bdiIssueDelete(id){
   var list=bdiGetIssuesAll(),is=bdiIssueById(list,id);if(!is)return;
-  if(!confirm("Oda "+(is.room||"?")+" ("+is.guest+") issue kaydı silinsin mi?\n\nSilinenler listesine gider; oradan geçmişiyle birlikte geri getirebilirsin."))return;
+  var park=bdiIssueParkable(is);
+  if(!confirm("Oda "+(is.room||"?")+" ("+is.guest+") issue kaydı silinsin mi?\n\n"+(park.length?"Bu issue'ya bağlı "+park.length+" Butler Did It kaydı da rapordan çıkar.\n":"")+"Silinenler listesine gider; oradan geçmişiyle birlikte geri getirebilirsin.\n\nSadece bir kayıt yanlışsa issue'yu silme: kartı aç, Geçmiş'te o satırın sonundaki \"sil\"e bas."))return;
+  bdiIssuePark(is,park);
   is.del=Date.now();is.u=is.del;
   BdiKV.set(BDI_ISSUES_KEY,JSON.stringify(list));if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();bdiGMSchedule();
   renderBdiIssues();bdiIssueBadge();bdiRefreshDerived();
@@ -9887,7 +9945,7 @@ function bdiIssueDelete(id){
 function bdiIssueRestore(id){
   var list=bdiGetIssuesAll(),is=bdiIssueById(list,id);if(!is)return;
   var sk=bdiIssueSkipped();if(sk[id]){delete sk[id];BdiKV.set("bdi_issue_skipped",JSON.stringify(sk))}
-  delete is.del;is.u=Date.now();
+  delete is.del;bdiIssueUnpark(is);is.u=Date.now();
   BdiKV.set(BDI_ISSUES_KEY,JSON.stringify(list));if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();bdiGMSchedule();
   _bdiIssueOpen[id]=true;if(!bdiGetIssuesDeleted().length&&_bdiIssueFilter==="deleted")_bdiIssueFilter="all";
   renderBdiIssues();bdiIssueBadge();bdiRefreshDerived();
@@ -9939,7 +9997,7 @@ function renderBdiIssues(){
   if(_bdiIssueFilter==="deleted"&&!dels.length&&!skN)_bdiIssueFilter="all";
   if(_bdiIssueFilter==="deleted"){
     wrap.innerHTML='<p class="bd-sub" style="margin:0 0 8px">Silinen issue\'lar geçmişleriyle burada durur. Geri getirince her şey (temas edenler, Butler Did It kayıtları) olduğu gibi döner.</p>'+dels.sort(function(a,b){return (b.del||0)-(a.del||0)}).map(function(is){var s=bdiIssueState(is);
-      return '<article class="bd-issue '+s.status+' bd-issue-del"><div class="bd-issue-top"><div class="bd-issue-room">'+esc(is.room||"—")+'</div><div class="bd-issue-main"><div class="bd-issue-guest">'+esc(is.guest)+' <span class="bd-pill bd-pill-dep">silindi '+esc(bdiFmtShort(is.del))+'</span></div><div class="bd-issue-snip">'+esc(String(is.concern||"").slice(0,200))+'</div></div><div class="bd-issue-meta"><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiIssueRestore(\''+is.id+'\')">Geri getir</button></div></div></article>'}).join("")+
+      return '<article class="bd-issue '+s.status+' bd-issue-del"><div class="bd-issue-top"><div class="bd-issue-room">'+esc(is.room||"—")+'</div><div class="bd-issue-main"><div class="bd-issue-guest">'+esc(is.guest)+' <span class="bd-pill bd-pill-dep">silindi '+esc(bdiFmtShort(is.del))+'</span>'+(is.parked&&is.parked.length?' <span class="bd-sub">· '+is.parked.length+' Butler Did It kaydıyla</span>':'')+'</div><div class="bd-issue-snip">'+esc(String(is.concern||"").slice(0,200))+'</div></div><div class="bd-issue-meta"><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiIssueRestore(\''+is.id+'\')">Geri getir</button></div></div></article>'}).join("")+
       Object.keys(skp).sort(function(a,b){return (skp[b].at||0)-(skp[a].at||0)}).map(function(id){var x=skp[id];
         return '<article class="bd-issue bd-issue-del"><div class="bd-issue-top"><div class="bd-issue-room">'+esc(x.room||"—")+'</div><div class="bd-issue-main"><div class="bd-issue-guest">'+esc(x.guest)+' <span class="bd-pill bd-pill-dep">eskiden silinmiş · son dosyada tekrar geldi '+esc(bdiFmtShort(x.at))+'</span></div><div class="bd-issue-snip">'+esc(String(x.concern||"").slice(0,200))+'</div></div><div class="bd-issue-meta"><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiIssueRestoreSkipped(\''+id+'\')">Geri getir</button></div></div></article>'}).join("");
     var seg0=document.getElementById("bdiIssueFilterSeg");if(seg0)Array.prototype.forEach.call(seg0.querySelectorAll("button"),function(b){b.classList.toggle("active",b.getAttribute("data-f")==="deleted")});
@@ -9993,7 +10051,7 @@ function renderBdiIssues(){
           (edt?' &middot; <select class="bd-tl-sel" title="Yanlış butler seçildiyse düzelt" onchange="bdiIssueEvEdit(\''+is.id+'\',\''+e.id+'\',this.value)">'+bdiButlerOptions(e.butler,"Butler")+'</select>':(e.butler?' &middot; '+esc(e.butler):''))+
           (e.by?' &middot; '+esc(e.by):'')+(e.src==="report"?' <span class="bd-sub">(rapor)</span>':'')+(e.prev?' <span class="bd-sub">(düzeltildi, önce: '+esc(e.prev)+')</span>':'')+
           (edt?' <button type="button" class="bd-tl-note" title="Butler ne yaptı? (Butler Did It\'te görünür)" onclick="bdiIssueEvText(\''+is.id+'\',\''+e.id+'\')">'+(e.text?'notu düzelt':'+ ne yapıldı')+'</button>':'')+
-          (rmv?' <button type="button" class="bd-tl-x" title="Bu kaydı sil" onclick="bdiIssueEvDelete(\''+is.id+'\',\''+e.id+'\')">&times;</button>':'')+
+          (rmv?' <button type="button" class="bd-tl-x" title="Yanlış girilen bu kaydı sil (Butler Did It\'teki karşılığı da silinir)" onclick="bdiIssueEvDelete(\''+is.id+'\',\''+e.id+'\')">sil</button>':'')+
           (e.text?'<div class="bd-tl-text">'+esc(e.text)+'</div>':'')+'</li>';
       });
       h+='</ul>';
@@ -13086,6 +13144,8 @@ function bdiMergeIssue(a,b){
   o.u=Math.max(a.u||0,b.u||0);
   var ev={};(a.events||[]).concat(b.events||[]).forEach(function(e){if(e&&e.id&&(!ev[e.id]||(e.u||0)>(ev[e.id].u||0)))ev[e.id]=e}); // duzeltilen/silinen olay (u) kazanir
   o.events=Object.keys(ev).map(function(k){return ev[k]}).sort(function(x,y){return (x.ts||0)-(y.ts||0)});
+  if(o.del&&(a.parked||b.parked)){var pk={};(a.parked||[]).concat(b.parked||[]).forEach(function(p){if(p&&p.l&&p.l.id)pk[String(p.l.id)]=p});o.parked=Object.keys(pk).map(function(k){return pk[k]})}
+  else if(!o.del)delete o.parked;
   return o;
 }
 async function _bdiExtSyncFile(dir){
@@ -13114,7 +13174,7 @@ async function _bdiExtSyncFile(dir){
   if(outPrep!==JSON.stringify(pr)){res.got++;BdiKV.set("bdi_prep_v1",outPrep)}
   if(outHand!==JSON.stringify(ho)){res.got++;BdiKV.set("bdi_handover_v1",outHand)}
   var outIssues=JSON.stringify(issues),outFloors=JSON.stringify(floors);
-  if(outIssues!==locJson){res.got+=Math.max(0,issues.length-loc.length)||1;BdiKV.set(BDI_ISSUES_KEY,outIssues)}
+  if(outIssues!==locJson){res.got+=Math.max(0,issues.length-loc.length)||1;BdiKV.set(BDI_ISSUES_KEY,outIssues);try{bdiIssueSweep()}catch(e){console.warn(e)}}
   if(outFloors!==JSON.stringify(fl)){res.got++;BdiKV.set("bdi_floors_v1",outFloors)}
   BdiKV.set(BDI_ISSUE_TOMBS,JSON.stringify(tombArr));
   var untombArr=Object.keys(untombs).slice(-1000);BdiKV.set("bdi_issue_untombs",JSON.stringify(untombArr));
@@ -13174,7 +13234,7 @@ function bdiReportIssueGroups(logs,endTs){
   var byId={};bdiGetIssuesAll().forEach(function(x){if(x&&x.id)byId[x.id]=x});
   var G={},order=[];
   logs.forEach(function(l){
-    var is=l.meta&&l.meta.issueId?byId[l.meta.issueId]||null:null,A=bdiIssueActOf(l),key;
+    var is=l.meta&&l.meta.issueId?byId[l.meta.issueId]||null:null,A=bdiIssueActOf(l),key;if(is&&is.del)is=null;
     var said=A.said||(l.action==="Guest Issue / Recovery / Room Move"?l.note||"":"");
     key=is?"i|"+is.id:"f|"+String(l.room||"")+"|"+normTR(String(l.guest||""))+"|"+normTR(String(said)).slice(0,80);
     if(!G[key]){G[key]={is:is,room:is&&is.room?is.room:l.room,guest:is&&!bdiGuestBad(is.guest)?is.guest:(bdiGuestBad(l.guest)?"":l.guest),said:said,acts:[]};order.push(key)}
