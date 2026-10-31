@@ -980,6 +980,8 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-isedit-row input:first-child{width:80px;flex:none}
 #page-didit .bd-isedit-row input:nth-child(2){flex:1}
 #page-didit .bd-issue-del{opacity:.85}
+#page-didit .bd-isskip{margin-top:6px;padding:6px 10px;border-radius:8px;background:var(--amber-t);color:var(--amber);font-size:12.5px}
+#page-didit .bd-isskip b{color:var(--ink)}
 #page-didit .bd-isfix{font-size:12px;margin-top:4px;padding:4px 8px;border-radius:6px;background:var(--amber-t);color:var(--amber);display:inline-block}
 #page-didit .bd-isfix b{color:var(--ink)}
 #page-didit .bd-isimp{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin:2px 0 10px;color:var(--ink)}
@@ -6772,7 +6774,7 @@ async function swRepIngest(files,src){
       }else if(d.type==="dep"){var DR=await bdiDepLoad(d.pdf,file);r.ok=!!DR.rows;r.msg=DR.rows+" oda · "+DR.ck+" çıktı · "+DR.du+" çıkacak"+(DR.total?(DR.total.rooms===DR.rows?" · Opera toplamıyla aynı":" · Opera toplamı "+DR.total.rooms+"!"):"")}
       else if(d.type==="xls"){r.ok=true;r.msg=(await swRepXls(file))+" misafir"}
       else if(d.type==="alice"){await bdiAliceImportFile(file);r.ok=true;r.msg=((document.getElementById("bdiAliceStatus")||{}).textContent||"").slice(0,90)}
-      else if(d.type==="issue"){await bdiIssueImportFile(file);r.ok=true;r.msg=((document.getElementById("bdiIssueImportStatus")||{}).textContent||"").slice(0,90)}
+      else if(d.type==="issue"){var IR=await bdiIssueImportFile(file);r.ok=!!IR;r.msg=IR?IR.added+" yeni, "+IR.updated+" güncellendi"+((IR.closed||0)+(IR.gone||0)?", "+((IR.closed||0)+(IR.gone||0))+" kapandı":"")+(IR.tombIds&&IR.tombIds.length?" · "+IR.tombIds.length+" silinmiş satır alınmadı (Issues › Silinenler'den geri getirilebilir)":""):"Dosya okunamadı"}
       else if(d.type==="ipad"){var R=await bgdImportObj(d.obj,file.name);r.ok=true;r.msg=bgdSummary(R)}
       else if(d.type==="pref"){var pf=await bdiPrefFormLoad(d.pdf,file);r.ok=true;r.msg=pf.n+" tercih"+(pf.guess?" · "+pf.guess:" · misafir Atölye'de seçilecek")}
       else if(d.type==="backup")r.msg="Yedek dosyası: Kurulum › Geri yükle'den yükle (rapor değil)";
@@ -9355,11 +9357,11 @@ function bdiIssueImportRows(rows){
     if(!rid&&cr)rid=bdiIssueKey(guest,"")+"@"+cr;
     if(cr){if(!win[0]||cr<win[0])win[0]=cr;if(cr>win[1])win[1]=cr}
     if(rid)seen[rid]=1;
-    if(rid&&delRid[rid]){out.skipped++;tombHits.push(delRid[rid]);continue} // cop kutusundaki issue'nun satiri
+    if(rid&&delRid[rid]){out.skipped++;tombHits.push(delRid[rid]);bdiIssueSkipNote(delRid[rid],rows[hi],rw,guest,room,concern,cr);continue} // cop kutusundaki issue'nun satiri
     var id=bdiIssueKey(guest,room),ex=rid&&byRid[rid]?byRid[rid]:null;
     if(ex)id=ex.id;
     else{ex=byId[id]||null;if(ex&&rid&&ex.rid&&ex.rid!==rid){id=id+"_"+(cr||rid.replace(/[^a-z0-9]/gi,""));ex=byId[id]||null}}
-    if(tombs[id]){out.skipped++;tombHits.push(id);continue}
+    if(tombs[id]){out.skipped++;tombHits.push(id);bdiIssueSkipNote(id,rows[hi],rw,guest,room,concern,cr);continue}
     var dep=txt(rw,cDep),cat=txt(rw,cCat),sat=txt(rw,cSat),sst=txt(rw,cSt);
     if(!ex){
       var t0=cr||now;
@@ -9410,6 +9412,24 @@ function bdiIssueRepair(){
   return n;
 }
 try{BdiKV.ready().then(function(){try{bdiIssueRepair()}catch(e){console.warn(e)}})}catch(e){}
+// Silinmis oldugu icin dosyadan alinmayan satir: Silinenler listesinde "dosyada tekrar geldi" olarak durur, tek tikla geri gelir.
+// (Eski surumde silinenlerin cop kutusu kaydi yok; bu not olmadan geri getirmenin tek yolu yukleme mesajindaki baglantiydi.)
+function bdiIssueSkipped(){try{var o=JSON.parse(BdiKV.get("bdi_issue_skipped")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return {}}}
+function bdiIssueSkipNote(id,hdr,row,guest,room,concern,cr){
+  if(bdiIssueById(bdiGetIssuesDeleted(),id))return; // cop kutusunda zaten var (gecmisiyle)
+  var o=bdiIssueSkipped();o[id]={hdr:hdr,row:row,guest:guest,room:room,concern:String(concern||"").slice(0,400),createdAt:cr||0,at:Date.now()};
+  var ks=Object.keys(o).sort(function(a,b){return (o[b].at||0)-(o[a].at||0)});ks.slice(60).forEach(function(k){delete o[k]});
+  BdiKV.set("bdi_issue_skipped",JSON.stringify(o));
+}
+function bdiIssueRestoreSkipped(id){
+  var o=bdiIssueSkipped(),x=o[id];if(!x)return;
+  BdiKV.set(BDI_ISSUE_TOMBS,JSON.stringify(bdiGetIssueTombs().filter(function(t){return t!==id})));
+  var ut=bdiGetIssueUntombs();if(ut.indexOf(id)<0){ut.push(id);BdiKV.set("bdi_issue_untombs",JSON.stringify(ut.slice(-1000)))}
+  delete o[id];BdiKV.set("bdi_issue_skipped",JSON.stringify(o));
+  var res=bdiIssueImportRows([x.hdr,x.row]);bdiIssueImportLog(res.imp,"silinenden geri getirildi",res);
+  if(!bdiGetIssuesDeleted().length&&!Object.keys(bdiIssueSkipped()).length&&_bdiIssueFilter==="deleted")_bdiIssueFilter="all";
+  renderBdiIssues();bdiIssueBadge();bdiRefreshDerived();
+}
 // ---------- Issue yukleme gecmisi (2026-11-01): yanlis dosya yuklenirse geri alinir ----------
 var _bdiIssueLastRows=null;
 function bdiIssueImports(){try{var a=JSON.parse(BdiKV.get("bdi_issue_imports")||"[]");return Array.isArray(a)?a:[]}catch(e){return []}}
@@ -9442,6 +9462,7 @@ function bdiIssueUntomb(ids){
   var all=bdiGetIssuesAll(),ch=false;all.forEach(function(x){if(x.del&&ids.indexOf(x.id)>=0){delete x.del;x.u=Date.now();ch=true}});
   if(ch)BdiKV.set(BDI_ISSUES_KEY,JSON.stringify(all));
   var ut=bdiGetIssueUntombs();ids.forEach(function(t){if(ut.indexOf(t)<0)ut.push(t)});BdiKV.set("bdi_issue_untombs",JSON.stringify(ut.slice(-1000)));
+  var sk=bdiIssueSkipped();ids.forEach(function(t){delete sk[t]});BdiKV.set("bdi_issue_skipped",JSON.stringify(sk));
   BdiKV.set(BDI_ISSUE_TOMBS,JSON.stringify(bdiGetIssueTombs().filter(function(t){return ids.indexOf(t)<0})));
   var res=bdiIssueImportRows(_bdiIssueLastRows);bdiIssueImportLog(res.imp,"silinenleri geri getir",res);
   var st=document.getElementById("bdiIssueImportStatus");if(st)st.innerHTML='<span class="bd-ok">'+res.added+' silinmiş issue geri getirildi.</span>';
@@ -9463,7 +9484,7 @@ async function bdiIssueImportFile(file){
     var wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
     var res=bdiIssueImportRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""}));
     if(st)st.innerHTML='<span class="bd-ok">'+esc(file.name)+' ('+res.rows+' satır): '+res.added+' yeni, '+res.updated+' güncellendi, '+res.same+' değişmedi'+(res.closed?', '+res.closed+' kapandı':'')+(res.gone?', '+res.gone+' kaynakta artık aktif değil (kapandı sayıldı)':'')+(res.reopened?', '+res.reopened+' yeniden açıldı':'')+(res.confirmed?', '+res.confirmed+' temas eden butler bulundu':'')+(res.noRoom?', '+res.noRoom+' kayıtta oda yok':'')+(res.notIssue?', '+res.notIssue+' issue dışı kayıt atlandı':'')+(res.skipped?', '+res.skipped+' atlandı':'')+'.</span>';
-    if(st&&res.tombIds&&res.tombIds.length)st.innerHTML+=' <span class="bd-sub">'+res.tombIds.length+' satır daha önce silinmiş olduğu için alınmadı.</span> <button type="button" class="bd-link" onclick="bdiIssueUntomb(\''+res.tombIds.join(",")+'\')">geri getir</button>';
+    if(st&&res.tombIds&&res.tombIds.length)st.innerHTML+='<div class="bd-isskip"><b>'+res.tombIds.length+' satır daha önce silinmiş olduğu için alınmadı.</b> Silinenler listesinde duruyor. <button type="button" class="bd-link" onclick="bdiIssueUntomb(\''+res.tombIds.join(",")+'\')">hepsini geri getir</button> · <button type="button" class="bd-link" onclick="bdiIssueSetFilter(\'deleted\')">Silinenleri göster</button></div>';
     bdiIssueImportLog(res.imp,file.name,res);
     swRepLog("issue",file.name,res.added+res.updated,res.added+" yeni, "+res.updated+" güncellendi");
   }catch(e){
@@ -9471,6 +9492,7 @@ async function bdiIssueImportFile(file){
   }
   if(input)input.value=""; // ayni dosya tekrar secilirse onchange yine tetiklensin
   renderBdiIssues();bdiRefreshDerived();
+  return res||null;
 }
 function bdiIssueById(list,id){for(var i=0;i<list.length;i++)if(list[i].id===id)return list[i];return null}
 
@@ -9842,6 +9864,7 @@ function bdiIssueDelete(id){
 }
 function bdiIssueRestore(id){
   var list=bdiGetIssuesAll(),is=bdiIssueById(list,id);if(!is)return;
+  var sk=bdiIssueSkipped();if(sk[id]){delete sk[id];BdiKV.set("bdi_issue_skipped",JSON.stringify(sk))}
   delete is.del;is.u=Date.now();
   BdiKV.set(BDI_ISSUES_KEY,JSON.stringify(list));if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();bdiGMSchedule();
   _bdiIssueOpen[id]=true;if(!bdiGetIssuesDeleted().length&&_bdiIssueFilter==="deleted")_bdiIssueFilter="all";
@@ -9864,9 +9887,9 @@ function bdiIssueAddManual(){
   var concern=(document.getElementById("bdiIsNewConcern").value||"").trim();
   if(!room||!concern){alert("Oda ve sorun detayi gerekli.");return}
   if(!guest){alert("Misafir adini yaz (VAC PDF yuklu degil).");return}
-  var list=bdiGetIssues(),id=bdiIssueKey(guest,room);
-  if(bdiGetIssueTombs().indexOf(id)>=0)id+="_"+Date.now();
-  if(bdiIssueById(list,id))id+="_"+Date.now(); // ayni misafirin ikinci sikayeti ayri issue
+  var list=bdiGetIssues(),id=bdiIssueKey(guest,room),gone=bdiIssueById(bdiGetIssuesDeleted(),id);
+  if(gone&&confirm("Bu misafir ve oda için silinmiş bir issue var:\n\n\""+String(gone.concern||"").slice(0,140)+"\"\n\nOnu geçmişiyle geri getireyim mi?\n(İptal derseniz yeni bir issue olarak eklenir.)")){bdiIssueRestore(id);["bdiIsNewRoom","bdiIsNewGuest","bdiIsNewConcern","bdiIsNewAt"].forEach(function(x){var el=document.getElementById(x);if(el)el.value=""});document.getElementById("bdiIssueNew").style.display="none";return}
+  if(bdiGetIssueTombs().indexOf(id)>=0||bdiIssueById(bdiGetIssuesAll(),id))id+="_"+Date.now(); // ikinci sikayet ayri issue; silinmisin ustune yazilmaz
   var now=Date.now(),atV=((document.getElementById("bdiIsNewAt")||{}).value||"").trim(),at=atV?Date.parse(atV):0;
   if(!at||at>now)at=now;
   var stV=(document.getElementById("bdiIsNewSt")||{}).value||"open",byV=(document.getElementById("bdiIsNewBy")||{}).value||"";
@@ -9889,12 +9912,14 @@ function renderBdiIssues(){
   var wrap=document.getElementById("bdiIssueList");if(!wrap)return;
   bdiAwayRefresh();
   var ih=document.getElementById("bdiIssueImports");if(ih)ih.innerHTML=bdiIssueImportsHtml();
-  var dels=bdiGetIssuesDeleted(),db=document.getElementById("bdiIssueDelBtn");
-  if(db){db.style.display=dels.length?"":"none";db.textContent="Silinenler ("+dels.length+")"}
-  if(_bdiIssueFilter==="deleted"&&!dels.length)_bdiIssueFilter="all";
+  var dels=bdiGetIssuesDeleted(),skp=bdiIssueSkipped(),skN=Object.keys(skp).length,db=document.getElementById("bdiIssueDelBtn");
+  if(db){db.style.display=(dels.length+skN)?"":"none";db.textContent="Silinenler ("+(dels.length+skN)+")"}
+  if(_bdiIssueFilter==="deleted"&&!dels.length&&!skN)_bdiIssueFilter="all";
   if(_bdiIssueFilter==="deleted"){
     wrap.innerHTML='<p class="bd-sub" style="margin:0 0 8px">Silinen issue\'lar geçmişleriyle burada durur. Geri getirince her şey (temas edenler, Butler Did It kayıtları) olduğu gibi döner.</p>'+dels.sort(function(a,b){return (b.del||0)-(a.del||0)}).map(function(is){var s=bdiIssueState(is);
-      return '<article class="bd-issue '+s.status+' bd-issue-del"><div class="bd-issue-top"><div class="bd-issue-room">'+esc(is.room||"—")+'</div><div class="bd-issue-main"><div class="bd-issue-guest">'+esc(is.guest)+' <span class="bd-pill bd-pill-dep">silindi '+esc(bdiFmtShort(is.del))+'</span></div><div class="bd-issue-snip">'+esc(String(is.concern||"").slice(0,200))+'</div></div><div class="bd-issue-meta"><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiIssueRestore(\''+is.id+'\')">Geri getir</button></div></div></article>'}).join("");
+      return '<article class="bd-issue '+s.status+' bd-issue-del"><div class="bd-issue-top"><div class="bd-issue-room">'+esc(is.room||"—")+'</div><div class="bd-issue-main"><div class="bd-issue-guest">'+esc(is.guest)+' <span class="bd-pill bd-pill-dep">silindi '+esc(bdiFmtShort(is.del))+'</span></div><div class="bd-issue-snip">'+esc(String(is.concern||"").slice(0,200))+'</div></div><div class="bd-issue-meta"><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiIssueRestore(\''+is.id+'\')">Geri getir</button></div></div></article>'}).join("")+
+      Object.keys(skp).sort(function(a,b){return (skp[b].at||0)-(skp[a].at||0)}).map(function(id){var x=skp[id];
+        return '<article class="bd-issue bd-issue-del"><div class="bd-issue-top"><div class="bd-issue-room">'+esc(x.room||"—")+'</div><div class="bd-issue-main"><div class="bd-issue-guest">'+esc(x.guest)+' <span class="bd-pill bd-pill-dep">eskiden silinmiş · son dosyada tekrar geldi '+esc(bdiFmtShort(x.at))+'</span></div><div class="bd-issue-snip">'+esc(String(x.concern||"").slice(0,200))+'</div></div><div class="bd-issue-meta"><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiIssueRestoreSkipped(\''+id+'\')">Geri getir</button></div></div></article>'}).join("");
     var seg0=document.getElementById("bdiIssueFilterSeg");if(seg0)Array.prototype.forEach.call(seg0.querySelectorAll("button"),function(b){b.classList.toggle("active",b.getAttribute("data-f")==="deleted")});
     return;
   }
@@ -16860,7 +16885,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueEvEdit, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueRestoreSkipped, bdiIssueEvEdit, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
