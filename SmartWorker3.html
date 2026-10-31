@@ -973,6 +973,11 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-tl-sel{width:auto;height:24px;font-size:12px;padding:0 4px;border:1px dashed #b9c6c1;border-radius:6px;background:#fff;font-weight:600}
 #page-didit .bd-tl-note{border:0;background:none;color:#4f6d9a;cursor:pointer;font-size:11.5px;padding:0 4px;text-decoration:underline dotted}
 #page-didit .bd-isconf input{width:170px;height:26px;font-size:12px;padding:0 6px;border:1px dashed #b9c6c1;border-radius:6px}
+#page-didit .bd-isconf-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px 10px 102px;border-top:1px dashed var(--line);background:#fbfcfb;font-size:12.5px;color:var(--mut)}
+#page-didit .bd-isconf-lbl{font-weight:600;color:var(--ink)}
+#page-didit .bd-isconf-row select{width:auto;min-width:170px;height:30px;font-size:12.5px;padding:0 8px;border:1px solid #cfd8d4;border-radius:7px;background:#fff}
+#page-didit .bd-isconf-row input{flex:1 1 220px;max-width:460px;min-width:0;height:30px;font-size:12.5px;padding:0 8px;border:1px solid #cfd8d4;border-radius:7px}
+@media (max-width:980px){#page-didit .bd-isconf-row{padding-left:16px}}
 #page-didit .bd-tl-x{border:0;background:none;color:#9a6b62;cursor:pointer;font-size:11.5px;padding:0 4px;text-decoration:underline dotted}
 #page-didit .bd-tl-x:hover{color:var(--red)}
 #page-didit .bd-isedit{margin:8px 0 4px;font-size:12px}
@@ -10060,10 +10065,13 @@ function renderBdiIssues(){
     h+='<div class="bd-issue-meta">'+bdiIssueDepTag(is)+'<span>'+(s.status==="closed"?'Kapandı '+esc(bdiFmtShort(s.closedAt))+(s.closedBy?' · '+esc(s.closedBy):''):'Açıldı: '+esc(bdiDaysAgo(is.createdAt)))+'</span>';
     if(hs.length)h+='<span>'+hs.map(function(b){return '<span class="bd-bond"><i style="--c:'+bdiButlerColor(b)+'"></i>'+esc(b)+'</span>'}).join('')+'</span>';
     else if(s.status==="open")h+='<span class="bd-warn-text">Henüz kimse ilgilenmedi</span>';
-    else{var cd=_bdiIssueDraft[is.id]||{};h+='<span class="bd-isconf" onclick="event.stopPropagation()">Temas eden <select id="bdiIsCB_'+is.id+'" onchange="bdiIssueDraftSet(\''+is.id+'\',\'cb\',this.value)" aria-label="Temas eden butler">'+bdiButlerOptions(cd.cb||"","seç (opsiyonel)")+'</select><input id="bdiIsCN_'+is.id+'" placeholder="Ne yaptı? (opsiyonel)" value="'+esc(cd.cn||"")+'" oninput="bdiIssueDraftSet(\''+is.id+'\',\'cn\',this.value)" aria-label="Butler ne yaptı"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueConfirmFrom(\''+is.id+'\')">Kaydet</button></span>'}
+    else h+='<span class="bd-sub">Temas eden girilmedi</span>';
     if(owner&&s.status==="open")h+='<span class="bd-sub">Kat sorumlusu: '+esc(owner)+'</span>';
     var gp=bdiGMProfileByName(is.guest);if(gp&&gp.repeat)h+='<span class="bd-flag bd-flag-rep" style="cursor:pointer" onclick="event.stopPropagation();bdiGuestOpen(\''+gp.gid+'\')">Tekrar misafir, '+gp.stays.length+' konaklama</span>';
     h+='</div></div>';
+    if(s.status==="closed"&&!hs.length){var cd=_bdiIssueDraft[is.id]||{};
+      h+='<div class="bd-isconf-row"><span class="bd-isconf-lbl">Kim ilgilendi?</span><select id="bdiIsCB_'+is.id+'" onchange="bdiIssueDraftSet(\''+is.id+'\',\'cb\',this.value)" aria-label="Temas eden butler">'+bdiButlerOptions(cd.cb||"","Butler seç (opsiyonel)")+'</select><input id="bdiIsCN_'+is.id+'" placeholder="Ne yaptı? (opsiyonel)" value="'+esc(cd.cn||"")+'" oninput="bdiIssueDraftSet(\''+is.id+'\',\'cn\',this.value)" aria-label="Butler ne yaptı"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueConfirmFrom(\''+is.id+'\')">Kaydet</button></div>';
+    }
     if(open){
       h+='<div class="bd-issue-body"><div><div class="bd-concern">'+esc(is.concern||"")+'</div></div><div>';
       h+='<h4 class="bd-h4">Geçmiş</h4><ul class="bd-tl">';
