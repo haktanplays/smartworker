@@ -971,6 +971,8 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-isconf{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
 #page-didit .bd-pill-dep{background:#eef0f6;color:#4f6d9a}
 #page-didit .bd-tl-sel{width:auto;height:24px;font-size:12px;padding:0 4px;border:1px dashed #b9c6c1;border-radius:6px;background:#fff;font-weight:600}
+#page-didit .bd-tl-note{border:0;background:none;color:#4f6d9a;cursor:pointer;font-size:11.5px;padding:0 4px;text-decoration:underline dotted}
+#page-didit .bd-isconf input{width:170px;height:26px;font-size:12px;padding:0 6px;border:1px dashed #b9c6c1;border-radius:6px}
 #page-didit .bd-tl-x{border:0;background:none;color:#9fb0aa;cursor:pointer;font-size:15px;line-height:1;padding:0 4px}
 #page-didit .bd-tl-x:hover{color:var(--red)}
 #page-didit .bd-isedit{margin:8px 0 4px;font-size:12px}
@@ -8329,7 +8331,7 @@ function renderBdiLogWithData(logs){
     h+='<td style="font-weight:700;text-align:center">'+esc(l.room)+_alBadge+'</td>';
     h+='<td style="font-size:11px;color:#af8d69">'+esc(l.guest||"")+'</td>';
     h+='<td>'+((l.touchCategory||'Service')!==l.action?'<span class="bd-badge bd-badge-soft">'+esc(l.touchCategory||'Service')+'</span>':'')+'<span class="bd-badge">'+esc(l.action)+'</span>'+(l.manual?' <span class="bd-badge bd-badge-soft" title="Manuel giris">M</span>':'')+'</td>';
-    h+='<td class="trace-text" style="max-width:350px">'+esc(l.sentence)+(l.note?' <i style="color:#9ca3af">['+esc(l.note)+']</i>':"")+'</td>';
+    h+='<td class="trace-text" style="max-width:350px">'+esc(l.sentence)+(l.note&&String(l.sentence||"").indexOf(l.note)<0?' <i style="color:#9ca3af">['+esc(l.note)+']</i>':"")+'</td>';
     h+='<td class="bd-react-cell">'+bdiReactCell(l,l._date||document.getElementById("bdiDate").value)+'</td>';
     h+="<td><button class=\"rm-btn\" onclick='removeBdiLogById("+JSON.stringify(l.id)+","+JSON.stringify(l._date||document.getElementById("bdiDate").value)+")'>\u00d7</button></td></tr>";
   }
@@ -9602,7 +9604,17 @@ function bdiIssueEvEdit(id,evId,butler){
   var list=bdiGetIssues(),is=bdiIssueById(list,id);if(!is||!butler)return;
   var ev=(is.events||[]).filter(function(e){return e.id===evId})[0];if(!ev||ev.butler===butler)return;
   var old=ev.butler||"",now=Date.now();ev.prev=old;ev.butler=butler;ev.u=now;is.u=now;bdiSaveIssues(list);
-  bdiIssueEvLogs(is,ev,function(arr){var ch=false;arr.forEach(function(l){if(l&&l.meta&&l.meta.issueEventId===evId){l.butler=butler;if(old)l.sentence=String(l.sentence||"").replace("Butler "+old,"Butler "+butler);ch=true}});return ch});
+  bdiIssueEvLogs(is,ev,function(arr){var ch=false;arr.forEach(function(l){if(l&&l.meta&&l.meta.issueEventId===evId){l.butler=butler;l.sentence=bdiIssueSentence(is,butler,l.note||ev.text,l.action==="Issue Closed");ch=true}});return ch});
+  renderBdiIssues();bdiRefreshDerived();
+}
+function bdiIssueEvText(id,evId){
+  var list=bdiGetIssues(),is=bdiIssueById(list,id);if(!is)return;
+  var ev=(is.events||[]).filter(function(e){return e.id===evId})[0];if(!ev)return;
+  var t=prompt("Butler ne yaptı? (Butler Did It'te görünür)",ev.text||"");if(t===null)return;t=String(t).trim();
+  if(t&&!bdiKvkkOk(t))return;
+  if(t===(ev.text||""))return;
+  var now=Date.now();ev.text=t;ev.u=now;is.u=now;bdiSaveIssues(list);
+  bdiIssueEvLogs(is,ev,function(arr){var ch=false;arr.forEach(function(l){if(l&&l.meta&&l.meta.issueEventId===evId){l.note=t;l.sentence=bdiIssueSentence(is,l.butler,t,l.action==="Issue Closed");ch=true}});return ch});
   renderBdiIssues();bdiRefreshDerived();
 }
 function bdiIssueEvDelete(id,evId){
@@ -9646,19 +9658,25 @@ var _bdiIssueDraft={};
 function bdiIssueDraftSet(id,k,v){(_bdiIssueDraft[id]=_bdiIssueDraft[id]||{})[k]=v}
 // Temas eden butleri sonradan teyit et (opsiyonel). Kapanmis issue'da kapanis saatiyle BDI kaydina da "Issue Closed"
 // olarak yazilir: Butler Did It raporunda ve "Issues closed" sayisinda gorunur. O butlerin bu issue icin kaydi varsa tekrar yazilmaz.
-function bdiIssueConfirm(id,butler){
+function bdiIssueConfirmFrom(id){
+  var b=(document.getElementById("bdiIsCB_"+id)||{}).value||"",t=((document.getElementById("bdiIsCN_"+id)||{}).value||"").trim();
+  if(!b){alert("Temas eden butleri seç.");return}
+  if(t&&!bdiKvkkOk(t))return;
+  delete _bdiIssueDraft[id];bdiIssueConfirm(id,b,t);
+}
+function bdiIssueConfirm(id,butler,text){
   if(!butler)return;
   var list=bdiGetIssues(),is=bdiIssueById(list,id);if(!is)return;
-  var cev={id:bdiEvId(),ts:Date.now(),type:"confirm",butler:butler,text:"",src:"manual"};
+  var cev={id:bdiEvId(),ts:Date.now(),type:"confirm",butler:butler,text:text||"",src:"manual"};
   is.events=is.events||[];is.events.push(cev);is.u=Date.now();
-  var lg=bdiIssueCreditLog(is,butler,cev.id);if(lg){cev.touchId=lg.id;cev.logDate=bdiYmd(new Date(bdiIssueState(is).closedAt||Date.now()))}
+  var lg=bdiIssueCreditLog(is,butler,cev.id,text);if(lg){cev.touchId=lg.id;cev.logDate=bdiYmd(new Date(bdiIssueState(is).closedAt||Date.now()))}
   bdiSaveIssues(list);renderBdiIssues();bdiRefreshDerived();
 }
-function bdiIssueCreditLog(is,butler,evId){
+function bdiIssueCreditLog(is,butler,evId,text){
   var s=bdiIssueState(is);if(s.status!=="closed"||!butler)return null;
   var at=new Date(s.closedAt||Date.now()),arr=loadBdiArrayForDate(bdiYmd(at));
   if(arr.some(function(l){return l&&l.meta&&l.meta.issueId===is.id&&l.butler===butler}))return null;
-  return bdiIssueTouch(is,{id:evId||bdiEvId(),type:"close",butler:butler,text:""},at);
+  return bdiIssueTouch(is,{id:evId||bdiEvId(),type:"close",butler:butler,text:text||""},at);
 }
 
 // ---------- SEN YOKKEN (2026-10-31): son vardiyamdan beri issue tarafinda ne degisti ----------
@@ -9820,9 +9838,13 @@ function bdiCalClick(ds){
 }
 
 // Issue islemi BDI touch'i olarak da kaydedilir -> butler metrigi, misafir gecmisi ve gunluk rapor ayni veriden beslenir.
+// "Ne yapildi?" notu cumlenin sonuna eklenir: Butler Did It logunda, raporunda (PDF/Excel) ve misafir gecmisinde gorunur
+function bdiIssueSentence(is,butler,text,closing){
+  return bdiCleanSentence("Butler "+butler+(closing?" resolved and closed the issue reported by ":" followed up on the issue reported by ")+(is.guest&&!bdiGuestBad(is.guest)?is.guest:"our guest")+" staying at Room "+(is.room||"?")+(text?": "+String(text).trim().replace(/\.+$/,""):"")+".");
+}
 function bdiIssueTouch(is,ev,now){
-  var date=bdiYmd(now),arr=loadBdiArrayForDate(date),guest=is.guest||"our guest",closing=ev.type==="close";
-  var sentence="Butler "+ev.butler+(closing?" resolved and closed the issue reported by ":" followed up on the issue reported by ")+guest+" staying at Room "+is.room+(ev.text?": "+ev.text:"")+".";
+  var date=bdiYmd(now),arr=loadBdiArrayForDate(date),closing=ev.type==="close";
+  var sentence=bdiIssueSentence(is,ev.butler,ev.text,closing);
   var e={butler:ev.butler,room:String(is.room),action:closing?"Issue Closed":"Issue Follow-up",verb:closing?"closed":"followed up",template:"",
     note:ev.text||"",time:bdiNowTime(now),sentence:bdiCleanSentence(sentence),guest:is.guest||"",ts:now.getTime(),manual:false,
     patternType:"issue",touchCategory:closing?"Issue Closed":"Issue Handling",countsAsTouch:true,source:"Issues",meta:{issueId:is.id,issueEventId:ev.id}};
@@ -9958,7 +9980,7 @@ function renderBdiIssues(){
     h+='<div class="bd-issue-meta">'+bdiIssueDepTag(is)+'<span>'+(s.status==="closed"?'Kapandı '+esc(bdiFmtShort(s.closedAt))+(s.closedBy?' · '+esc(s.closedBy):''):'Açıldı: '+esc(bdiDaysAgo(is.createdAt)))+'</span>';
     if(hs.length)h+='<span>'+hs.map(function(b){return '<span class="bd-bond"><i style="--c:'+bdiButlerColor(b)+'"></i>'+esc(b)+'</span>'}).join('')+'</span>';
     else if(s.status==="open")h+='<span class="bd-warn-text">Henüz kimse ilgilenmedi</span>';
-    else h+='<label class="bd-isconf" onclick="event.stopPropagation()">Temas eden <select onchange="bdiIssueConfirm(\''+is.id+'\',this.value)" aria-label="Temas eden butler">'+bdiButlerOptions("","seç (opsiyonel)")+'</select></label>';
+    else{var cd=_bdiIssueDraft[is.id]||{};h+='<span class="bd-isconf" onclick="event.stopPropagation()">Temas eden <select id="bdiIsCB_'+is.id+'" onchange="bdiIssueDraftSet(\''+is.id+'\',\'cb\',this.value)" aria-label="Temas eden butler">'+bdiButlerOptions(cd.cb||"","seç (opsiyonel)")+'</select><input id="bdiIsCN_'+is.id+'" placeholder="Ne yaptı? (opsiyonel)" value="'+esc(cd.cn||"")+'" oninput="bdiIssueDraftSet(\''+is.id+'\',\'cn\',this.value)" aria-label="Butler ne yaptı"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueConfirmFrom(\''+is.id+'\')">Kaydet</button></span>'}
     if(owner&&s.status==="open")h+='<span class="bd-sub">Kat sorumlusu: '+esc(owner)+'</span>';
     var gp=bdiGMProfileByName(is.guest);if(gp&&gp.repeat)h+='<span class="bd-flag bd-flag-rep" style="cursor:pointer" onclick="event.stopPropagation();bdiGuestOpen(\''+gp.gid+'\')">Tekrar misafir, '+gp.stays.length+' konaklama</span>';
     h+='</div></div>';
@@ -9970,6 +9992,7 @@ function renderBdiIssues(){
         h+='<li style="--c:'+(BDI_EV_COLOR[e.type]||"#9fb0aa")+'"><time>'+esc(bdiFmtTs(e.ts))+'</time><b>'+esc(BDI_EV_LABEL[e.type]||e.type)+'</b>'+
           (edt?' &middot; <select class="bd-tl-sel" title="Yanlış butler seçildiyse düzelt" onchange="bdiIssueEvEdit(\''+is.id+'\',\''+e.id+'\',this.value)">'+bdiButlerOptions(e.butler,"Butler")+'</select>':(e.butler?' &middot; '+esc(e.butler):''))+
           (e.by?' &middot; '+esc(e.by):'')+(e.src==="report"?' <span class="bd-sub">(rapor)</span>':'')+(e.prev?' <span class="bd-sub">(düzeltildi, önce: '+esc(e.prev)+')</span>':'')+
+          (edt?' <button type="button" class="bd-tl-note" title="Butler ne yaptı? (Butler Did It\'te görünür)" onclick="bdiIssueEvText(\''+is.id+'\',\''+e.id+'\')">'+(e.text?'notu düzelt':'+ ne yapıldı')+'</button>':'')+
           (rmv?' <button type="button" class="bd-tl-x" title="Bu kaydı sil" onclick="bdiIssueEvDelete(\''+is.id+'\',\''+e.id+'\')">&times;</button>':'')+
           (e.text?'<div class="bd-tl-text">'+esc(e.text)+'</div>':'')+'</li>';
       });
@@ -13179,7 +13202,7 @@ function downloadDidIt(){
     var l=logs[i];
     var ld=l._date||ds;var dd2=new Date(ld+"T00:00:00");var fD2=("0"+dd2.getDate()).slice(-2)+"."+("0"+(dd2.getMonth()+1)).slice(-2)+"."+dd2.getFullYear();
     h+='<tr>'+(hasDate?'<td style="font-size:8pt;color:#8a6e47;white-space:nowrap">'+fD2+'</td>':'');
-    h+='<td>'+esc(l.butler)+'</td><td style="font-weight:700;text-align:center">'+esc(l.room)+'</td><td style="font-size:8.5pt;color:#8a6e47">'+esc(l.guest||"")+'</td><td><span class="badge">'+esc(l.action)+'</span></td><td>'+esc(l.sentence)+(l.note?' <i style="color:#999">'+esc(l.note)+'</i>':'')+'</td></tr>';
+    h+='<td>'+esc(l.butler)+'</td><td style="font-weight:700;text-align:center">'+esc(l.room)+'</td><td style="font-size:8.5pt;color:#8a6e47">'+esc(l.guest||"")+'</td><td><span class="badge">'+esc(l.action)+'</span></td><td>'+esc(l.sentence)+(l.note&&String(l.sentence||"").indexOf(l.note)<0?' <i style="color:#999">'+esc(l.note)+'</i>':'')+'</td></tr>';
   }
   h+='</tbody></table>';
   h+='</td></tr></tbody><tfoot><tr><td class="wc"><div class="fspace"></div></td></tr></tfoot></table>';
@@ -16885,7 +16908,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueRestoreSkipped, bdiIssueEvEdit, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueRestoreSkipped, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
