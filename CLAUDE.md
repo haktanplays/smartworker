@@ -4,7 +4,7 @@ Raffles Istanbul butler ekibinin tek dosyalık (HTML) uygulamaları. Kullanıcı
 
 ## Her yeni istekte
 
-Yeni özellik, yeniden tasarım ya da iş akışı değişikliği istendiğinde kodlamadan önce
-`.claude/skills/derin-bakis/SKILL.md` uygulanır: dört soru (usta ne yapardı, en ham malzeme, yöntem/araç,
-dışarıdan doğrulama) + isteğin yeniden yazılmış hali, kullanıcı onayı, sonra kurulum.
-Küçük düzeltmeler ve net hata düzeltmeleri için atlanır.
+Yeni özellik, yeniden tasarım ya da iş akışı değişikliği istendiğinde `.claude/skills/derin-bakis/SKILL.md`
+uygulanır: dört soru (usta ne yapardı, en ham malzeme, yöntem/araç, dışarıdan doğrulama) **içeriden** düşünülür,
+kullanıcıya soru listesi ya da yeniden yazılmış istek gösterilmez; derin versiyon doğrudan kurulur, dış ölçütle
+doğrulanır, sonunda neyin neden eklendiği kısaca anlatılır. Küçük düzeltmeler ve net hata düzeltmeleri için atlanır.

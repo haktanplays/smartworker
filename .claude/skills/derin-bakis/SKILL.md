@@ -1,12 +1,13 @@
 ---
 name: derin-bakis
-description: Depth lens for every new feature, redesign or workflow change in SmartWorker and its sibling apps (Butler Did It, issues, briefing, reports, Expense, Komunikasyon, Itinerary). Use BEFORE designing or building whenever the user asks for something new or says "derin", "deeper", "daha iyi kurgula", "nasıl olmalı". Produces a deeper version, not a bigger one - four questions (what a top professional would do that wasn't asked, the rawest source material, the specific methods/tools, what outside us proves it right) and a rewritten request to confirm before coding. Skip it for typo fixes, one-line tweaks and pure bug fixes.
+description: Depth lens for every new feature, redesign or workflow change in SmartWorker and its sibling apps (Butler Did It, issues, briefing, reports, Expense, Komunikasyon, Itinerary). Use BEFORE designing or building whenever the user asks for something new or says "derin", "deeper", "daha iyi kurgula", "nasıl olmalı". Think through four questions silently (what a top professional would do that wasn't asked, the rawest source material, the specific methods/tools, what outside us proves it right) and build the deeper version directly - do not show the questions or a rewritten prompt to the user. Skip it for typo fixes, one-line tweaks and pure bug fixes.
 ---
 
 # Derin bakış (daha derin, daha büyük değil)
 
 Kullanıcı bir şey istediğinde ilk iş onu olduğu gibi kodlamak değil. Önce bu alanın en iyi profesyonelinin
-aynı isteğe nasıl yaklaşacağını çıkar, isteği o seviyeye çek, kullanıcıya onaylat, sonra kur.
+aynı isteğe nasıl yaklaşacağını **kendi içinde** düşün, isteği o seviyeye çek ve doğrudan kur.
+(2026-10-31 kullanıcı kararı: "bana promptu vermene gerek yok her defasında, öyle düşünmen yeterli.")
 
 **Kural: derinleştir, büyütme.** En fazla 3 ek fikir. Her biri "hangi anda, kim, hangi kararı daha iyi veriyor"
 sorusuna cevap vermeli. Cevap veremeyen fikir listeden çıkar.
@@ -51,23 +52,18 @@ sorusuna cevap vermeli. Cevap veremeyen fikir listeden çıkar.
    - **Üçüncü kişi:** Duty Manager / Front Office kayıtlarıyla çelişki olmaması, Guest Relations'ın aynı resmi görmesi
    - **Kağıt testi:** A4 çıktıda okunuyor, kesilmiyor, üst üste binmiyor
 
-## Çıktı biçimi
+## Nasıl uygulanır
 
-Kodlamadan önce kullanıcıya Türkçe, sade dille:
+1. Dört soruyu sessizce cevapla. Kullanıcıya soru listesi ya da "yeniden yazılmış istek" GÖSTERME.
+2. İşe ham malzemeden başla: kullanıcının yüklediği gerçek dosyayı (PDF/Excel) aç, yapısını gör, kendi verisinden
+   somut örnekler bul (ör. aynı odada farklı günlerde iki misafir, odası boş kayıt, yazım farkı).
+3. Derin versiyonu kur (en fazla 3 ek fikir). Kullanımı en basit tut: kullanıcı yeni bir şey öğrenmek zorunda kalmasın.
+4. 4. maddedeki dış ölçütü gerçekten çalıştır (kaynak dosyayla mutabakat, gerçek verili test) ve sonucu raporla.
+5. Bitince Türkçe, sade bir açıklamada: ne yapıldı, istenene ek olarak ne eklendi ve neden (birer cümle),
+   doğrulama sonucu, kullanıcının yapması gereken (varsa).
 
-```
-1) Usta ne yapardı (istemediğin): ...
-2) En ham malzeme: ...
-3) Yöntem ve araçlar: ...
-4) Doğruluğu kim/ne gösterir: ...
-
-İsteğinin yeniden yazılmış hali:
-"..."
-```
-
-Yeniden yazılmış istek: kısa, ölçülebilir, ham malzemeyi ve dış ölçütü içeren, "daha büyük" değil "daha derin" bir
-istek olmalı. Kullanıcı onaylayınca (ya da düzeltince) kur. "Bitti" tanımı, 4. maddedeki dış ölçütün çalıştırılmasını
-(ya da kullanıcıyla planlanmasını) içerir.
+Kullanıcıya sadece şu durumlarda sor: ham malzeme elde değilse ve tahmin yanlış veri üretecekse (o zaman örnek dosya
+iste), ya da derin versiyon kapsamı belirgin şekilde büyütüyorsa ya da geri alınması zor bir karar gerekiyorsa.
 
 ## Ne zaman kullanma
 
