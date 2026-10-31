@@ -1587,8 +1587,8 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <div id="bdiIssueAway"></div>
   <label class="bd-drop" id="bdiIssueDrop">
     <input type="file" id="bdiIssueFile" accept=".xlsx,.xls" style="display:none" onchange="bdiIssueImportFile(this.files[0]);this.value=''">
-    <b>Günlük issue raporunu bırak ya da seç</b>
-    <span>Room #, Guest Name, Concern Details. Varsa tarih, durum (Status), kapatan ve ilgilenen sütunları da okunur: arada açılıp kapananlar gerçek saatleriyle girer. Rapor, uygulamada yapılanı ezmez.</span>
+    <b>Sistemden aldığın issue listesini bırak ya da seç</b>
+    <span>Tarih filtreli "tümü" listesi (Issues_All) açılan ve kapananları gerçek saatleri ve misafir memnuniyetiyle getirir. "Aktif" liste (Issues_Active) kendi tarih aralığında artık görünmeyen issue'ları kapandı sayar. Aynı dosya iki kez gelse çift kayıt olmaz; liste, uygulamada yapılanı ezmez.</span>
   </label>
   <div id="bdiIssueImportStatus" class="bd-status"></div>
   <div id="bdiIssueNew" class="bd-subpanel" style="display:none">
@@ -9044,11 +9044,17 @@ function bdiIssueImportRows(rows){
   var list=bdiGetIssues(),byId={},byRid={},tombs={};
   list.forEach(function(x){byId[x.id]=x;if(x.rid)byRid[x.rid]=x});
   bdiGetIssueTombs().forEach(function(t){tombs[t]=1});
-  var now=Date.now(),out={added:0,updated:0,same:0,skipped:0,closed:0,confirmed:0};
+  var now=Date.now(),out={added:0,updated:0,same:0,skipped:0,closed:0,confirmed:0,gone:0,reopened:0,noRoom:0,notIssue:0,rows:0};
   // Opsiyonel sutunlar (2026-10-31): gunluk issue raporunda varsa okunur. Durum kaynak rapordan gelir, butler
   // aksiyonlari bizden; rapor uygulamadakini ezmez (celiski kartta "Raporda: ..." olarak gorunur).
   var H=(rows[hi]||[]).map(function(x){return normTR(String(x==null?"":x)).replace(/\s+/g," ").trim()}),taken={};taken[cR]=taken[cG]=taken[cC]=1;
   var pick=function(re,not){for(var k=0;k<H.length;k++){if(taken[k]||!H[k])continue;if(re.test(H[k])&&!(not&&not.test(H[k]))){taken[k]=1;return k}}return -1};
+  // Bilinen kaynak (ServiceRequests): Start Date & Time, Service Type, Room #, Guest Name, Concern Details, Status (New/Completed),
+  // Department, Category, Completed Date & Time (New'de baslangicla ayni, kapanis sayilmaz), Request Satisfaction. ID sutunu yok.
+  var cTyp=pick(/^(service type|type|tur|tip|kayit turu)$/);
+  var cSat=pick(/satisf|memnun/);
+  var cDep=pick(/^(department|departman|dept)$/);
+  var cCat=pick(/^(category|kategori)$/);
   var cCb=pick(/(closed|resolved|completed) ?by|kapatan|cozen/);
   var cHb=pick(/handled ?by|butler|ilgilenen|assigned|responsible|sorumlu|owner/);
   var cSt=pick(/status|state|durum/);
@@ -9057,38 +9063,70 @@ function bdiIssueImportRows(rows){
   var cTm=pick(/^(time|saat|created time|open time|acilis saati)$/);
   var cCr=pick(/date|created|opened|reported|tarih|acilis|olusturul|time/);
   var cell=function(rw,c){return c<0||rw[c]==null?"":rw[c]};
+  var txt=function(rw,c){return String(cell(rw,c)).replace(/\s+/g," ").trim()};
+  var seen={},win=[0,0];
   for(var r2=hi+1;r2<rows.length;r2++){
     var rw=rows[r2]||[];
     var room=String(rw[cR]==null?"":rw[cR]).replace(/\.0+$/,"").trim();
     var guest=String(rw[cG]==null?"":rw[cG]).replace(/\s+/g," ").trim();
     var concern=String(rw[cC]==null?"":rw[cC]).trim();
     if(!room&&!guest&&!concern)continue;
-    if(!room||!guest||!concern){out.skipped++;continue}
+    out.rows++;
+    if(!guest||!concern){out.skipped++;continue}
+    var typ=txt(rw,cTyp);if(typ&&!/issue|recovery|complaint|sikayet|şikayet|sorun/i.test(typ)){out.notIssue++;continue}
+    if(!room){room=bdiIssueRoomFor(guest);if(!room)out.noRoom++} // oda bos gelebiliyor: in-house listesinden bul, yoksa bos kalir
     var rid=String(cell(rw,cId)).replace(/\.0+$/,"").trim();
     var cr=cCr>=0?bdiXlTs(cell(rw,cCr),cTm>=0?cell(rw,cTm):null):0,ca=cCa>=0?bdiXlTs(cell(rw,cCa)):0;
     if(cr>now)cr=0;if(ca>now)ca=0;
     var st=bdiIssueStatusOf(cell(rw,cSt));if(!st&&ca)st="closed";
+    if(st!=="closed")ca=0; // New satirlarinda "Completed Date & Time" baslangicin aynisi: kapanis degil
+    // ID yoksa kimlik = misafir + baslangic saati: ayni misafirin ikinci sikayeti ayri issue olur, ayni dosya tekrar gelse cift olmaz
+    if(!rid&&cr)rid=bdiIssueKey(guest,"")+"@"+cr;
+    if(cr){if(!win[0]||cr<win[0])win[0]=cr;if(cr>win[1])win[1]=cr}
+    if(rid)seen[rid]=1;
     var id=bdiIssueKey(guest,room),ex=rid&&byRid[rid]?byRid[rid]:null;
     if(ex)id=ex.id;
-    else{ex=byId[id]||null;if(ex&&rid&&ex.rid&&ex.rid!==rid){id=id+"_"+rid.replace(/[^a-z0-9]/gi,"");ex=byId[id]||null}}
+    else{ex=byId[id]||null;if(ex&&rid&&ex.rid&&ex.rid!==rid){id=id+"_"+(cr||rid.replace(/[^a-z0-9]/gi,""));ex=byId[id]||null}}
     if(tombs[id]){out.skipped++;continue}
+    var dep=txt(rw,cDep),cat=txt(rw,cCat),sat=txt(rw,cSat);
     if(!ex){
       var t0=cr||now;
       ex={id:id,room:room,guest:guest,concern:concern,createdAt:t0,u:now,source:"excel",events:[{id:bdiEvId(),ts:t0,type:"import",butler:"",text:"",src:"report"}]};
-      if(rid)ex.rid=rid;
+      if(rid)ex.rid=rid;if(cr)ex.sr=1;if(dep)ex.dept=dep;if(cat)ex.cat=cat;if(sat)ex.sat=sat;
       list.push(ex);byId[id]=ex;if(rid)byRid[rid]=ex;out.added++;
     }else{
       var ch=false;
       if(concern.length>(ex.concern||"").length){ex.concern=concern;ex.events=ex.events||[];ex.events.push({id:bdiEvId(),ts:now,type:"update",butler:"",text:""});ch=true}
       if(cr&&cr<(ex.createdAt||now)){ex.createdAt=cr;(ex.events||[]).forEach(function(e){if(e.type==="import"&&e.ts>cr)e.ts=cr});ch=true}
       if(rid&&!ex.rid){ex.rid=rid;byRid[rid]=ex;ch=true}
+      if(cr&&!ex.sr){ex.sr=1;ch=true}
+      if(room&&!ex.room){ex.room=room;ch=true}
+      if(dep&&ex.dept!==dep){ex.dept=dep;ch=true}
+      if(cat&&ex.cat!==cat){ex.cat=cat;ch=true}
+      if(sat&&ex.sat!==sat){ex.sat=sat;ch=true}
       if(ch){ex.u=now;out.updated++}else out.same++;
     }
     var rr=bdiIssueApplyReport(ex,st,ca,String(cell(rw,cCb)).trim(),String(cell(rw,cHb)).trim(),now);
-    out.closed+=rr.closed;out.confirmed+=rr.confirmed;
+    out.closed+=rr.closed;out.confirmed+=rr.confirmed;out.reopened+=rr.reopened;
   }
+  // Kaynak sistem durumun sahibi: dosyanin kapsadigi zaman araliginda acilmis, uygulamada hala acik ama bu dosyada
+  // gorunmeyen issue artik aktif degildir (Aktif listesinden cikmis = kapanmis). Gercek kapanis saati sonra "tum
+  // issue'lar" dosyasi gelince yerine yazilir. Sadece bu kaynaktan gelen kayitlara uygulanir (elle eklenenler haric).
+  if(win[0])list.forEach(function(is){
+    if(!is.sr||!is.rid||seen[is.rid]||tombs[is.id])return;
+    var t=is.createdAt||0;if(t<win[0]||t>win[1])return;
+    if(bdiIssueState(is).status!=="open")return;
+    is.events=is.events||[];is.events.push({id:bdiEvId(),ts:now,type:"close",butler:"",text:"Kaynak listede artık aktif değil",src:"absent"});
+    is.u=now;out.gone++;
+  });
   bdiSaveIssues(list);
   return out;
+}
+// Odasi bos gelen issue: misafir hafizasindaki guncel konaklamadan ya da VAC/in-house listesinden oda bul
+function bdiIssueRoomFor(guest){
+  try{var gp=bdiGMProfileByName(guest);if(gp&&gp.currentStay&&gp.currentStay.rooms){var rs=Object.keys(gp.currentStay.rooms);if(rs.length)return rs[rs.length-1]}}catch(e){}
+  try{var q=bdiGuestKey(guest),hit="";Object.keys(vacRooms||{}).forEach(function(r){if(!hit&&bdiGuestKey(vacNameFmt(r))===q)hit=r});if(hit)return hit}catch(e){}
+  return "";
 }
 async function bdiIssueImportFile(file){
   var input=document.getElementById("bdiIssueFile"),st=document.getElementById("bdiIssueImportStatus");
@@ -9096,7 +9134,7 @@ async function bdiIssueImportFile(file){
   try{
     var wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
     var res=bdiIssueImportRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""}));
-    if(st)st.innerHTML='<span class="bd-ok">'+esc(file.name)+': '+res.added+' yeni, '+res.updated+' güncellendi, '+res.same+' zaten vardı'+(res.closed?', '+res.closed+' rapordan kapandı':'')+(res.confirmed?', '+res.confirmed+' temas eden butler bulundu':'')+(res.skipped?', '+res.skipped+' atlandı':'')+'.</span>';
+    if(st)st.innerHTML='<span class="bd-ok">'+esc(file.name)+' ('+res.rows+' satır): '+res.added+' yeni, '+res.updated+' güncellendi, '+res.same+' değişmedi'+(res.closed?', '+res.closed+' kapandı':'')+(res.gone?', '+res.gone+' kaynakta artık aktif değil (kapandı sayıldı)':'')+(res.reopened?', '+res.reopened+' yeniden açıldı':'')+(res.confirmed?', '+res.confirmed+' temas eden butler bulundu':'')+(res.noRoom?', '+res.noRoom+' kayıtta oda yok':'')+(res.notIssue?', '+res.notIssue+' issue dışı kayıt atlandı':'')+(res.skipped?', '+res.skipped+' atlandı':'')+'.</span>';
     swRepLog("issue",file.name,res.added+res.updated,res.added+" yeni, "+res.updated+" güncellendi");
   }catch(e){
     if(st)st.innerHTML='<span class="bd-err">Dosya okunamadı: '+esc(e.message||e)+'</span>';
@@ -9125,7 +9163,7 @@ function bdiXlTs(v,t){
 }
 function bdiIssueStatusOf(t){
   t=normTR(String(t==null?"":t)).trim();if(!t)return "";
-  if(/clos|resolv|done|complet|solved|kapan|kapali|cozul|tamam|bitti/.test(t))return "closed";
+  if(/clos|resolv|done|complet|solved|cancel|reject|kapan|kapali|cozul|tamam|bitti|iptal/.test(t))return "closed";
   if(/open|progress|pending|new|acik|devam|bekle|yeni|islem/.test(t))return "open";
   return "";
 }
@@ -9142,8 +9180,15 @@ function bdiMatchButler(x){
 }
 // Rapor satirini issue'ya uygula: kapanis (rapordan, gercek saatiyle) + temas eden butler. Uygulamadaki karari ezmez.
 function bdiIssueApplyReport(is,st,closedAt,closedBy,handledBy,now){
-  var r={closed:0,confirmed:0};is.events=is.events||[];
-  var s=bdiIssueState(is),names=[],cbB=bdiMatchButler(closedBy),willClose=false;
+  var r={closed:0,confirmed:0,reopened:0};is.events=is.events||[];
+  var s=bdiIssueState(is),lastClose=null;
+  is.events.forEach(function(e){if(e.type==="close"&&(!lastClose||(e.ts||0)>=(lastClose.ts||0)))lastClose=e});
+  if(s.status==="closed"&&lastClose&&lastClose.src==="absent"){
+    if(st==="closed"&&closedAt){lastClose.ts=closedAt;lastClose.src="report";lastClose.text="";is.u=now}
+    else if(st==="open"){is.events.push({id:bdiEvId(),ts:now,type:"reopen",butler:"",text:"Kaynakta yeniden aktif",src:"report"});r.reopened++;is.u=now}
+    s=bdiIssueState(is);
+  }
+  var names=[],cbB=bdiMatchButler(closedBy),willClose=false;
   String(handledBy||"").split(/[,;\/&+]|\s+ve\s+|\s+and\s+/i).concat([closedBy]).forEach(function(x){var b=bdiMatchButler(x);if(b&&names.indexOf(b)<0)names.push(b)});
   if(st==="closed"&&s.status==="open"){
     var lastRep=0;is.events.forEach(function(e){if(e.type==="close"&&e.src==="report")lastRep=Math.max(lastRep,e.ts||0)});
@@ -9158,6 +9203,10 @@ function bdiIssueApplyReport(is,st,closedAt,closedBy,handledBy,now){
   if(st)is.rep={st:st,at:now};
   if(r.closed||r.confirmed||(st&&st!==prev))is.u=now;
   return r;
+}
+function bdiIssueSatPill(is){
+  if(!is||!is.sat)return "";
+  return /^satisf/i.test(is.sat)?'<span class="bd-pill bd-pill-closed" title="Request Satisfaction">Misafir memnun</span>':'<span class="bd-pill bd-pill-open" title="Request Satisfaction">'+esc(is.sat)+'</span>';
 }
 // Temas eden butleri sonradan teyit et (opsiyonel; touch kaydi uretmez, sadece issue'ya yazilir)
 function bdiIssueConfirm(id,butler){
@@ -9216,7 +9265,8 @@ function bdiAwayHtml(noTitle){
       var is=x.is,s=x.s,hs=Object.keys(s.handlers),det=["açıldı "+bdiFmtShort(is.createdAt)];
       if(s.status==="closed"&&s.closedAt)det.push("kapandı "+bdiFmtShort(s.closedAt)+(s.closedBy?" ("+s.closedBy+")":""));
       det.push(hs.length?"temas: "+hs.join(", "):"temas eden: girilmedi");
-      h+='<li class="k-'+g[0]+'" onclick="bdiAwayOpen(\''+is.id+'\')" role="button" tabindex="0"><span class="bd-away-tag">'+g[1]+'</span><b>'+esc(is.room||"?")+'</b> '+esc(is.guest||"")+' <span class="bd-away-txt">'+esc(String(is.concern||"").slice(0,120))+'</span><span class="bd-sub">'+esc(det.join(" · "))+'</span></li>';
+      if(is.sat)det.push(/^satisf/i.test(is.sat)?"misafir memnun":is.sat);
+      h+='<li class="k-'+g[0]+'" onclick="bdiAwayOpen(\''+is.id+'\')" role="button" tabindex="0"><span class="bd-away-tag">'+g[1]+'</span><b>'+esc(is.room||"oda ?")+'</b> '+esc(is.guest||"")+' <span class="bd-away-txt">'+esc(String(is.concern||"").slice(0,120))+'</span><span class="bd-sub">'+esc(det.join(" · "))+'</span></li>';
     });
   });
   return h+'</ul></div>';
@@ -9386,11 +9436,12 @@ function renderBdiIssues(){
     var hs=Object.keys(s.handlers);
     h+='<article class="bd-issue '+s.status+'" id="bdiIs_'+is.id+'">';
     h+='<div class="bd-issue-top" onclick="bdiIssueToggle(\''+is.id+'\')" role="button" tabindex="0" aria-expanded="'+open+'">';
-    h+='<div class="bd-issue-room">'+esc(is.room)+'<small>'+(fl?'Kat '+fl:'')+'</small></div>';
+    h+='<div class="bd-issue-room">'+esc(is.room||"—")+'<small>'+(fl?'Kat '+fl:(is.room?'':'oda yok'))+'</small></div>';
     var conflict=is.rep&&is.rep.st&&is.rep.st!==s.status;
-    h+='<div class="bd-issue-main"><div class="bd-issue-guest">'+esc(is.guest)+' <span class="bd-pill bd-pill-'+s.status+'">'+(s.status==="open"?'Açık':'Kapandı')+'</span>'+(conflict?'<span class="bd-pill bd-pill-open" title="Son yüklenen raporda durum farklı; uygulamadaki durum korunur.">Raporda: '+(is.rep.st==="open"?'açık':'kapalı')+'</span>':'')+'</div>';
+    h+='<div class="bd-issue-main"><div class="bd-issue-guest">'+esc(is.guest)+' <span class="bd-pill bd-pill-'+s.status+'">'+(s.status==="open"?'Açık':'Kapandı')+'</span>'+(conflict?'<span class="bd-pill bd-pill-open" title="Son yüklenen raporda durum farklı; uygulamadaki durum korunur.">Raporda: '+(is.rep.st==="open"?'açık':'kapalı')+'</span>':'')+bdiIssueSatPill(is)+'</div>';
+    if(is.dept||is.cat)h+='<div class="bd-sub">'+esc([is.dept,is.cat].filter(function(x){return x&&x!=="All"}).join(" · ")||is.dept||"")+'</div>';
     h+='<div class="bd-issue-snip">'+esc((is.concern||"").slice(0,260))+'</div></div>';
-    h+='<div class="bd-issue-meta"><span>'+(s.status==="closed"?esc(s.closedBy)+', '+esc(bdiFmtTs(s.closedAt)):'Açıldı: '+esc(bdiDaysAgo(is.createdAt)))+'</span>';
+    h+='<div class="bd-issue-meta"><span>'+(s.status==="closed"?'Kapandı '+esc(bdiFmtShort(s.closedAt))+(s.closedBy?' · '+esc(s.closedBy):''):'Açıldı: '+esc(bdiDaysAgo(is.createdAt)))+'</span>';
     if(hs.length)h+='<span>'+hs.map(function(b){return '<span class="bd-bond"><i style="--c:'+bdiButlerColor(b)+'"></i>'+esc(b)+'</span>'}).join('')+'</span>';
     else if(s.status==="open")h+='<span class="bd-warn-text">Henüz kimse ilgilenmedi</span>';
     else h+='<label class="bd-isconf" onclick="event.stopPropagation()">Temas eden <select onchange="bdiIssueConfirm(\''+is.id+'\',this.value)" aria-label="Temas eden butler">'+bdiButlerOptions("","seç (opsiyonel)")+'</select></label>';
