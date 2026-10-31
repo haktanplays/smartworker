@@ -13134,6 +13134,90 @@ function getBdiFilteredLogs(){
   return applyBdiFilters(all);
 }
 
+// ---------- Butler Did It raporu: Guest Issues bolumu (2026-11-01) ----------
+// Issue kayitlari ana tablodan ayrilir; raporun en altinda issue basina tek kart: ustte issue'nun kendisi
+// (kaynak rapordaki metin; "Issue updated by X**" ile eklenmis guncellemeler ayri satir), altinda butler'in yaptiklari.
+function bdiLogIsIssue(l){return !!(l&&((l.meta&&l.meta.issueId)||l.patternType==="issue"||l.action==="Issue Closed"||l.action==="Issue Follow-up"||l.action==="Guest Issue / Recovery / Room Move"))}
+// Rapora giden metin: saglik kelimeleri ve tutarlar (bakiye, provizyon) gizlenir
+function bdiReportMask(t){
+  t=typeof bdiSensMask==="function"?bdiSensMask(t):String(t||"");
+  return t.replace(/\[hassasiyet\]/g,"[sensitive]").replace(/(?:\b(?:TRY|TL|EUR|USD|GBP|AED|SAR)|[€$£₺])\s?\d[\d.,]*|\b\d[\d.,]*\s?(?:TRY|TL|EUR|USD|GBP|AED|SAR|[€$£₺])(?![A-Za-z])/g,"[amount]");
+}
+var BDI_UPD_BY={fo:"Front Office",fom:"Front Office",hk:"Housekeeping",hsk:"Housekeeping",eng:"Engineering",gr:"Guest Relations",fb:"F&B","f&b":"F&B",dm:"Duty Manager",bs:"Butler Service"};
+// "…metin… Issue updated by Butler Service**…guncelleme…" -> {base, updates:[{by,text}]}
+function bdiIssueSplitText(t){
+  t=String(t||"");var re=/\s*Issue\s+updated\s+by\s+([^*\n]{1,40}?)\s*\*{2,}\s*/gi,m,last=0,by=null,base=null,ups=[];
+  while((m=re.exec(t))){var seg=t.slice(last,m.index);if(base===null)base=seg;else ups.push({by:by,text:seg});by=m[1];last=re.lastIndex}
+  var tail=t.slice(last);if(base===null)base=tail;else ups.push({by:by,text:tail});
+  var cl=function(x){return String(x||"").replace(/\s+/g," ").trim()};
+  return {base:cl(base),updates:ups.map(function(u){var b=cl(u.by);return {by:BDI_UPD_BY[b.toLowerCase()]||b,text:cl(u.text)}}).filter(function(u){return u.text})};
+}
+// Belirli bir anda issue durumu (gecmis gunun raporu o gunun durumunu gosterir, bugunku durumu degil)
+function bdiIssueStateAt(is,endTs){var c={};for(var k in is)c[k]=is[k];c.events=(is.events||[]).filter(function(e){return e&&(e.ts||0)<=endTs});return bdiIssueState(c)}
+function bdiDurTxt(ms){var m=Math.max(0,Math.round(ms/60000));if(m<60)return m+" min";var h=Math.floor(m/60);if(h<24)return h+"h"+(m%60?" "+(m%60)+"m":"");var d=Math.floor(h/24);return d+"d"+(h%24?" "+(h%24)+"h":"")}
+// Bir issue logundan "butler ne yapti": etiket + aciklama (+ formdan girildiyse misafirin soyledigi)
+function bdiIssueActOf(l){
+  var cat=l.touchCategory||"",said="",det="",lab;
+  if(l.action==="Issue Closed"||l.action==="Issue Follow-up"){lab=l.action==="Issue Closed"?"Resolved & closed":"Followed up";det=l.note||""}
+  else if(l.action==="Guest Issue / Recovery / Room Move"||l.patternType==="issue"){
+    lab=cat==="Recovery"?"Recovery":cat==="Room Move"?"Room move":"Handled";
+    var sn=String(l.sentence||""),p="Butler "+(l.butler||"")+" ",k=sn.indexOf(p);
+    det=k>=0?sn.slice(k+p.length):((l.meta&&l.meta.butlerAction)||l.note||"");
+    det=det.charAt(0).toUpperCase()+det.slice(1);
+    said=(l.meta&&l.meta.issue)||"";
+  }else{lab=l.action||"Touch";det=l.note||l.sentence||""}
+  return {lab:lab,det:det,said:said};
+}
+function bdiRoomNum(r){var n=parseInt(String(r||"").replace(/\D/g,""),10);return isNaN(n)?1e9:n}
+// Donem loglarindan issue kartlari (oda numarasina gore; ayni issue'nun farkli gunlerdeki islemleri tek kartta)
+function bdiReportIssueGroups(logs,endTs){
+  var byId={};bdiGetIssuesAll().forEach(function(x){if(x&&x.id)byId[x.id]=x});
+  var G={},order=[];
+  logs.forEach(function(l){
+    var is=l.meta&&l.meta.issueId?byId[l.meta.issueId]||null:null,A=bdiIssueActOf(l),key;
+    var said=A.said||(l.action==="Guest Issue / Recovery / Room Move"?l.note||"":"");
+    key=is?"i|"+is.id:"f|"+String(l.room||"")+"|"+normTR(String(l.guest||""))+"|"+normTR(String(said)).slice(0,80);
+    if(!G[key]){G[key]={is:is,room:is&&is.room?is.room:l.room,guest:is&&!bdiGuestBad(is.guest)?is.guest:(bdiGuestBad(l.guest)?"":l.guest),said:said,acts:[]};order.push(key)}
+    if(is&&A.said&&normTR(String(is.concern||"")).indexOf(normTR(String(A.said)))>=0)A.said=""; // issue metninde zaten var
+    if(!is)A.said=""; // kartin issue metni zaten bu
+    G[key].acts.push({l:l,lab:A.lab,det:A.det,said:A.said});
+  });
+  return order.map(function(k){
+    var g=G[k],is=g.is;
+    g.acts.sort(function(a,b){return String(a.l._date||"").localeCompare(String(b.l._date||""))||String(a.l.time||"").localeCompare(String(b.l.time||""))});
+    if(is){
+      var sp=bdiIssueSplitText(is.concern),st=bdiIssueStateAt(is,endTs);
+      g.text=sp.base;g.updates=sp.updates;g.status=st.status;g.closedAt=st.closedAt;g.createdAt=is.createdAt||0;
+      g.sat=is.sat||"";g.dept=is.dept&&is.dept!=="All"?is.dept:"";g.cat=is.cat||"";
+    }else{g.text=String(g.said||"").replace(/\s+/g," ").trim();g.updates=[];g.status="";g.sat="";g.dept="";g.cat=""}
+    return g;
+  }).sort(function(a,b){return bdiRoomNum(a.room)-bdiRoomNum(b.room)||String(a.acts[0].l._date||"").localeCompare(String(b.acts[0].l._date||""))});
+}
+function bdiReportIssueHtml(groups,hasDate,endTs){
+  if(!groups.length)return "";
+  var nAct=0,nOk=0,nOpen=0,M=bdiReportMask;
+  groups.forEach(function(g){nAct+=g.acts.length;if(g.status==="closed")nOk++;else if(g.status==="open")nOpen++});
+  var fD=function(d){d=String(d||"");return d.slice(8,10)+"."+d.slice(5,7)};
+  var h='<div class="isec"><div class="isec-h"><h2>Guest Issues</h2><div class="isec-sum">'+groups.length+' issue'+(groups.length>1?'s':'')+' · '+nAct+' butler action'+(nAct>1?'s':'')+(nOk?' · <b class="ok">'+nOk+' resolved</b>':'')+(nOpen?' · <b class="op">'+nOpen+' still open</b>':'')+'</div></div>';
+  groups.forEach(function(g){
+    var meta=[];if(g.dept)meta.push(g.dept);if(g.cat)meta.push(g.cat);
+    if(g.createdAt)meta.push("Reported "+bdiFmtShort(g.createdAt));
+    if(g.status==="closed"&&g.closedAt){meta.push("Resolved "+bdiFmtShort(g.closedAt)+(g.createdAt&&g.closedAt>g.createdAt?" · in "+bdiDurTxt(g.closedAt-g.createdAt):""))}
+    else if(g.status==="open"&&g.createdAt)meta.push("Open for "+bdiDurTxt(Math.min(endTs,Date.now())-g.createdAt));
+    var pills=g.status==="closed"?'<span class="ip ip-ok">Resolved</span>':g.status==="open"?'<span class="ip ip-op">Open</span>':'<span class="ip">'+esc(g.acts[0].lab)+'</span>';
+    if(g.sat)pills+='<span class="ip '+(/not|dis|un/i.test(g.sat)?'ip-bad':'ip-sat')+'">'+esc(g.sat)+'</span>';
+    h+='<div class="iss"><div class="iss-h"><div class="iss-room">'+esc(g.room||"—")+'</div><div class="iss-who"><b>'+esc(g.guest||"Guest")+'</b>'+(meta.length?'<span>'+esc(meta.join(" · "))+'</span>':'')+'</div><div class="iss-pills">'+pills+'</div></div>';
+    h+='<div class="iss-b"><div class="ilbl">Issue</div><div class="itxt">'+(g.text?esc(M(g.text)):'<i class="imut">No issue text recorded.</i>')+'</div>';
+    g.updates.forEach(function(u){h+='<div class="iupd"><span>Update · '+esc(u.by||"")+'</span>'+esc(M(u.text))+'</div>'});
+    h+='</div><div class="iss-a"><div class="ilbl">What the butler did</div>';
+    g.acts.forEach(function(a){
+      h+='<div class="iact"><div class="it">'+(hasDate?fD(a.l._date)+'<br>':'')+esc(a.l.time||"")+'</div><div class="ib">'+esc(a.l.butler||"")+'<span>'+esc(a.lab)+'</span></div><div class="idet">'+
+        (a.said?'<i class="imut">Guest: “'+esc(M(a.said))+'”</i> ':'')+(a.det?esc(M(a.det)):'<i class="imut">—</i>')+'</div></div>';
+    });
+    h+='</div></div>';
+  });
+  return h+'</div>';
+}
 function downloadDidIt(){
   var logs=getBdiFilteredLogs();
   if(!logs.length)return alert("Kayit yok!");
@@ -13162,6 +13246,19 @@ function downloadDidIt(){
     // Logo baskida her sayfanin dibinde sabit durur. Altina yazi kaymasin diye tum sayfa bir "kabuk" tabloya sarili:
     // tfoot'taki bos satir her sayfanin sonunda tekrar eder ve logonun yerini ayirir (2026-10-30).
     'table.wrap{margin:0;border-collapse:collapse}table.wrap>tbody>tr>td.wc,table.wrap>tfoot>tr>td.wc{padding:0;border:0;background:none}.fspace{height:0}' +
+    // Guest Issues bolumu (2026-11-01): issue basina kart, sayfa arasinda bolunmez
+    '.isec{margin-top:10mm}.isec-h{display:flex;align-items:baseline;justify-content:space-between;gap:4mm;border-bottom:2px solid #af8d69;padding-bottom:2mm;margin-bottom:4mm;break-after:avoid}' +
+    '.isec-h h2{font-size:14pt;font-weight:300;letter-spacing:.5px;color:#2d2d2d}.isec-sum{font-size:8.5pt;color:#8C7D6A}.isec-sum b.ok{color:#3f6f52}.isec-sum b.op{color:#a2671c}' +
+    '.iss{border:1px solid #e9e1d3;border-radius:2.5mm;margin-bottom:4mm;break-inside:avoid;page-break-inside:avoid;overflow:hidden}' +
+    '.iss-h{display:flex;align-items:center;gap:4mm;padding:2.6mm 4mm;background:#FBF8F3;border-bottom:1px solid #efe7da}' +
+    '.iss-room{font-size:15pt;font-weight:700;color:#af8d69;min-width:15mm}.iss-who{flex:1;min-width:0}.iss-who b{display:block;font-size:10.5pt;color:#2d2d2d}.iss-who span{display:block;font-size:7.8pt;color:#8C7D6A;margin-top:.6mm}' +
+    '.iss-pills{display:flex;gap:1.5mm;flex-wrap:wrap;justify-content:flex-end}.ip{display:inline-block;padding:.8mm 2.6mm;border-radius:3mm;font-size:7.5pt;font-weight:700;letter-spacing:.4px;text-transform:uppercase;background:#f1ece3;color:#8a6e47}' +
+    '.ip-ok{background:#e8f1eb;color:#3f6f52}.ip-op{background:#fbf0de;color:#a2671c}.ip-sat{background:#fff;color:#3f6f52;border:1px solid #cfe0d4}.ip-bad{background:#fff;color:#a23b2c;border:1px solid #ecc9c2}' +
+    '.iss-b{padding:3mm 4mm 2.5mm}.ilbl{font-size:7pt;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#af8d69;margin-bottom:1.2mm}' +
+    '.itxt{font-size:8.8pt;line-height:1.5;color:#3a3a3a}.iupd{margin-top:2mm;padding:1.6mm 3mm;border-left:2px solid #d9cbb4;background:#fcfaf6;font-size:8.3pt;line-height:1.45;color:#555}.iupd span{display:block;font-size:7pt;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#8C7D6A;margin-bottom:.6mm}' +
+    '.iss-a{padding:2.5mm 4mm 3mm;border-top:1px dashed #e5dccd;background:#fffdf9}.iact{display:flex;gap:3mm;padding:1.4mm 0}.iact+.iact{border-top:1px solid #f3eee5}' +
+    '.it{width:12mm;flex:none;font-size:8.5pt;font-weight:700;color:#2d2d2d;line-height:1.35}.ib{width:38mm;flex:none;font-size:8.8pt;font-weight:600;line-height:1.35}.ib span{display:block;font-size:7.3pt;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#af8d69}' +
+    '.idet{flex:1;font-size:8.8pt;line-height:1.45;color:#333}.imut{color:#9a9184}' +
     '@media print{.toolbar{display:none!important}.page{min-height:auto;padding:0}.fspace{height:28mm}.wc tr{break-inside:avoid}.footer{position:fixed;bottom:0;left:0;right:0;margin:0;padding:0;border:none}.footer img{width:34mm}}' +
     '@media screen{body{background:#e5e7eb;padding:60px 10px 20px}}';
   var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>The Butler Did It - '+dateStr+'</title><style>'+css+'</style></head><body>';
@@ -13194,17 +13291,19 @@ function downloadDidIt(){
     _bsum.forEach(function(x){h+='<tr><td><b>'+esc(x.name)+'</b></td><td>'+esc(Object.keys(x.floors).map(function(f){return f.replace("Kat ","")+(_single?"":" ("+x.floors[f]+"d)")}).join(", ")||"-")+'</td><td style="text-align:right">'+x.touches+'</td><td style="text-align:right">'+Object.keys(x.guests).length+'</td><td style="text-align:right">'+x.issueTouch+'</td><td style="text-align:right">'+x.issueClose+'</td></tr>'});
     h+='</tbody></table>';
   }
-  // Table
-  var hasDate=(bdiViewMode!=="day");
-  h+='<table><thead><tr>'+(hasDate?'<th>Date</th>':'')+'<th>Butler</th><th>Room</th><th>Guest</th><th>Action</th><th>Details</th></tr></thead><tbody>';
-  logs=logs.slice().sort(bdiLogRoomSort); // gun -> oda numarasi -> saat (ayni odada cikan ve yeni gelen saat sirasiyla ayrilir)
+  // Table (issue kayitlari en altta ayri bolumde; ozet sayilari tum kayitlarla)
+  var hasDate=(bdiViewMode!=="day"),_endTs=new Date((_rg.end||ds)+"T23:59:59.999").getTime();
+  var _issLogs=logs.filter(bdiLogIsIssue),_issHtml=bdiReportIssueHtml(bdiReportIssueGroups(_issLogs,_endTs),hasDate,_endTs);
+  logs=logs.filter(function(l){return !bdiLogIsIssue(l)}).sort(bdiLogRoomSort); // gun -> oda numarasi -> saat (ayni odada cikan ve yeni gelen saat sirasiyla ayrilir)
+  if(logs.length)h+='<table><thead><tr>'+(hasDate?'<th>Date</th>':'')+'<th>Butler</th><th>Room</th><th>Guest</th><th>Action</th><th>Details</th></tr></thead><tbody>';
   for(var i=0;i<logs.length;i++){
     var l=logs[i];
     var ld=l._date||ds;var dd2=new Date(ld+"T00:00:00");var fD2=("0"+dd2.getDate()).slice(-2)+"."+("0"+(dd2.getMonth()+1)).slice(-2)+"."+dd2.getFullYear();
     h+='<tr>'+(hasDate?'<td style="font-size:8pt;color:#8a6e47;white-space:nowrap">'+fD2+'</td>':'');
     h+='<td>'+esc(l.butler)+'</td><td style="font-weight:700;text-align:center">'+esc(l.room)+'</td><td style="font-size:8.5pt;color:#8a6e47">'+esc(l.guest||"")+'</td><td><span class="badge">'+esc(l.action)+'</span></td><td>'+esc(l.sentence)+(l.note&&String(l.sentence||"").indexOf(l.note)<0?' <i style="color:#999">'+esc(l.note)+'</i>':'')+'</td></tr>';
   }
-  h+='</tbody></table>';
+  if(logs.length)h+='</tbody></table>';
+  h+=_issHtml;
   h+='</td></tr></tbody><tfoot><tr><td class="wc"><div class="fspace"></div></td></tr></tfoot></table>';
   h+='<div class="footer"><img src="'+RLOGO+'" alt="Raffles Istanbul"></div>';
   h+='</div>';
@@ -13236,6 +13335,15 @@ function downloadDidItXlsx(){
   ws["!cols"]=cols;
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Butler Did It");
+  var _rg=(bdiViewMode==="day"?null:getBdiDateRange())||{end:ds},_endTs=new Date((_rg.end||ds)+"T23:59:59.999").getTime(),M=bdiReportMask,IR=[];
+  bdiReportIssueGroups(logs.filter(bdiLogIsIssue),_endTs).forEach(function(g){g.acts.forEach(function(a){
+    var dd=new Date((a.l._date||ds)+"T00:00:00");
+    IR.push({Room:g.room||"",Guest:g.guest||"",Issue:M(g.text),"Updates (source)":g.updates.map(function(u){return u.by+": "+M(u.text)}).join(" | "),
+      Department:g.dept,Category:g.cat,Reported:g.createdAt?bdiFmtTs(g.createdAt):"",Status:g.status==="closed"?"Resolved":g.status==="open"?"Open":"",
+      Resolved:g.status==="closed"&&g.closedAt?bdiFmtTs(g.closedAt):"",Satisfaction:g.sat,
+      Date:("0"+dd.getDate()).slice(-2)+"."+("0"+(dd.getMonth()+1)).slice(-2)+"."+dd.getFullYear(),Time:a.l.time||"",Butler:a.l.butler||"",Action:a.lab,"What the butler did":M((a.said?"Guest: \u201c"+a.said+"\u201d ":"")+a.det)});
+  })});
+  if(IR.length){var ws2=XLSX.utils.json_to_sheet(IR);ws2["!cols"]=[{wch:6},{wch:22},{wch:70},{wch:50},{wch:14},{wch:16},{wch:16},{wch:9},{wch:16},{wch:12},{wch:10},{wch:6},{wch:18},{wch:16},{wch:60}];XLSX.utils.book_append_sheet(wb,ws2,"Issues")}
   XLSX.writeFile(wb,"ButlerDidIt_"+dateStr.replace(/[\.\s—\/]/g,"_").replace(/_+/g,"_")+".xlsx");
 }
 
