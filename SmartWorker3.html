@@ -16170,11 +16170,16 @@ function removeAutoBdiTouchForAlert(a){
   if(next.length!==arr.length){saveBdiArrayForDate(date,next);refreshBdiIfSameDate(date,next)}
 }
 
+// 2026-11-01: liste varis raporunun AIT OLDUGU gune yazilir. PY icin aksam yarinin raporu yuklenince bugunun Butler Alert
+// listesi ezilmez; yarininki "alert_<yarin>" olarak hazirlanir (gece yarisi o gun acilir). Ayni gunun raporu tekrar
+// yuklenirse "gidildi / gidilmedi", gidenin adi ve sebep korunur (eskiden hepsi siliniyordu).
 function buildAlertList(parsedGuests, traceList){
+  var _ad=swArrDay(parsedGuests)||getAlertDate(),_live=_ad===getAlertDate();
+  var _prev=_live?(alertList||[]):(function(){try{return JSON.parse(localStorage.getItem("alert_"+_ad)||"[]")||[]}catch(e){return []}})();
   var seen={};
   var newAlerts=[];
   // Keep manual entries
-  var manuals=alertList.filter(function(a){return a.manual});
+  var manuals=_prev.filter(function(a){return a.manual});
   manuals.forEach(function(m){seen[m.roomNo]=true});
 
   for(var i=0;i<parsedGuests.length;i++){
@@ -16342,10 +16347,16 @@ function buildAlertList(parsedGuests, traceList){
   }
 
   // Sort by room number and normalize priority
-  alertList=manuals.concat(newAlerts);
-  alertList.forEach(alertNormalizeEntry);
-  alertList.forEach(alertNormalizeEntry);
-  alertList.sort(function(a,b){return a.roomNo-b.roomNo});
+  var _pm={};_prev.forEach(function(a){if(a&&a.roomNo&&!a.manual)_pm[a.roomNo]=a});
+  newAlerts.forEach(function(a){var o=_pm[a.roomNo];if(!o)return;if(o.guest&&a.guest&&o.guest!=="—"&&a.guest!=="—"&&!bdiNameNear(o.guest,a.guest))return; // odada baska misafir: isaret tasinmaz
+    ["visited","visitedBy","notVisitedReason","linkedTouch","visitedVia"].forEach(function(k){if(o[k]!==undefined&&o[k]!==null&&o[k]!=="")a[k]=o[k]})});
+  var _list=manuals.concat(newAlerts);_list.forEach(alertNormalizeEntry);_list.sort(function(a,b){return a.roomNo-b.roomNo});
+  if(!_live){
+    localStorage.setItem("alert_"+_ad,JSON.stringify(cleanAlertLegacyUpsellFields(_list)));if(typeof _bdiAlertSnapCache!=="undefined")delete _bdiAlertSnapCache[_ad];
+    try{bdiToast("Butler Alert: "+bdiFmtD(_ad)+" için "+_list.length+" alert hazırlandı. Bugünün listesi değişmedi.")}catch(e){}
+    return;
+  }
+  alertList=_list;
   window.alertList=alertList;
   alertSelected={};
   saveAlertSnapshot();
