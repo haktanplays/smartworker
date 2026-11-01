@@ -894,6 +894,16 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-pt-st.changed{background:#fde8e6;color:#b3261e}
 #page-didit .bd-pt-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;background:#fff}
 #page-didit .bd-pt-row .bd-pt-blks{display:flex;flex-wrap:wrap;gap:4px;flex:1;min-width:200px}
+#page-didit .bd-pt-daysec{padding:10px 12px;border:1px solid #d9e3ef;border-radius:12px;background:#f8fbff}
+#page-didit .bd-pt-daysec input[type=date]{height:28px;font-size:12.5px;padding:0 6px;border:1px solid #cfd8d4;border-radius:7px;margin-left:6px;width:auto;font-weight:400}
+#page-didit .bd-pt-day{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:6px;background:#fff}
+#page-didit .bd-pt-day.done{background:#f6faf7}
+#page-didit .bd-pt-dh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+#page-didit .bd-pt-act{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#page-didit .bd-pt-pre{margin-top:6px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+#page-didit .bd-pt-pre .o{color:var(--mut)}
+#page-didit .bd-pt-pre .d{color:var(--ink);background:#eaf1fd;border-radius:4px;padding:0 5px;margin:1px 0}
+#page-didit .bd-pt-day.done .bd-pt-pre .d{background:#eef4ef}
 #page-didit .bd-pt-blk{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;background:var(--soft)}
 #page-didit .bd-xf-dlg{background:#fff;border-radius:12px;padding:18px 20px;width:min(760px,100%);max-height:92vh;overflow:auto}
 #page-didit .bd-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:9px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:700}
@@ -11314,6 +11324,7 @@ function bdiProtelDid(e){
   var s=String(e.text||"").replace(/\s+/g," ").trim();
   if(!s)s="Butler "+(String(e.action||"service").toLowerCase());
   if(e.butler)s=s.replace(new RegExp("^Butler\\s+"+String(e.butler).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s+","i"),"Butler ");
+  if(e.name&&!bdiGuestBad(e.name)&&String(e.name).trim().length>3)s=s.replace(new RegExp("(^|[^\\wÀ-ž])"+String(e.name).trim().replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/\s+/g,"\\s+")+"(?![\\wÀ-ž])","gi"),"$1the guest"); // not misafirin kendi profiline girer: adi tekrar yazilmaz
   s=s.replace(/our guest\b.*?(?=\s+(?:with|staying at|at Room)\b|[.]\s|$)/i,"the guest").replace(/\s+staying at Room\s+\d+/gi,"").replace(/\s+at Room\s+\d+/gi,"");
   s=s.replace(/\s+for the guest(?=[.,;]|$)/i,"").replace(/\s+to the guest(?=[.,;]|$)/i,"");
   if(s.length>180)s=s.slice(0,177).replace(/\s+\S*$/,"")+"...";
@@ -11462,17 +11473,67 @@ function bdiProtelRowHtml(x){
     '<span class="bd-pt-blks">'+x.st.map(function(b){return '<span class="bd-pt-blk"><b>'+esc(b.title)+'</b> '+(b.later?'<span class="bd-pt-st new" title="Konaklamanın özeti; misafir ayrılınca listeye girer">ayrılışta</span>':bdiProtelStHtml(b))+'</span>'}).join("")+'</span>'+
     '<button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiProtelCopy(\''+p.gid+'\')">Notları aç</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelMarkAll(\''+p.gid+'\')">Hepsi girildi</button></div>';
 }
+// ---------- Gunun touch'lari -> Protel (2026-11-01) ----------
+// Butler Did It blogu konaklama ozeti; oteldeki misafirde normalde ayrilista girilir. Ekip her sabah bir onceki gunun
+// touch'larini Protel'e giriyor: secilen gun touch alan misafirler, o gunden bloga giren satirlar ve tek tikla kopyala / girildi.
+// Kurallar ayni (not standardi): rutin isler girmez, konaklama basina en kayda deger 5 is, KVKK kelimesi yazilmaz.
+var _bdiProtelDay="";
+function bdiProtelDayVal(){if(_bdiProtelDay)return _bdiProtelDay;var d=new Date();d.setDate(d.getDate()-1);return bdiYmd(d)}
+function bdiProtelSetDay(v){_bdiProtelDay=/^\d{4}-\d{2}-\d{2}$/.test(v||"")?v:"";bdiProtelRefresh()}
+function bdiProtelDayRows(day){
+  var prof=bdiGMProfiles(),sig="** "+bdiSigDate(new Date(day+"T12:00:00").getTime()),rows=[],routG=0,routN={};
+  prof.list.forEach(function(p){
+    var ev=p.events.filter(function(e){return e.date===day&&e.kind!=="pref"});if(!ev.length)return;
+    var rooms={};ev.forEach(function(e){if(e.room)rooms[e.room]=1});
+    var routine=ev.filter(function(e){return BDI_PROTEL_ROUTINE.test(e.action||"")}),notable=ev.length-routine.length;
+    var bd=bdiProtelNotes(p).filter(function(n){return n.title==="Butler Did It"})[0];
+    var all=bd?bd.text.split("\n").slice(1):[],lines=all.filter(function(l){return l.indexOf(sig)>=0});
+    if(!notable&&!lines.length){routG++;routine.forEach(function(e){routN[String(e.action||"").toLowerCase()]=1});return}
+    rows.push({p:p,rooms:Object.keys(rooms).sort(),lines:lines,others:all.length-lines.length,notable:notable,routine:routine.length,bd:bd,st:bd?bdiProtelState(p.gid,bd):{s:"none"}});
+  });
+  rows.sort(function(a,b){return ((a.st.s==="ok")-(b.st.s==="ok"))||(bdiRoomNum(a.rooms[0])-bdiRoomNum(b.rooms[0]))});
+  var anon=[];loadBdiArrayForDate(day).forEach(function(l){if(l&&l.countsAsTouch!==false&&bdiGuestBad(l.guest)){var r=String(l.room||"?");if(anon.indexOf(r)<0)anon.push(r)}});
+  return {rows:rows,routG:routG,routN:Object.keys(routN).sort(),anon:anon.sort(function(a,b){return bdiRoomNum(a)-bdiRoomNum(b)}),pend:rows.filter(function(r){return r.bd&&r.st.s!=="ok"}).length};
+}
+function bdiProtelDayHtml(){
+  var day=bdiProtelDayVal(),today=bdiYmd(new Date()),yd=new Date();yd.setDate(yd.getDate()-1);
+  var lbl=day===bdiYmd(yd)?"Dün":day===today?"Bugün":bdiFmtD(day),D=bdiProtelDayRows(day);
+  var h='<div class="bd-bf-sec bd-pt-daysec"><h3 class="bd-h3">Günün touch\'ları → Protel <input type="date" value="'+day+'" max="'+today+'" onchange="bdiProtelSetDay(this.value)" aria-label="Gün"> <span class="bd-sub">'+esc(lbl)+' · '+D.rows.length+' misafir'+(D.rows.length?(D.pend?' · <b>'+D.pend+' girilecek</b>':' · hepsi girildi'):'')+'</span></h3>';
+  h+='<p class="bd-sub" style="margin:-2px 0 8px">Her misafir için <b>Bloğu kopyala</b> → Protel\'de misafirin <b>Butler Did It</b> Web Note\'unu aç (yoksa yeni not, Note Title: Butler Did It) → içeriğin yerine yapıştır → <b>Girildi</b>. Mavi satırlar o günden. Rutin işler (turndown, laundry, su, buz, courtesy, takip, issue, alert) Protel\'e girmez; konaklama başına en kayda değer 5 iş yazılır.</p>';
+  if(!D.rows.length)h+='<p class="bd-empty">'+esc(lbl)+' Protel\'e girecek touch yok.</p>';
+  D.rows.forEach(function(r){
+    var g=r.p.gid,ok=r.st.s==="ok";
+    h+='<div class="bd-pt-day'+(ok?' done':'')+'"><div class="bd-pt-dh"><button type="button" class="bd-link bd-q-name" onclick="bdiGuestOpen(\''+g+'\')">'+esc(r.p.name)+'</button><span class="bd-sub">'+(r.rooms.length?'Oda '+esc(r.rooms.join(", ")):'')+'</span>'+(r.bd?bdiProtelStHtml(r.st):'')+
+      '<span class="bd-pt-act">'+(r.bd?'<button type="button" class="bd-btn bd-btn-'+(ok?'ghost':'primary')+' bd-btn-sm" onclick="bdiProtelDayCopy(\''+g+'\')">Bloğu kopyala</button>'+
+      (ok?'<button type="button" class="bd-link" onclick="bdiProtelDayMark(\''+g+'\',0)">işareti geri al</button>':'<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiProtelDayMark(\''+g+'\',1)">Girildi</button>'):'')+
+      '<button type="button" class="bd-link" onclick="bdiProtelCopy(\''+g+'\')">tüm notlar</button></span></div>';
+    if(r.bd)h+='<div class="bd-pt-pre">'+(r.others?'<div class="o">***Butler Did It*** · önceki '+r.others+' satır</div>':'<div class="o">***Butler Did It***</div>')+r.lines.map(function(l){return '<div class="d">'+esc(l)+'</div>'}).join("")+'</div>';
+    if(!r.lines.length)h+='<p class="bd-sub" style="margin:4px 0 0">O günkü '+r.notable+' iş bloğa girmedi: konaklamanın en kayda değer 5 işi daha önceki günlerden (ya da KVKK kelimesi taşıyor). Blok değişmedi.</p>';
+    if(r.routine)h+='<p class="bd-sub" style="margin:4px 0 0">+'+r.routine+' rutin touch Protel\'e girmez.</p>';
+    h+='</div>';
+  });
+  if(D.routG)h+='<p class="bd-sub" style="margin:6px 0 0">Yalnızca rutin touch alan '+D.routG+' misafir listede yok ('+esc(D.routN.slice(0,6).join(", "))+').</p>';
+  if(D.anon.length)h+='<div class="bd-note bd-note-warn" style="margin-top:8px">Misafir adı olmadan girilen touch: Oda '+esc(D.anon.join(", "))+'. Protel notu misafire bağlanamaz; Log ve rapor\'da o kayıtlara misafir adını ekle.</div>';
+  return h+'</div>';
+}
+function bdiProtelDayMark(gid,on){bdiProtelMark(gid,["Butler Did It"],!!on)}
+function bdiProtelDayCopy(gid){
+  var p=bdiGMProfiles().byGid[gid];if(!p)return;
+  var bd=bdiProtelNotes(p).filter(function(n){return n.title==="Butler Did It"})[0];if(!bd)return;
+  bdiCopyText(bd.text).then(function(){bdiToast(p.name+": Butler Did It bloğu kopyalandı. Protel'de Note Title: Butler Did It, eski içeriğin yerine yapıştır.")});
+}
 function bdiProtelListHtml(){
   var t=bdiProtelTodo(),G=t.G,h='';bdiProtelBadge(t);
   h+='<p class="bd-sub" style="margin:0 0 12px">Protel\'e girilecek <b>'+t.blocks+' blok</b> ('+t.guests+' misafir)'+(t.okN?' · '+t.okN+' misafirin notları Protel\'de güncel':'')+'. Akış: <b>Notları aç</b> → bloğu kopyala → Protel\'de Web Note olarak yapıştır → <b>Girildi</b>. Bir blok sonradan değişirse (yeni tercih onaylandı, yeni issue) burada <b>değişti</b> diye tekrar çıkar.</p>';
   var sec=function(title,list,empty,note){h+='<div class="bd-bf-sec"><h3 class="bd-h3">'+title+' <span class="bd-sub">'+list.length+'</span></h3>'+(note?'<p class="bd-sub" style="margin:-4px 0 8px">'+note+'</p>':'')+(list.length?list.map(bdiProtelRowHtml).join(""):'<p class="bd-empty">'+empty+'</p>')+'</div>'};
+  h+=bdiProtelDayHtml();
   sec("Bugün gelenler",G.arr,bdiTodayArrivals().length?"Bugün gelenlerin Protel notları güncel.":"Varış listesi yok (Mektuplar sekmesinde ARR yükle).","Arrival raporuna basılmadan önce girilmeli.");
   sec("Oteldekiler",G.inh,"Oteldeki misafirlerin notları güncel.","Butler Did It bloğu konaklamanın özeti: misafir ayrılınca listeye girer.");
   sec("Son 7 günde ayrılanlar",G.dep,"Yeni ayrılan misafirlerin notları güncel.","Konaklamanın Butler Did It ve Issues blokları.");
   if(G.oth.length)h+='<details class="bd-bf-sec"><summary class="bd-h3" style="cursor:pointer">Diğer misafirler <span class="bd-sub">'+G.oth.length+' · onaylı notu olan eski misafirler</span></summary>'+G.oth.slice(0,60).map(bdiProtelRowHtml).join("")+(G.oth.length>60?'<p class="bd-sub">… ve '+(G.oth.length-60)+' misafir daha</p>':'')+'</details>';
   return h;
 }
-function bdiProtelBadge(t){var el=document.getElementById("bdiProtelCnt");if(!el)return;try{t=t||bdiProtelTodo()}catch(e){return}var n=t.G.arr.length+t.G.inh.length+t.G.dep.length;el.textContent=n?" "+n:""}
+function bdiProtelBadge(t){var el=document.getElementById("bdiProtelCnt");if(!el)return;var gs={};try{t=t||bdiProtelTodo();t.G.arr.concat(t.G.inh,t.G.dep).forEach(function(x){gs[x.p.gid]=1});bdiProtelDayRows(bdiProtelDayVal()).rows.forEach(function(r){if(r.bd&&r.st.s!=="ok")gs[r.p.gid]=1})}catch(e){return}var n=Object.keys(gs).length;el.textContent=n?" "+n:""}
 function bdiProtelRefresh(){if(_bdiBriefMode!=="protel")return bdiProtelBadge();var el=document.getElementById("bdiBriefBody");if(el&&document.querySelector('#bdiBriefSeg button[data-m="protel"].active'))el.innerHTML=bdiProtelListHtml()}
 function bdiProtelCopyBlock(i){
   var n=_bdiProtelLast||[];var t=i<0?n.map(function(x){return x.text}).join("\n\n"):(n[i]||{}).text;if(!t)return;
@@ -17112,7 +17173,7 @@ window.bdiLogs = bdiLogs;
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
   bdiGMSuggestAct, bdiGMUnmerge, bdiGMSaveNote, bdiGuestOpen, bdiGraphSelect, bdiGMDownload, bdiGMRestoreFile, bdiGMRestoreSnapshot,
-  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bdiProtelMarkIdx, bdiProtelMarkAll, swRepOpen, swRepPick, swRepScanFolder, bdiRepSlot, bdiPfAssign, bdiPfDelete, bdiAtAct, bdiAtBulk, bdiAtEditText, bdiAtSetField, bdiAtSetFilter, bdiAtSetView, bdiAtSearch, renderBdiAtelier, bdiKatSetSel, bdiKatInspect, bdiKatWelcome, bdiKatUndo, bdiKatPrep, bdiKatLetter, bdiKatCopyLetter, bdiKatCard, bdiKatPrint, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
+  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bdiProtelMarkIdx, bdiProtelMarkAll, bdiProtelDayCopy, bdiProtelDayMark, bdiProtelSetDay, swRepOpen, swRepPick, swRepScanFolder, bdiRepSlot, bdiPfAssign, bdiPfDelete, bdiAtAct, bdiAtBulk, bdiAtEditText, bdiAtSetField, bdiAtSetFilter, bdiAtSetView, bdiAtSearch, renderBdiAtelier, bdiKatSetSel, bdiKatInspect, bdiKatWelcome, bdiKatUndo, bdiKatPrep, bdiKatLetter, bdiKatCopyLetter, bdiKatCard, bdiKatPrint, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
   bdiAliceImportFile, bdiAliceSetPeriod, bdiStaffSet, renderBdiAlice,
   bdiSetReaction, bdiReactText, bdiReactQuick, bdiReactClose, bdiDnaAdd, bdiDnaDel, bdiDnaSaveAddr,
   renderBdiBriefTab, bdiBriefSetMode, bdiPrepMark, bdiShiftSet, bdiShiftSaveNote, bdiShiftCopy, bdiShiftPrint,
