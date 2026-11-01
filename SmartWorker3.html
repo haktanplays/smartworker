@@ -6608,6 +6608,23 @@ function bdiLogIdent(l,ymd){
   return {k:"room:"+l.room+"|"+d,n:"Oda "+l.room};
 }
 // Cikan misafire konaklamasi boyunca kac touch yapildi (isimle ya da isimsiz kayitta oda+saat ile)
+// Cikmadan once temas (2026-11-01): cikis gunu yapilan veda / bagaj / pack temasi konaklama boyunca ilgilenildigi
+// anlamina gelmez. pre = cikis gununden onceki gunlerdeki temas (ayni gun giris-cikista cikis saatinden once),
+// dep = cikis gunu temasi. Gun bazinda sayilir: kayit saati gercek saat degil (sonradan giriliyor), gun guvenilir.
+function bdiStayTouchSplit(r,cache){
+  var pre=0,dep=0,name=bdiDepName(r),out=bdiDepOut(r)||Infinity,d=r.arr||r.dep,same=!r.arr||r.arr===r.dep;
+  for(var g=0;g<45&&d&&d<=r.dep;g++,d=bdiAddDays(d,1)){
+    var arr=cache[d]||(cache[d]=loadBdiArrayForDate(d)),dd=d;
+    arr.forEach(function(l){
+      if(!bdiIsTouch(l))return;
+      var mine=!bdiGuestBad(l.guest)?bdiNameNear(l.guest,name):("000"+String(l.room||"")).slice(-4)===r.room;if(!mine)return;
+      var t=l.ts&&l.ts>1e12?l.ts:Date.parse(dd+"T"+(l.time||"12:00")+":00");
+      if(bdiGuestBad(l.guest)&&t>out)return; // isimsiz oda kaydi cikistan sonra baska misafirindir
+      if(dd<r.dep)pre++;else if(same&&t<=out&&r.arr===r.dep)pre++;else dep++;
+    });
+  }
+  return {pre:pre,dep:dep};
+}
 function bdiStayTouches(r,cache){
   var n=0,name=bdiDepName(r),out=bdiDepOut(r)||Infinity,d=r.arr||r.dep;
   for(var g=0;g<45&&d&&d<=r.dep;g++,d=bdiAddDays(d,1)){
@@ -10194,10 +10211,11 @@ function bdiReportStats(logs,start,end){
   var G={},R={},t=0;
   logs.forEach(function(l){if(!l||!(l.room||l.guest)||!bdiIsTouch(l))return;t++;var gi=bdiLogIdent(l,l._date||start);if(gi)G[gi.k]=gi.n;if(l.room)R[("000"+l.room).slice(-4)]=1});
   var deps={},cache={};
-  bdiDepAll().forEach(function(r){var o=bdiDepOut(r);if(!o||r.dep<start||r.dep>end)return;var k=bdiGuestKey(bdiDepName(r))||r.room;deps[k]=Math.max(deps[k]||0,bdiStayTouches(r,cache))});
+  bdiDepAll().forEach(function(r){var o=bdiDepOut(r);if(!o||r.dep<start||r.dep>end)return;var k=bdiGuestKey(bdiDepName(r))||r.room,sp=bdiStayTouchSplit(r,cache),x=deps[k]||(deps[k]={pre:0,all:0});x.pre=Math.max(x.pre,sp.pre);x.all=Math.max(x.all,sp.pre+sp.dep)});
   var dk=Object.keys(deps),occ=0;
   if(start===end){occ=parseInt(BdiKV.get("bdi_occ_"+start)||"0",10)||0;if(!occ){var g=bdiGih();if(g&&g.day===start)occ=(g.rows||[]).length}}
-  return {touches:t,guests:Object.keys(G).length,rooms:Object.keys(R).length,occ:occ,depN:dk.length,depT:dk.filter(function(k){return deps[k]>0}).length};
+  var depPre=dk.filter(function(k){return deps[k].pre>0}).length,depT=dk.filter(function(k){return deps[k].all>0}).length;
+  return {touches:t,guests:Object.keys(G).length,rooms:Object.keys(R).length,occ:occ,depN:dk.length,depT:depT,depPre:depPre,depOnly:depT-depPre,depNone:dk.length-depT};
 }
 function bdiButlerSummary(logs){
   var m={},dates={};
@@ -10238,7 +10256,7 @@ function renderBdiButlerSummary(logs){
   var list=bdiButlerSummary(logs);
   if(!list.length){el.innerHTML="";return}
   var RS=bdiReportStats(logs,range.start,range.end);
-  var h='<div class="bd-bsum-total"><span><b>'+RS.guests+'</b> eşsiz misafir</span><span><b>'+(RS.guests?String(Math.round(RS.touches/RS.guests*10)/10).replace(".",","):"0")+'</b> touch / misafir</span><span><b>'+RS.rooms+(RS.occ?'/'+RS.occ:'')+'</b> oda'+(RS.occ?' ('+Math.round(RS.rooms/RS.occ*100)+'%)':'')+'</span>'+(RS.depN?'<span><b>'+RS.depT+'/'+RS.depN+'</b> çıkana dokunuldu</span>':'')+'</div>';
+  var h='<div class="bd-bsum-total"><span><b>'+RS.guests+'</b> eşsiz misafir</span><span><b>'+(RS.guests?String(Math.round(RS.touches/RS.guests*10)/10).replace(".",","):"0")+'</b> touch / misafir</span><span><b>'+RS.rooms+(RS.occ?'/'+RS.occ:'')+'</b> oda'+(RS.occ?' ('+Math.round(RS.rooms/RS.occ*100)+'%)':'')+'</span>'+(RS.depN?'<span title="Çıkış gününden önce, konaklama sırasında en az bir temas. Çıkış günü yapılan veda / bagaj teması sayılmaz."><b>'+RS.depPre+'/'+RS.depN+'</b> çıkana çıkmadan önce dokunuldu ('+Math.round(RS.depPre/RS.depN*100)+'%)'+(RS.depOnly?' · '+RS.depOnly+' yalnız çıkış günü':'')+(RS.depNone?' · '+RS.depNone+' hiç':'')+'</span>':'')+'</div>';
   list.forEach(function(b){
     var gn=Object.keys(b.guests);
     h+='<div class="bd-bcard" style="--c:'+bdiButlerColor(b.name)+'"><div class="bd-bcard-top"><span class="bd-bcard-name">'+esc(b.name)+'</span><span class="bd-bcard-num">'+b.touches+'<small> touch</small></span></div>';
@@ -13442,6 +13460,7 @@ function downloadDidIt(){
     '.header .date{font-size:11pt;color:#8C7D6A;margin-top:2mm}' +
     '.summary{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin:8mm 0;padding:6mm 0;background:#FBF8F3;border-radius:8px}' +
     '.summary .item{text-align:center;min-width:80px}.summary .num{font-size:22pt;font-weight:700;color:#af8d69;display:block}.summary .lbl{font-size:8pt;color:#8C7D6A;text-transform:uppercase;letter-spacing:1px}' +
+    '.summary .sub{display:block;font-size:7.5pt;color:#a08f78;margin-top:.8mm}' +
     '.summary .num small{font-size:12pt;color:#8C7D6A;font-weight:600}.summary.summary-b{background:none;margin:-4mm 0 4mm;padding:0 0 2mm}.summary.summary-b .num{font-size:15pt}' +
     'table{width:100%;border-collapse:collapse;font-size:9.5pt;margin-top:8mm}' +
     'th{text-align:left;padding:3mm 4mm;color:#af8d69;font-size:8pt;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #af8d69}' +
@@ -13486,7 +13505,7 @@ function downloadDidIt(){
   h+=_it(RS.guests,'Unique Guests');
   if(RS.guests)h+=_it(String(Math.round(RS.touches/RS.guests*10)/10),'Touches / Guest');
   h+=_it(RS.occ?RS.rooms+'<small>/'+RS.occ+'</small>':RS.rooms,RS.occ?'Rooms Served · '+Math.round(RS.rooms/RS.occ*100)+'%':'Rooms Served');
-  if(RS.depN)h+=_it(RS.depT+'<small>/'+RS.depN+'</small>','Departures Touched');
+  if(RS.depN)h+='<div class="item"><span class="num">'+RS.depPre+'<small>/'+RS.depN+'</small></span><span class="lbl">Touched Before Departure · '+Math.round(RS.depPre/RS.depN*100)+'%</span>'+(RS.depOnly||RS.depNone?'<span class="sub">'+[RS.depOnly?RS.depOnly+' only on departure day':'',RS.depNone?RS.depNone+' not touched':''].filter(Boolean).join(' · ')+'</span>':'')+'</div>';
   h+='</div><div class="summary summary-b">';
   var bkeys=Object.keys(bc);
   for(var k=0;k<bkeys.length;k++){h+='<div class="item"><span class="num">'+bc[bkeys[k]]+'</span><span class="lbl">'+esc(bkeys[k])+'</span></div>'}
