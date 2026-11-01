@@ -653,6 +653,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-fd-tag.t-iss{background:#fde8e6;color:#b3261e}
 #page-didit .bd-fd-tag.t-warn{background:#fff1dc;color:#93570a}
 #page-didit .bd-fd-tag.t-cold{background:#eef3fb;color:#3b5f99}
+#page-didit .bd-fd-tag.t-mo{background:#f3eefb;color:#5b4691}
 #page-didit .bd-fd-tag.t-mut{background:#f2f4f3;color:#6b7b77}
 #page-didit .bd-fd-main{flex:none;max-width:46%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
 #page-didit .bd-fd-main b{margin-right:4px}
@@ -12483,6 +12484,18 @@ function bdiFeedToggle(k){_bdiFeedOpen[k]=!_bdiFeedOpen[k];bdiFeedRefresh()}
 function bdiFeedGrpToggle(g){_bdiFeedGrp[g]=!_bdiFeedGrp[g];bdiFeedRefresh()}
 function bdiFeedRefresh(){var el=document.getElementById("bdiBriefBody");if(!el||_bdiBriefMode!=="feed")return;var pw=document.getElementById("bdiBriefPower"),v=pw?pw.value:"",y=window.scrollY;el.innerHTML=bdiBriefPowerHtml()+bdiFeedHtml();var p2=document.getElementById("bdiBriefPower");if(p2&&v){p2.value=v;bdiBriefPowerHint()}window.scrollTo(0,y)}
 function bdiFeedIssueOpen(id){_bdiIssueOpen[id]=true;bdiIssueSetFilter("all");switchBdiTab("issues");setTimeout(function(){var e=document.getElementById("bdiIs_"+id);if(e)e.scrollIntoView({block:"center"})},60)}
+// Tekrar gelen misafir icin tek satirlik hatira: son konaklama, o konaklamada begendigi, yasadigi sorun.
+// Hafizada onceki konaklama yoksa Protel notundaki en son issue (yil ile).
+function bdiFeedMemory(x,k){
+  var p=x.p,out=[],cut=function(t,n){t=String(t||"").replace(/\s+/g," ").trim();return t.length>n?t.slice(0,n-1).replace(/\s+\S*$/,"")+"…":t};
+  if(p&&p.prevStays.length){var ls=p.prevStays[p.prevStays.length-1];out.push("son konaklama "+bdiFmtD(ls.to).slice(3));
+    var ev=p.events.filter(function(e){return e.date>=ls.from&&e.date<=ls.to});
+    var good=ev.filter(function(e){return e.react==="good"})[0];if(good)out.push("sevdiği: "+cut(good.reactText||good.action,40));
+    var iss=p.issues.filter(function(i){return i.date>=ls.from&&i.date<=ls.to})[0];if(iss)out.push("sorun yaşadı: "+cut(iss.text,40));
+  }
+  if(!out.length&&k&&k.n&&k.n.issues.length){var li=k.n.issues[k.n.issues.length-1],y=String(li.d||"").replace(/^.*[./]/,"");out.push("geçmişte sorun: "+cut(li.t,45)+(y?" ("+(y.length===2?"20"+y:y)+")":""))}
+  return out.join(" · ");
+}
 function bdiFeedHtml(){_bdiKatC=bdiKatCache();try{return bdiFeedHtml0()}finally{_bdiKatC=null}}
 function bdiFeedHtml0(){
   var today=bdiYmd(new Date()),plan=bdiFloorPlan(today),h='',rooms=bdiKatRooms(),cache={},allIs=bdiGetIssues();
@@ -12491,7 +12504,9 @@ function bdiFeedHtml0(){
   var sel=_bdiKatSel,mine=function(room){if(!sel||!plan||!room)return true;return bdiFloorOwner(today,String(room).padStart(4,"0"))===sel};
   var R=Object.keys(rooms).sort().map(function(r){return rooms[r]}).filter(function(x){return mine(x.room)}),K={};
   R.forEach(function(x){K[x.room]=bdiKatItems(x)});
-  var A=R.filter(function(x){return x.arriving&&!x.departing}),IN=R.filter(function(x){return !x.arriving&&!x.departing}),DR=R.filter(function(x){return x.departing});
+  var A0=R.filter(function(x){return x.arriving&&!x.departing}),IN=R.filter(function(x){return !x.arriving&&!x.departing}),DR=R.filter(function(x){return x.departing});
+  // VAC "Due In" ama gelis tarihi gecmis: bugunun varisi degil, dunden beklenip gelmeyen (gec gelis / no-show). Varis sayisi ARR ile ayni kalir.
+  var late=A0.filter(function(x){return x.vs&&x.vs.arr&&x.vs.arr<today&&!(x.g&&x.g.arr===today)}),A=A0.filter(function(x){return late.indexOf(x)<0});
   var prep=_bdiKatC.prep,isPrep=function(x){var pr=prep[x.key];return !!(pr&&!pr.off)};
   var esq=function(t){return esc(String(t||"")).replace(/'/g,"&#39;")};
   var item=function(k,tag,cls,main,sub,right,detail){var open=!!_bdiFeedOpen[k];
@@ -12545,11 +12560,13 @@ function bdiFeedHtml0(){
     if(rp)b.push('<span class="bd-fd-p rep">'+(x.p&&x.p.prevStays.length?(x.p.prevStays.length+1)+'. konaklama':'tekrar')+'</span>');
     if(k.warn.length||k.n.sens)b.push('<span class="bd-fd-p warn">hassasiyet</span>');
     if(x.g&&x.g.chl)b.push('<span class="bd-fd-p">'+x.g.chl+' çocuk</span>');
-    var pv=k.items.slice(0,2).map(function(i){return i.t}).join(" · ");
-    return item("a:"+x.room,"Gelen","t-arr",'<b>'+esc(x.room)+'</b> '+esc(nm(x))+' '+b.join(""),esc(cut(pv,80)),aState(x),card(x,"arr"))}).join("");
+    var mem=rp?bdiFeedMemory(x,k):"",pv=k.items.slice(0,2).map(function(i){return i.t}).join(" · ");
+    return item("a:"+x.room,"Gelen","t-arr",'<b>'+esc(x.room)+'</b> '+esc(nm(x))+' '+b.join(""),esc(cut([mem,pv].filter(Boolean).join(" · "),95)),aState(x),card(x,"arr"))}).join("");
   if(aPlain.length){var gk="aplain",op=!!_bdiFeedGrp[gk];
     ab+='<div class="bd-fd-it"><button type="button" class="bd-fd-row bd-fd-more" onclick="bdiFeedGrpToggle(\''+gk+'\')" aria-expanded="'+op+'"><span class="bd-fd-tag t-mut">+'+aPlain.length+'</span><span class="bd-fd-main">'+(aSp.length?'diğer gelenler':'gelenler')+': ilk kez ya da kayıtlı tercihi yok</span><span class="bd-fd-sub">'+esc(aPlain.map(function(x){return x.room}).join(", "))+'</span><span class="bd-fd-r">'+aPlain.filter(isPrep).length+'/'+aPlain.length+' hazır</span><span class="bd-fd-car">'+(op?'&#9662;':'&#9656;')+'</span></button>'+(op?'<div class="bd-fd-sub-list">'+aPlain.map(function(x){return item("a:"+x.room,"Gelen","t-arr",'<b>'+esc(x.room)+'</b> '+esc(nm(x)),esc(bdiKatHead(x).sub),aState(x),card(x,"arr"))}).join("")+'</div>':'')+'</div>'}
-  if(A.length)h+=grp('Gelenler',A.length,aReady+'/'+A.length+' oda hazır',ab);
+  if(late.length){var lk2="alate",lo2=!!_bdiFeedGrp[lk2];
+    ab+='<div class="bd-fd-it"><button type="button" class="bd-fd-row bd-fd-more" onclick="bdiFeedGrpToggle(\''+lk2+'\')" aria-expanded="'+lo2+'"><span class="bd-fd-tag t-warn">+'+late.length+'</span><span class="bd-fd-main">dünden beklenen, henüz gelmedi</span><span class="bd-fd-sub">'+esc(late.map(function(x){return x.room}).join(", "))+' · VAC "Due In": geç geliş ya da no-show, ön büroyla kontrol</span><span class="bd-fd-r"></span><span class="bd-fd-car">'+(lo2?'&#9662;':'&#9656;')+'</span></button>'+(lo2?'<div class="bd-fd-sub-list">'+late.map(function(x){return item("a:"+x.room,"Bekleniyor","t-warn",'<b>'+esc(x.room)+'</b> '+esc(nm(x)),esc('geliş '+bdiFmtD(x.vs.arr).slice(0,5)+' · '+bdiKatHead(x).sub),'',card(x,"arr"))}).join("")+'</div>':'')+'</div>'}
+  if(A.length||late.length)h+=grp('Gelenler',A.length,aReady+'/'+A.length+' oda hazır',ab);
   // 3) Cikislar
   var dLine=function(o){var b=[];
     if(o.iss.length)b.push('<span class="bd-fd-p warn">'+(o.iss.some(function(is){return bdiIssueState(is).status==="open"})?'açık issue':'issue vardı')+'</span>');
@@ -12564,6 +12581,26 @@ function bdiFeedHtml0(){
       db+='<div class="bd-fd-it"><button type="button" class="bd-fd-row bd-fd-more" onclick="bdiFeedGrpToggle(\''+lk+'\')" aria-expanded="'+lo+'"><span class="bd-fd-tag t-mut">'+left.length+'</span><span class="bd-fd-main">çıktı</span><span class="bd-fd-sub">konaklamada temas: '+pre+' · hiç temas yok: '+none+'</span><span class="bd-fd-r"></span><span class="bd-fd-car">'+(lo?'&#9662;':'&#9656;')+'</span></button>'+(lo?'<div class="bd-fd-sub-list">'+left.slice().sort(function(a,b){return String(a.time).localeCompare(String(b.time))}).map(dLine).join("")+'</div>':'')+'</div>'}
     h+=grp('Çıkışlar',due.length?due.length+' çıkacak':'',due.length?'saat sırasıyla':'',db);
   }
+  // 3b) Konaklama anlari
+  var yd=bdiAddDays(today,-1),tm=bdiAddDays(today,1),touched=function(x){return bdiKatTouches(x.room).length>0};
+  var nights=function(x){return x.arr&&x.dep?Math.round((new Date(x.dep+"T12:00:00")-new Date(x.arr+"T12:00:00"))/864e5):0};
+  var special=function(x){var k=K[x.room];return !!(k.occ.length||bdiKatRepeat(x,k.n)||k.warn.length||k.n.sens||isRooms[x.room])};
+  var mo='',moN=0,moRow=function(list,key,tag,label,why,isSp){
+    var seen={};list=list.filter(function(x){var gk=bdiGuestKey(x.pn.full)||x.room;if(seen[gk]){seen[gk].push(x.room);return false}seen[gk]=x.also=[];return true}); // ayni misafir iki odada: tek satir
+    if(!list.length)return;moN+=list.length;
+    var sp=list.filter(isSp),rest=list.filter(function(x){return sp.indexOf(x)<0});
+    var line=function(x){var k=K[x.room],b=[];if(bdiKatRepeat(x,k.n))b.push('<span class="bd-fd-p rep">tekrar</span>');if(k.occ.length)b.push('<span class="bd-fd-p cel">'+esc(cut(k.occ[0],24))+'</span>');if(isRooms[x.room])b.push('<span class="bd-fd-p warn">açık issue</span>');
+      var n=nights(x);return item(key+":"+x.room,tag,"t-mo",'<b>'+esc([x.room].concat(x.also||[]).join(", "))+'</b> '+esc(nm(x))+' '+b.join(""),esc(cut(why+(n?' · '+n+' gece':'')+(k.items.length?' · '+k.items[0].t:''),90)),touched(x)?'<span class="bd-fd-st ok">&#10003; bugün temas</span>':'',card(x,"insp"))};
+    mo+=sp.map(line).join("");
+    if(rest.length){var gk="mo-"+key,op=!!_bdiFeedGrp[gk];
+      mo+='<div class="bd-fd-it"><button type="button" class="bd-fd-row bd-fd-more" onclick="bdiFeedGrpToggle(\''+gk+'\')" aria-expanded="'+op+'"><span class="bd-fd-tag t-mo">+'+rest.length+'</span><span class="bd-fd-main">'+label+'</span><span class="bd-fd-sub">'+esc(rest.map(function(x){return x.room}).join(", "))+'</span><span class="bd-fd-r">'+rest.filter(touched).length+'/'+rest.length+' temas</span><span class="bd-fd-car">'+(op?'&#9662;':'&#9656;')+'</span></button>'+(op?'<div class="bd-fd-sub-list">'+rest.map(line).join("")+'</div>':'')+'</div>'}
+  };
+  // ilk sabah: tekrar gelen de tek tek (tekrar hos geldiniz); son gece: tekrar misafir cok, yalniz kutlama / issue / hassasiyet / 7+ gece
+  var lastSp=function(x){var k=K[x.room];return !!(k.occ.length||k.warn.length||k.n.sens||isRooms[x.room]||nights(x)>=7)};
+  var fL=IN.filter(function(x){return x.arr===yd}),lL=IN.filter(function(x){return x.dep===tm});
+  moRow(fL,"f","İlk sabah",(fL.some(special)?"diğer ":"")+"dün gelenler","ilk geceyi sor",special);
+  moRow(lL,"l","Son gece",(lL.some(lastSp)?"diğer ":"")+"yarın çıkacaklar","yarın çıkıyor: veda jesti",lastSp);
+  if(mo)h+=grp('Konaklama anları',moN,'ilk sabah ve son gece',mo);
   // 4) Dikkat
   var kb=openIs.map(function(o){var is=o.is,hs=Object.keys(o.s.handlers),hrs=Math.floor((Date.now()-(is.createdAt||Date.now()))/36e5);
     return item("i:"+is.id,"Issue","t-iss",'<b>'+esc(is.room||"?")+'</b> '+esc(is.guest||""),esc(cut(is.concern,90)),'<span class="bd-fd-st'+(hs.length?'':' warn')+'">'+(hs.length?esc(hs.join(", ")):'kimse ilgilenmedi')+' · '+hrs+' sa</span>',function(){
@@ -12975,6 +13012,7 @@ function bdiKatRoomHtml(x,mode){
   h+='</div>';
   var hk=x.vs&&x.vs.hk,hkl=hk&&BDI_HK_LBL[hk]; // VAC (HSK01124) oda durumu
   if(hkl){var bad=mode==="arr"?!/^(IP|CL)$/.test(hk):/^(DI|OO|OS)$/.test(hk);h+='<div class="bd-kt-l'+(bad?' a':'')+'"><span class="bd-kt-lb">Oda</span>'+esc(hkl)+' ('+esc(hk)+')'+(mode==="arr"&&bad?' · oda henüz hazır değil: HK ile kontrol et':mode==="arr"?' · hazırlığa uygun':'')+'</div>'}
+  var adr=x.p?bdiDnaAddrText(x.p.gid):"";if(adr)h+='<div class="bd-kt-l"><span class="bd-kt-lb">Hitap</span><b>'+esc(adr)+'</b></div>';
   var lbl=mode==="arr"?"Odaya bırak":mode==="insp"?"Kontrol et":"Tercihler";
   if(K.warn.length||K.n.sens)h+='<div class="bd-kt-l w"><span class="bd-kt-lb">Dikkat</span>'+(K.warn.length?'Guest is highly sensitive towards '+esc(K.warn.join(", ")):'')+(K.n.sens?(K.warn.length?' · ':'')+'Protel\'de hassasiyet notu var: Protel\'den kontrol et':'')+'</div>';
   if(K.occ.length)h+='<div class="bd-kt-l o"><span class="bd-kt-lb">Kutlama</span>'+esc(K.occ.join(" · "))+'</div>';
