@@ -2042,6 +2042,12 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div class="settings-body" style="display:none">
 
 <div class="section">
+<h3>Alert'e bağlanan touch'lar</h3>
+<div class="settings-info">Butler Alert listesindeki bir odaya bu işlemlerden biri girilince (Kayıt, sözlü bildirim, kat turu, iPad) alert kendiliğinden "gidildi" olur ve touch o butlerın alert ziyareti sayılır. Ayrıca "Butler Alert Visit" kaydı açılmaz, aynı ziyaret iki kez sayılmaz.</div>
+<div id="alertLinkActs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px"></div>
+</div>
+
+<div class="section">
 <h3>Gitmedi Sebepleri</h3>
 <div class="settings-info">Butler check-in ziyareti yapılamadığında seçilebilecek sebepler.</div>
 <div id="alertReasonTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
@@ -2419,7 +2425,7 @@ function showPage(p){
       (p==="radar"&&t.indexOf("Inspector")>=0)||
       (p==="alert"&&t.indexOf("Butler Alert")>=0)||
       (p==="settings"&&t.indexOf("Ayar")>=0))});
-  if(p==="settings"){renderKWTags();renderPyKWTagsSettings();renderAlertReasonSettings();renderAlertKwSettings();bdiamRender();renderBdiChipSettings();if(typeof renderSettingsManager==="function")renderSettingsManager();}
+  if(p==="settings"){renderKWTags();renderPyKWTagsSettings();renderAlertReasonSettings();renderAlertKwSettings();renderAlertLinkActs();bdiamRender();renderBdiChipSettings();if(typeof renderSettingsManager==="function")renderSettingsManager();}
   if(p==="radar"){renderRadarBrief();renderWatchlist();renderRadarWatchUI();}
   if(p==="alert"){if(!alertList.length)loadAlertSnapshot();loadAlertTarget();renderAlertTable()}
   if(p==="didit")initDidIt();
@@ -3446,7 +3452,7 @@ var SETTINGS_SYNC_KEYS=[
   "sw_admin_pin",                                                             // yonetici sifresi (ozet; 2026-11-01) - butun bilgisayarlarda ayni
   "pyTitleKW","pyAutoUpdateZip",                                              // PY title keywordleri + otomatik ZIP tercihi
   "ir_elimKW","ir_thresholds","ir_midRooms","ir_forbesBlocked","ir_lqaBlocked","ir_companyIgnore","ir_lqaInspectors", // Inspector Radar listeleri
-  "alertReasons","alert_kw_ota","alert_kw_transfer","alert_kw_transferEx","alert_target" // Butler Alert ayarlari
+  "alertReasons","alert_kw_ota","alert_kw_transfer","alert_kw_transferEx","alert_target","alert_link_acts" // Butler Alert ayarlari
 ];
 async function _settingsSyncFile(dir){
   var res={got:0,sent:0};
@@ -7644,6 +7650,48 @@ function bdiAutoType(){
   if(so&&v==="__move"&&so.value!=="room_move"){so.value="room_move";toggleBdiIssueSolution()}
   else if(so&&v==="__issue"&&so.value==="room_move"){so.value="none";toggleBdiIssueSolution()}
 }
+// ===== Butler Alert <-> Butler Did It baglantisi (2026-11-01) =====
+// Ayarlardaki touch'lardan biri (varsayilan: Welcome / In-room Check-in / Meet & Greet / In Room Visit) alert listesindeki
+// odaya girilince alert "gidildi" olur (visitedBy = touch'i yapan butler, linkedTouch = kayit). Touch silinirse geri alinir.
+// Misafir adi varsa alert'teki adla eslesmeli (ayni oda, baska misafir = baglanmaz).
+var BDI_ALERT_LINK_DEF=/welcome|check-?in|meet\s*&\s*greet|in room visit/i;
+function bdiAlertLinkActs(){try{var a=JSON.parse(localStorage.getItem("alert_link_acts")||"null");if(Array.isArray(a))return a}catch(e){}return getBdiActions().map(function(x){return x.label}).filter(function(l){return BDI_ALERT_LINK_DEF.test(l)})}
+function bdiAlertLinkToggle(label,on){var a=bdiAlertLinkActs().filter(function(x){return x!==label});if(on)a.push(label);localStorage.setItem("alert_link_acts",JSON.stringify(a));renderAlertLinkActs()}
+function renderAlertLinkActs(){
+  var el=document.getElementById("alertLinkActs");if(!el)return;var on=bdiAlertLinkActs();
+  el.innerHTML=getBdiActions().map(function(a){var c=on.indexOf(a.label)>=0;return '<label class="kw-tag" style="cursor:pointer;'+(c?'background:#e6f1ee;color:#0f5446;font-weight:600':'')+'"><input type="checkbox" value="'+esc(a.label)+'"'+(c?' checked':'')+' onchange="bdiAlertLinkToggle(this.value,this.checked)" style="margin:0 5px 0 0;vertical-align:-1px">'+esc(a.label)+'</label>'}).join("");
+}
+function bdiAlertListOn(date){
+  if(date===getAlertDate())return {list:alertList,live:true};
+  try{return {list:JSON.parse(localStorage.getItem("alert_"+date)||"[]")||[],live:false}}catch(e){return {list:[],live:false}}
+}
+function bdiAlertSaveOn(date,o){
+  if(o.live){saveAlertSnapshot();try{renderAlertTable()}catch(e){}}else localStorage.setItem("alert_"+date,JSON.stringify(o.list));
+  if(_bdiAlertSnapCache)delete _bdiAlertSnapCache[date];
+}
+function bdiAlertLink(entry,date){
+  if(!entry||!entry.room||entry.patternType==="alert"||!entry.butler||entry.butler==="Butler team")return null;
+  if(bdiAlertLinkActs().indexOf(entry.action)<0)return null;
+  var o=bdiAlertListOn(date),r=parseInt(entry.room,10),a=null;if(!r)return null;
+  o.list.forEach(function(x){if(x&&parseInt(x.roomNo,10)===r)a=x});if(!a)return null;
+  if(!bdiGuestBad(entry.guest)&&a.guest&&a.guest!=="—"&&!bdiNameNear(entry.guest,a.guest))return null; // oda cakismasi
+  entry.meta=entry.meta||{};entry.meta.alertVisit=1;entry.meta.alertReasons=(a.reasons||[]).map(alertReasonLabel).filter(Boolean).join(" / ");
+  if(a.visited!==true){a.visited=true;a.visitedBy=entry.butler;a.notVisitedReason="";a.linkedTouch=entry.id;a.visitedVia=entry.action;try{alertNormalizeEntry(a)}catch(e){}bdiAlertSaveOn(date,o)}
+  return a;
+}
+function bdiAlertUnlink(l,date){
+  if(!l||!l.id)return;var o=bdiAlertListOn(date),ch=false;
+  o.list.forEach(function(a){if(a&&a.linkedTouch===l.id){a.visited=null;a.visitedBy="";delete a.linkedTouch;delete a.visitedVia;ch=true}});
+  if(ch)bdiAlertSaveOn(date,o);
+}
+// Rapor: donemdeki alert'ler ve gidilenler
+function bdiAlertStats(start,end){
+  var tot=0,vis=0,miss=[],d=start;
+  for(var i=0;i<62&&d&&d<=end;i++,d=bdiAddDays(d,1)){
+    bdiAlertListOn(d).list.forEach(function(a){if(!a||!a.roomNo)return;tot++;if(a.visited===true)vis++;else miss.push(String(a.roomNo))});
+  }
+  return {tot:tot,vis:vis,miss:miss};
+}
 function getBdiTouchType(){
   var el=document.getElementById("bdiTouchType");
   return el?el.value:"service";
@@ -8052,6 +8100,7 @@ function addDidIt(){
     if(!entry)return;
     bdiNormalizeLogEntry(entry,document.getElementById("bdiDate").value,bdiLogs.length);
     bdiIssueLinkFromTouch(entry); // odada acik issue varsa ona baglanir (meta.issueId + issue gecmisine olay)
+    bdiAlertLink(entry,document.getElementById("bdiDate").value); // Butler Alert odasinda welcome vb. -> alert gidildi
     bdiLogs.push(entry);_bdiJustAdded=[entry.id];
     if(entry.patternType==="service")bdiBumpChipCount(entry.action);
   }else{
@@ -8063,6 +8112,7 @@ function addDidIt(){
       if(!e2){roomInput.value=rooms.join(",");return} // dogrulama hatasi: durumu geri koy
       bdiNormalizeLogEntry(e2,document.getElementById("bdiDate").value,bdiLogs.length);
       bdiIssueLinkFromTouch(e2);
+      bdiAlertLink(e2,document.getElementById("bdiDate").value);
       bdiLogs.push(e2);_bdiJustAdded.push(e2.id);
       if(e2.patternType==="service")bdiBumpChipCount(e2.action);
       added++;
@@ -8193,6 +8243,7 @@ function removeBdiLogById(id,datePart){
   var _src=(!datePart||datePart===curDate)?bdiLogs:loadBdiArrayForDate(datePart),_lg=(_src||[]).filter(function(l){return l&&l.id===id})[0],lk=bdiIssueEvForLog(_lg);
   if(lk&&lk.ev.type==="close"&&!confirm("Bu kayıt Oda "+(lk.is.room||"?")+" ("+(lk.is.guest||"")+") issue'sunu kapatan kayıt.\n\nSilinirse issue yeniden açık görünür. Silinsin mi?"))return;
   if(lk){var _now=Date.now();lk.ev.del=_now;lk.ev.u=_now;lk.is.u=_now;bdiSaveIssues(lk.list);try{renderBdiIssues();bdiIssueBadge()}catch(e){}}
+  if(_lg&&_lg.meta&&_lg.meta.alertVisit)bdiAlertUnlink(_lg,datePart||curDate); // bagli alert ziyareti geri alinir
   bdiAddTomb(id); // sync mezar tasi: silinen kayit diger makinelerden geri gelmesin
   var key="bdi_"+(datePart||curDate);
   if(datePart&&datePart!==curDate){
@@ -10298,7 +10349,7 @@ function bdiButlerSummary(logs){
     if(l.room)b.rooms[l.room]=1;
     if(l._date)b.days[l._date]=1;
     var cat=l.touchCategory||"";
-    if(cat==="Alert Visit")b.alerts++;
+    if(cat==="Alert Visit"||(l.meta&&l.meta.alertVisit))b.alerts++;
     if(cat==="Issue Closed")b.issueClose++;
     else if((l.meta&&l.meta.issueId)||cat==="Issue Handling"||cat==="Recovery"||cat==="Room Move")b.issueTouch++;
     if(cat==="Preference")b.prefs++;
@@ -12357,7 +12408,7 @@ function bgdTouchEntry(e,butler,room,guest,t){
   if(rf&&BDI_REACT[rf])en.reaction={f:rf,t:"",at:t.getTime()};else if(rf==="away")en.meta.away=true;
   return en;
 }
-function bgdPushLog(d,entry){var arr=loadBdiArrayForDate(d);if(arr.some(function(l){return l.id===entry.id}))return false;arr.push(entry);saveBdiArrayForDate(d,arr);refreshBdiIfSameDate(d,arr);return true}
+function bgdPushLog(d,entry){var arr=loadBdiArrayForDate(d);if(arr.some(function(l){return l.id===entry.id}))return false;bdiAlertLink(entry,d);arr.push(entry);saveBdiArrayForDate(d,arr);refreshBdiIfSameDate(d,arr);return true}
 async function bgdUndo(ref,rec,ctx){
   if(rec.log){bdiAddTomb(rec.log);var arr=loadBdiArrayForDate(rec.d),n=arr.length;arr=arr.filter(function(l){return l.id!==rec.log});if(arr.length!==n){saveBdiArrayForDate(rec.d,arr);refreshBdiIfSameDate(rec.d,arr)}}
   if(rec.iss){var L=ctx.issues();
@@ -13692,6 +13743,7 @@ function downloadDidIt(){
     'td{padding:3mm 4mm;border-bottom:1px solid #f0ebe2}tr:nth-child(even){background:#FDFBF7}' +
     '.badge{display:inline-block;padding:1mm 3mm;border-radius:3mm;font-size:8pt;background:#FBF5EB;color:#8a6e47;font-weight:600}' +
     'table.bsum{margin-top:2mm;font-size:9pt}table.bsum td{padding:2mm 4mm}' +
+    'table.gtab tr.gh em.al{font-style:normal;font-size:7.5pt;font-weight:700;color:#9a5b12;background:#fdf0e1;border-radius:3mm;padding:.5mm 2.5mm;margin-left:3mm}.badge.al{background:#fdf0e1;color:#9a5b12}' +
     'table.gtab tr.gh td{background:#FBF8F3!important;border-bottom:1px solid #e9e1d3;padding:2.2mm 4mm 1.6mm;break-after:avoid}table.gtab tr.gh b{font-size:10pt;color:#2d2d2d;margin-right:3mm}table.gtab tr.gh span{font-size:8pt;color:#8C7D6A}' +
     '.footer{text-align:center;margin-top:12mm;padding-top:6mm;border-top:1px solid #e5e0d5}' +
     '.footer img{width:42mm}' +
@@ -13731,6 +13783,8 @@ function downloadDidIt(){
   h+=_it(RS.guests,'Unique Guests');
   if(RS.guests)h+=_it(String(Math.round(RS.touches/RS.guests*10)/10),'Touches / Guest');
   h+=_it(RS.occ?RS.rooms+'<small>/'+RS.occ+'</small>':RS.rooms,RS.occ?'Rooms Served · '+Math.round(RS.rooms/RS.occ*100)+'%':'Rooms Served');
+  var _as=bdiAlertStats(_rg.start||ds,_rg.end||ds);
+  if(_as.tot)h+='<div class="item"><span class="num">'+_as.vis+'<small>/'+_as.tot+'</small></span><span class="lbl">Butler Alerts Visited · '+Math.round(_as.vis/_as.tot*100)+'%</span>'+(_as.miss.length?'<span class="sub">not visited: '+esc(_as.miss.slice(0,8).join(", "))+(_as.miss.length>8?' …':'')+'</span>':'')+'</div>';
   if(RS.depN)h+='<div class="item"><span class="num">'+RS.depPre+'<small>/'+RS.depN+'</small></span><span class="lbl">Touched Before Departure · '+Math.round(RS.depPre/RS.depN*100)+'%</span>'+(RS.depOnly||RS.depNone?'<span class="sub">'+[RS.depOnly?RS.depOnly+' only on departure day':'',RS.depNone?RS.depNone+' not touched':''].filter(Boolean).join(' · ')+'</span>':'')+'</div>';
   h+='</div><div class="summary summary-b">';
   var bkeys=Object.keys(bc);
@@ -13756,10 +13810,11 @@ function downloadDidIt(){
   for(var i=0;i<logs.length;i++){
     var l=logs[i];
     if(l._ghead){var gh=l._ghead,rs=Object.keys(gh.rooms).sort(function(a,b){return bdiRoomNum(a)-bdiRoomNum(b)});
-      h+='<tr class="gh"><td colspan="'+_ncol+'"><b>'+esc(gh.anon?"Guest name not recorded":gh.name)+'</b><span>Room '+esc(rs.join(" · "))+' · '+gh.rows.length+' touch'+(gh.rows.length>1?'es':'')+'</span></td></tr>';continue}
+      var _al=null;gh.rows.some(function(x){var a=getAlertForRoomOn(x.room,x._date||ds);if(a&&(gh.anon||!a.guest||a.guest==="—"||bdiNameNear(gh.name,a.guest))){_al=a;return true}return false});
+      h+='<tr class="gh"><td colspan="'+_ncol+'"><b>'+esc(gh.anon?"Guest name not recorded":gh.name)+'</b><span>Room '+esc(rs.join(" · "))+' · '+gh.rows.length+' touch'+(gh.rows.length>1?'es':'')+'</span>'+(_al?'<em class="al">Butler Alert'+((_al.reasons||[]).length?': '+esc((_al.reasons||[]).map(alertReasonLabel).filter(Boolean).join(" / ")):'')+(_al.visited===true?' · visited':' · not visited')+'</em>':'')+'</td></tr>';continue}
     var ld=l._date||ds;var dd2=new Date(ld+"T00:00:00");var fD2=("0"+dd2.getDate()).slice(-2)+"."+("0"+(dd2.getMonth()+1)).slice(-2)+"."+dd2.getFullYear();
     h+='<tr>'+(hasDate?'<td style="font-size:8pt;color:#8a6e47;white-space:nowrap">'+fD2+'</td>':'');
-    h+='<td>'+esc(l.butler)+'</td><td style="font-weight:700;text-align:center">'+esc(l.room)+'</td><td><span class="badge">'+esc(l.action)+'</span></td><td>'+esc(l.sentence)+(l.note&&String(l.sentence||"").indexOf(l.note)<0?' <i style="color:#999">'+esc(l.note)+'</i>':'')+'</td></tr>';
+    h+='<td>'+esc(l.butler)+'</td><td style="font-weight:700;text-align:center">'+esc(l.room)+'</td><td><span class="badge">'+esc(l.action)+'</span>'+((l.meta&&l.meta.alertVisit)||l.touchCategory==="Alert Visit"?' <span class="badge al">Alert</span>':'')+'</td><td>'+esc(l.sentence)+(l.note&&String(l.sentence||"").indexOf(l.note)<0?' <i style="color:#999">'+esc(l.note)+'</i>':'')+'</td></tr>';
   }
   if(logs.length)h+='</tbody></table>';
   h+=_issHtml;
@@ -16303,7 +16358,7 @@ function setAlertVisited(idx,val,butlerName){
     createBdiTouchFromAlert(a);
   }else{
     removeAutoBdiTouchForAlert(a);
-    a.visitedBy="";
+    a.visitedBy="";delete a.linkedTouch;delete a.visitedVia;
     if(val===null)a.notVisitedReason="";
   }
   alertNormalizeEntry(a);
@@ -17490,7 +17545,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueRestoreSkipped, bdiIssueNoContact, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueRestoreSkipped, bdiIssueNoContact, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
