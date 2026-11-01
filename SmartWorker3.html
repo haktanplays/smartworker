@@ -633,6 +633,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-power:focus-within{border-color:var(--g);box-shadow:0 0 0 3px rgba(15,84,70,.13)}
 #page-didit .bd-power-ic{color:var(--g);font-size:15px}
 #page-didit .bd-power input{border:0!important;background:transparent!important;box-shadow:none!important;height:40px;font-size:14px}
+#page-didit .bd-bpow{margin:0 0 10px}
 #page-didit .bd-power-hint{font-size:12px;color:var(--g);min-height:16px;margin:5px 0 8px 2px}
 #page-didit .bd-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
 #page-didit .bd-chip{border:1px solid #cfe2dc;background:#fff;color:var(--g);border-radius:999px;padding:5px 12px;font:600 12px 'Segoe UI',system-ui,sans-serif;cursor:pointer}
@@ -8020,9 +8021,31 @@ function bdiMatchAction(words){
   }
   return null;
 }
+// Ofis donemi (2026-11-01): butlerlar sozlu bildiriyor, ofis tek satirla giriyor. Butler satirin basinda adla
+// ("beyza", "beyza nur") ya da sonunda @ad / bas harflerle ("@lale", "LA") yazilabilir. Sondaki duz kelime butler sayilmaz
+// (not olabilir: "lale" = cicek). Birden fazla butlera uyan kisaltma kabul edilmez.
+function bdiButlerFromToken(t,strict){
+  var raw=String(t||""),mark=/^[@\/]/.test(raw);t=normTR(raw.replace(/^[@\/]/,"")).replace(/[^a-z]/g,"");if(t.length<2)return null;
+  var up=/^[A-ZÇĞİÖŞÜ]{2,3}$/.test(raw.replace(/^[@\/]/,""));
+  if(strict&&!mark&&!up)return null;
+  var hit=bdiButlerList().filter(function(b){
+    var w=normTR(String(b)).split(/\s+/).filter(Boolean),ini=w.map(function(x){return x.charAt(0)}).join("");
+    if(t===ini||t===ini.charAt(0)+ini.charAt(ini.length-1)||(ini.length>2&&t===ini.slice(0,2)))return t.length<=3;
+    return t.length>=3&&(w[0].indexOf(t)===0||(t.length>=4&&w.indexOf(t)>=0));
+  });
+  return hit.length===1?hit[0]:null;
+}
+function bdiPowerButler(tokens){
+  if(tokens.length<2)return {tokens:tokens,butler:null};
+  var b=/^\d/.test(tokens[0])?null:bdiButlerFromToken(tokens[0]);
+  if(b){var w=normTR(b).split(/\s+/),i=1;while(i<tokens.length&&!/^\d/.test(tokens[i])&&w.indexOf(normTR(tokens[i]))>0)i++;return {tokens:tokens.slice(i),butler:b}}
+  var last=tokens[tokens.length-1];b=tokens.length>2?bdiButlerFromToken(last,true):null;
+  return b?{tokens:tokens.slice(0,-1),butler:b}:{tokens:tokens,butler:null};
+}
 function bdiParsePowerLine(str){
   var tokens=(str||"").trim().split(/\s+/).filter(Boolean);
   if(!tokens.length)return null;
+  var PB=bdiPowerButler(tokens),butler=PB.butler;tokens=PB.tokens;
   var rooms=bdiParseRooms(tokens[0]);
   if(!rooms.length||!rooms.every(function(r){return /^\d{3,4}$/.test(r)}))return {error:"Ilk kisim oda olmali (orn. 1903 veya 1903,1905)"};
   var rest=tokens.slice(1);
@@ -8030,7 +8053,7 @@ function bdiParsePowerLine(str){
   var m=bdiMatchAction(rest);
   if(!m)return {rooms:rooms,error:'Islem bulunamadi: "'+rest[0]+'"'};
   var note=rest.slice(m.used).join(" ");
-  return {rooms:rooms,actionIndex:m.index,actionLabel:m.label,note:note};
+  return {rooms:rooms,actionIndex:m.index,actionLabel:m.label,note:note,butler:butler};
 }
 function bdiPowerHint(){
   var box=document.getElementById("bdiPowerHintBox");
@@ -8040,13 +8063,16 @@ function bdiPowerHint(){
   var p=bdiParsePowerLine(v);
   if(!p||p.error){box.textContent=p&&p.error?p.error:"";box.style.color="#b45309";return}
   box.style.color="#166534";
-  box.textContent="→ "+p.rooms.length+" oda ("+p.rooms.join(", ")+") • "+p.actionLabel+(p.note?" • \""+p.note+"\"":"");
+  var who=p.butler||(document.getElementById("bdiButler")||{}).value||"";
+  box.textContent="→ "+(who?who+" • ":"butler yok • ")+p.rooms.length+" oda ("+p.rooms.join(", ")+") • "+p.actionLabel+(p.note?" • \""+p.note+"\"":"")+(p.butler?"":" (butler satırda yoksa üstteki seçili butler)");
 }
 function bdiPowerSubmit(){
   var inp=document.getElementById("bdiPowerLine");
   var p=bdiParsePowerLine(inp.value);
   if(!p||p.error){alert((p&&p.error)||"Format: oda islem [detay]");return}
-  if(!document.getElementById("bdiButler").value){alert("Once ustten Butler sec (bir kez yeterli).");return}
+  var bSel=document.getElementById("bdiButler"),bPrev=bSel.value;
+  if(p.butler){if(![].some.call(bSel.options,function(o){return o.value===p.butler}))bSel.add(new Option(p.butler,p.butler));bSel.value=p.butler}
+  if(!bSel.value){alert("Butler yok: satırın başına adını yaz (ör. \"beyza 1108 sleep ritual\") ya da üstten Butler seç.");return}
   // Formu doldur ve normal kayit yolundan gec (tum kurallar/preview ayni kalsin)
   var tt=document.getElementById("bdiTouchType");
   if(tt.value!=="service"){tt.value="service";toggleBdiPattern();}
@@ -8055,8 +8081,33 @@ function bdiPowerSubmit(){
   document.getElementById("bdiRoom").value=p.rooms.join(",");
   document.getElementById("bdiNote").value=p.note||"";
   addDidIt();
+  if(p.butler)bSel.value=bPrev; // satirdan gelen butler tek kayitlik; ustteki secim degismez
   inp.value="";bdiPowerHint();
   inp.focus(); // pes pese hizli giris
+}
+// Brifing ustundeki "Sozlu bildirim" satiri: ayni ayristirici, kayit her zaman BUGUNE; brifing aninda guncellenir
+function bdiBriefPowerHtml(){
+  return '<div class="bd-bpow"><div class="bd-power"><span class="bd-power-ic" aria-hidden="true">&#9889;</span><input id="bdiBriefPower" type="text" placeholder=\'Sözlü bildirim: "beyza 1108 sleep ritual lavanta" ya da "1705 farewell @zafer", Enter ile kaydet\' onkeydown="if(event.key===\'Enter\')bdiBriefPowerSubmit()" oninput="bdiBriefPowerHint()" aria-label="Sözlü bildirim"></div><div id="bdiBriefPowerHint" class="bd-power-hint"></div></div>';
+}
+function bdiBriefPowerHint(){
+  var box=document.getElementById("bdiBriefPowerHint"),v=(document.getElementById("bdiBriefPower")||{}).value||"";if(!box)return;
+  if(!v.trim()){box.textContent="";return}
+  var p=bdiParsePowerLine(v);
+  if(!p||p.error){box.textContent=p&&p.error?p.error:"";box.style.color="#b45309";return}
+  if(!p.butler){box.textContent="Butler adını yaz: satırın başına (beyza 1108 ...) ya da sonuna @ad";box.style.color="#b45309";return}
+  box.style.color="#166534";box.textContent="→ "+p.butler+" • "+p.rooms.join(", ")+" • "+p.actionLabel+(p.note?" • \""+p.note+"\"":"")+" • bugün "+bdiNowTime();
+}
+function bdiBriefPowerSubmit(){
+  var inp=document.getElementById("bdiBriefPower");if(!inp)return;
+  var p=bdiParsePowerLine(inp.value);
+  if(!p||p.error){alert((p&&p.error)||"Format: butler oda işlem [detay]");return}
+  if(!p.butler){alert("Butler adını yaz: satırın başına (ör. \"beyza 1108 sleep ritual\") ya da sonuna @ad.");return}
+  var dEl=document.getElementById("bdiDate"),today=bdiYmd(new Date());
+  if(dEl&&dEl.value!==today){dEl.value=today;loadBdiLogs()}
+  var pw=document.getElementById("bdiPowerLine");if(!pw)return;
+  pw.value=inp.value;bdiPowerSubmit();
+  bdiToast(p.butler+" · "+p.rooms.join(", ")+" · "+p.actionLabel+" kaydedildi.");
+  Promise.resolve(renderBdiBriefTab()).then(function(){var x=document.getElementById("bdiBriefPower");if(x)x.focus()});
 }
 
 function removeBdiLogById(id,datePart){
@@ -12052,7 +12103,7 @@ async function renderBdiBriefTab(){
   try{await bdiGMIngest()}catch(e){console.warn(e)}
   _bdiGMProf=null;
   if(_bdiBriefMode==="ipad"){el.innerHTML=bgdPanelHtml();bgdScanFolder(true);return}
-  el.innerHTML=_bdiBriefMode==="shift"?bdiShiftHtml():_bdiBriefMode==="gr"?bdiGrHtml():_bdiBriefMode==="protel"?bdiProtelListHtml():_bdiBriefMode==="kat"?bdiKatHtml():bdiBriefDayHtml();
+  el.innerHTML=(/^(day|kat|shift)$/.test(_bdiBriefMode)?bdiBriefPowerHtml():"")+(_bdiBriefMode==="shift"?bdiShiftHtml():_bdiBriefMode==="gr"?bdiGrHtml():_bdiBriefMode==="protel"?bdiProtelListHtml():_bdiBriefMode==="kat"?bdiKatHtml():bdiBriefDayHtml());
   if(_bdiBriefMode!=="protel")bdiProtelBadge();
 }
 function bdiBriefSetMode(m){_bdiBriefMode=m;renderBdiBriefTab()}
@@ -12903,7 +12954,14 @@ function bdiShiftModel(date,key){
     if(l.reaction&&l.reaction.f==="cold")open.push({k:"tepki",t:"Oda "+l.room+" "+(l.guest||"")+": soğuk tepki"+(l.reaction.t?" ("+l.reaction.t+")":"")});
   });
   bdiGetIssues().forEach(function(is){var s=bdiIssueState(is);if(s.status==="open")open.push({k:"issue",t:"Issue, oda "+(is.room||"?")+" "+(is.guest||"")+": "+String(is.concern||"").slice(0,90)+" ("+Math.floor(bdiHoursSince(bdiYmd(new Date(is.createdAt||Date.now()))+" "+bdiNowTime(new Date(is.createdAt||Date.now()))))+" saattir açık)"})});
-  if(date===bdiYmd(new Date()))bdiGMProfiles().list.forEach(function(p){if(p.noTouchToday)open.push({k:"temas",t:"Bugün temas yok: "+p.name+" (oda "+Object.keys((p.currentStay||{}).rooms||{}).join(", ")+")"})});
+  // Sabah herkes "bugun temas yok"tur; liste yalniz dunden beri hic dokunulmayanlari sayar (gercek risk), digerleri tek satir
+  if(date===bdiYmd(new Date())){var yd=bdiAddDays(date,-1),nT=0,n2=0,cold=[];
+    bdiGMProfiles().list.forEach(function(p){if(!p.noTouchToday)return;nT++;var cs=p.currentStay;
+      if(!cs||cs.from>yd||p.events.some(function(e){return e.date===yd}))return;
+      if(cs.from===yd)cold.push({k:"temas",t:"Dün geldi, hâlâ karşılanmadı: "+p.name+" (oda "+Object.keys(cs.rooms||{}).join(", ")+")",r:Object.keys(cs.rooms||{})[0]});else n2++});
+    cold.sort(function(a,b){return bdiRoomNum(a.r)-bdiRoomNum(b.r)});
+    if(nT)open.push({k:"temas",t:"Bugün henüz temas yok: "+nT+" misafir"+(n2?" · "+n2+" misafire 2 gündür hiç dokunulmadı (liste: Kapsam sekmesi)":"")});
+    open=open.concat(cold);}
   return {logs:logs,by:by,open:open};
 }
 function bdiShiftKeyPrev(date,key){var order=["sabah","aksam","gece"],i=order.indexOf(key);if(i<0)return null;return i===0?bdiAddDays(date,-1)+"|gece":date+"|"+order[i-1]}
@@ -17173,7 +17231,7 @@ window.bdiLogs = bdiLogs;
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
   bdiGMSuggestAct, bdiGMUnmerge, bdiGMSaveNote, bdiGuestOpen, bdiGraphSelect, bdiGMDownload, bdiGMRestoreFile, bdiGMRestoreSnapshot,
-  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bdiProtelMarkIdx, bdiProtelMarkAll, bdiProtelDayCopy, bdiProtelDayMark, bdiProtelSetDay, swRepOpen, swRepPick, swRepScanFolder, bdiRepSlot, bdiPfAssign, bdiPfDelete, bdiAtAct, bdiAtBulk, bdiAtEditText, bdiAtSetField, bdiAtSetFilter, bdiAtSetView, bdiAtSearch, renderBdiAtelier, bdiKatSetSel, bdiKatInspect, bdiKatWelcome, bdiKatUndo, bdiKatPrep, bdiKatLetter, bdiKatCopyLetter, bdiKatCard, bdiKatPrint, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
+  bdiInsAct, bdiProtelCopy, bdiProtelCopyBlock, bdiProtelMarkIdx, bdiProtelMarkAll, bdiProtelDayCopy, bdiProtelDayMark, bdiProtelSetDay, bdiBriefPowerSubmit, bdiBriefPowerHint, swRepOpen, swRepPick, swRepScanFolder, bdiRepSlot, bdiPfAssign, bdiPfDelete, bdiAtAct, bdiAtBulk, bdiAtEditText, bdiAtSetField, bdiAtSetFilter, bdiAtSetView, bdiAtSearch, renderBdiAtelier, bdiKatSetSel, bdiKatInspect, bdiKatWelcome, bdiKatUndo, bdiKatPrep, bdiKatLetter, bdiKatCopyLetter, bdiKatCard, bdiKatPrint, bgdGenerate, bgdDownloadLast, bgdPreview, bgdImportFiles, bgdScanNow, bgdPmApply, bgdPmDismiss, bdiBriefFor, bdiXfOpen, bdiXfClose, bdiXfImport, bdiGuestSearchKey, bdiCopyText, bdiToast,
   bdiAliceImportFile, bdiAliceSetPeriod, bdiStaffSet, renderBdiAlice,
   bdiSetReaction, bdiReactText, bdiReactQuick, bdiReactClose, bdiDnaAdd, bdiDnaDel, bdiDnaSaveAddr,
   renderBdiBriefTab, bdiBriefSetMode, bdiPrepMark, bdiShiftSet, bdiShiftSaveNote, bdiShiftCopy, bdiShiftPrint,
