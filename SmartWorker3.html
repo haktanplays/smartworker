@@ -617,7 +617,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-range{display:inline-flex;align-items:center;gap:6px}
 #page-didit .bd-range input{width:140px;height:32px}
 #page-didit .bd-grid{display:grid;gap:10px;align-items:end}
-#page-didit .bd-row-who{grid-template-columns:220px 120px 1fr;margin-bottom:10px}
+#page-didit .bd-row-who{grid-template-columns:230px 180px 110px 1fr;margin-bottom:10px}
 #page-didit .bd-action-row{grid-template-columns:1fr 1.2fr}
 #page-didit .bd-issue-row{grid-template-columns:1.2fr 1.2fr 180px}
 #page-didit .bd-move-row{grid-template-columns:110px 170px 150px;margin-top:10px}
@@ -778,6 +778,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-issue-body{border-top:1px solid var(--line);padding:16px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:22px;background:#fbfcfc}
 #page-didit .bd-concern{white-space:pre-wrap;font-size:13px;line-height:1.65;max-width:72ch}
 #page-didit .bd-act{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:12px}
+#page-didit .bd-ncclose{margin-top:6px;font-size:12px}
 #page-didit .bd-act select,#page-didit .bd-act input{height:32px}
 #page-didit .bd-act .bd-btn{width:100%}
 #page-didit .bd-act-closed{grid-template-columns:auto}
@@ -1500,7 +1501,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
     <div id="bdiQuickChips" class="bd-chips"></div>
 
     <div class="bd-grid bd-row-who">
-      <div style="display:none"><label class="bd-lbl" for="bdiTouchType">Touch tipi</label><select id="bdiTouchType" onchange="toggleBdiPattern()">
+      <div><label class="bd-lbl" for="bdiTouchType">Touch tipi <span class="bd-opt">(işlemden otomatik)</span></label><select id="bdiTouchType" onchange="toggleBdiPattern()">
         <option value="service">Butler Did It</option>
         <option value="issue">Guest Issue / Recovery / Room Move</option>
         <option value="preference">Guest Preference</option>
@@ -3447,6 +3448,7 @@ async function _bdiSyncFile(dir){
 var SETTINGS_SYNC_JSON="smartworker_settings_sync.json";
 var SETTINGS_SYNC_KEYS=[
   "kw_equip","kw_amenity","kw_action","kw_deco","kw_butler","kw_bdiaction",   // chip/keyword listeleri + BDI action sablonlari + butler isimleri
+  "bdi_action_cat",                                                           // islem -> touch tipi (Butler Did It / Preference / Recovery / Occasion)
   "bdi_chip_hidden",                                                          // hizli balon gizleme
   "bdi_staff_roles",                                                          // Alice personel grup/departman tablosu (2026-10-28)
   "sw_admin_pin",                                                             // yonetici sifresi (ozet; 2026-11-01) - butun bilgisayarlarda ayni
@@ -7635,13 +7637,18 @@ function initDidIt(){
 
 // Touch tipi ayrica secilmez (2026-11-01): islem belirler. Tercih / ozel gun islemlerinde ek alanlar acilir;
 // bos birakilirsa kayit normal touch olarak gider (detay zorunlu degil). Issue ve oda degisikligi listenin sonunda.
+// Islem -> touch tipi: Ayarlar › Butler Did It islemleri'nde her islem bir basliga baglanir (bdi_action_cat).
+// Baglanmamis islemler icin varsayilan: adinda "preference" tercih, "special occasion / room decoration" ozel gun,
+// "recovery / issue / complaint" guest recovery, digerleri Butler Did It.
+var BDI_CAT_LBL={service:"Butler Did It",preference:"Guest Preference",issue:"Guest Recovery",occasion:"Special Occasion"};
+function bdiActionCats(){try{var o=JSON.parse(localStorage.getItem("bdi_action_cat")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return {}}}
+function bdiActionCatDefault(l){l=String(l||"");if(/preference/i.test(l))return "preference";if(/special occasion|room decoration|celebrat|birthday|anniversary|honeymoon/i.test(l))return "occasion";if(/recovery|complain|\bissue\b/i.test(l))return "issue";return "service"}
+function bdiActionCatOf(label){var m=bdiActionCats()[label];return BDI_CAT_LBL[m]?m:bdiActionCatDefault(label)}
+function bdiActionCatSet(label,cat){var o=bdiActionCats();if(BDI_CAT_LBL[cat])o[label]=cat;else delete o[label];localStorage.setItem("bdi_action_cat",JSON.stringify(o));bdiamRender()}
 function bdiActionKind(v){
   v=String(v==null?"":v);if(v==="__issue"||v==="__move")return "issue";
   var a=/^\d+$/.test(v)?getBdiActions()[+v]:null;if(!a)return "service";
-  var l=String(a.label||"");
-  if(/preference/i.test(l))return "preference";
-  if(/special occasion|room decoration|celebrat|birthday|anniversary|honeymoon/i.test(l))return "occasion";
-  return "service";
+  return bdiActionCatOf(a.label);
 }
 function bdiAutoType(){
   var v=(document.getElementById("bdiAction")||{}).value||"",tt=document.getElementById("bdiTouchType");if(!tt)return;
@@ -7654,9 +7661,25 @@ function bdiAutoType(){
 // Ayarlardaki touch'lardan biri (varsayilan: Welcome / In-room Check-in / Meet & Greet / In Room Visit) alert listesindeki
 // odaya girilince alert "gidildi" olur (visitedBy = touch'i yapan butler, linkedTouch = kayit). Touch silinirse geri alinir.
 // Misafir adi varsa alert'teki adla eslesmeli (ayni oda, baska misafir = baglanmaz).
-var BDI_ALERT_LINK_DEF=/welcome|check-?in|meet\s*&\s*greet|in room visit/i;
+var BDI_ALERT_LINK_DEF=/welcome|check-?in|meet\s*&\s*greet|\bvisit\b/i;
 function bdiAlertLinkActs(){try{var a=JSON.parse(localStorage.getItem("alert_link_acts")||"null");if(Array.isArray(a))return a}catch(e){}return getBdiActions().map(function(x){return x.label}).filter(function(l){return BDI_ALERT_LINK_DEF.test(l)})}
-function bdiAlertLinkToggle(label,on){var a=bdiAlertLinkActs().filter(function(x){return x!==label});if(on)a.push(label);localStorage.setItem("alert_link_acts",JSON.stringify(a));renderAlertLinkActs()}
+function bdiAlertLinkToggle(label,on){var a=bdiAlertLinkActs().filter(function(x){return x!==label});if(on)a.push(label);localStorage.setItem("alert_link_acts",JSON.stringify(a));renderAlertLinkActs();
+  try{var d=getAlertDate();if(bdiAlertBackfill(d,alertList)){saveAlertSnapshot();renderAlertTable()}}catch(e){}}
+// Alert listesi kurulurken / ayar degisince: o gunun Butler Did It kayitlarinda baglanan islem varsa (alert listesi sonradan
+// geldi ya da yenilendi) alert "gidildi" olur. Liste ve kayitlar yerinde guncellenir; degisiklik varsa true.
+function bdiAlertBackfill(date,list){
+  if(!date||!list||!list.length)return false;var acts=bdiAlertLinkActs();if(!acts.length)return false;
+  var arr=loadBdiArrayForDate(date),chA=false,chL=false,byR={};list.forEach(function(a){if(a&&a.roomNo)byR[parseInt(a.roomNo,10)]=a});
+  arr.slice().sort(function(x,y){return (x.ts||0)-(y.ts||0)}).forEach(function(l){
+    if(!l||!l.room||l.patternType==="alert"||!l.butler||l.butler==="Butler team"||acts.indexOf(l.action)<0)return;
+    var a=byR[parseInt(l.room,10)];if(!a)return;
+    if(!bdiGuestBad(l.guest)&&a.guest&&a.guest!=="—"&&!bdiNameNear(l.guest,a.guest))return;
+    if(!(l.meta&&l.meta.alertVisit)){l.meta=l.meta||{};l.meta.alertVisit=1;l.meta.alertReasons=(a.reasons||[]).map(alertReasonLabel).filter(Boolean).join(" / ");chL=true}
+    if(a.visited!==true){a.visited=true;a.visitedBy=l.butler;a.notVisitedReason="";a.linkedTouch=l.id;a.visitedVia=l.action;try{alertNormalizeEntry(a)}catch(e){}chA=true}
+  });
+  if(chL){saveBdiArrayForDate(date,arr);refreshBdiIfSameDate(date,arr)}
+  return chA;
+}
 function renderAlertLinkActs(){
   var el=document.getElementById("alertLinkActs");if(!el)return;var on=bdiAlertLinkActs();
   el.innerHTML=getBdiActions().map(function(a){var c=on.indexOf(a.label)>=0;return '<label class="kw-tag" style="cursor:pointer;'+(c?'background:#e6f1ee;color:#0f5446;font-weight:600':'')+'"><input type="checkbox" value="'+esc(a.label)+'"'+(c?' checked':'')+' onchange="bdiAlertLinkToggle(this.value,this.checked)" style="margin:0 5px 0 0;vertical-align:-1px">'+esc(a.label)+'</label>'}).join("");
@@ -7838,6 +7861,7 @@ function buildBdiTouchEntry(strict){
   var type=getBdiTouchType(),_av=(document.getElementById("bdiAction")||{}).value||"",_al=/^\d+$/.test(_av)&&getBdiActions()[+_av]?getBdiActions()[+_av].label:"";
   if(type==="preference"&&_al&&!((document.getElementById("bdiPrefDetail")||{}).value||"").trim())type="service";
   if(type==="occasion"&&_al&&!((document.getElementById("bdiArrangement")||{}).value||"").trim())type="service";
+  if(type==="issue"&&_al&&!((document.getElementById("bdiIssueText")||{}).value||"").trim())type="service";
   var butler=document.getElementById("bdiButler").value;
   var room=document.getElementById("bdiRoom").value.trim();
   var guestName=vacNameFmt(room);
@@ -7864,7 +7888,7 @@ function buildBdiTouchEntry(strict){
     if(strict&&!issue){alert("Issue / guest comment gir!");return null}
     if(!issue)return null;
     if(!actText)actText="apologized sincerely and offered assistance";
-    action="Guest Issue / Recovery / Room Move";
+    action=_al||"Guest Issue / Recovery / Room Move";
     note=issue;
     var guestDisplay=guestName||"our guest";
     sentence="Guest "+guestDisplay+" staying at Room "+room+" reported "+issue+". Butler "+butler+" "+actText+".";
@@ -8015,20 +8039,25 @@ function _bdiamParse(raw){
 function bdiamRender(){
   var wrap=document.getElementById("bdiamList");
   if(!wrap)return;
-  var raw=_bdiamRawList(),h='';
-  for(var i=0;i<raw.length;i++){
-    var a=_bdiamParse(raw[i]);
-    if(!a.label)continue;
+  var raw=_bdiamRawList(),h='',G={service:[],preference:[],issue:[],occasion:[]};
+  for(var i=0;i<raw.length;i++){var a0=_bdiamParse(raw[i]);if(a0.label)G[bdiActionCatOf(a0.label)].push({i:i,a:a0})}
+  // islemler bagli olduklari touch tipinin altinda (2026-11-01): Kayit'ta islem secilince touch tipi buna gore ayarlanir, raporda da gorunur
+  Object.keys(G).forEach(function(cat){
+    h+='<div style="margin:10px 0 4px;font-size:12px;font-weight:700;color:#0f5446;letter-spacing:.3px">'+esc(BDI_CAT_LBL[cat])+' <span style="font-weight:400;color:#6b7280">'+G[cat].length+' işlem</span></div>';
+    if(!G[cat].length)h+='<p class="hint" style="margin:0 0 4px">Bu başlığa bağlı işlem yok.</p>';
+    G[cat].forEach(function(x){var a=x.a,i=x.i;
     var ex=buildBdiSentence(_BDIAM_S.butler,a.label,a.verb,_BDIAM_S.room,"",_BDIAM_S.guest,a.template);
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:8px">'
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px">'
       +'<div style="min-width:0"><div style="font-size:13px;font-weight:700;color:#1e293b">'+esc(a.label)+'</div>'
       +'<div style="font-size:11px;color:#6b7280;font-style:italic">'+esc(ex)+'</div></div>'
-      +'<div style="display:flex;gap:6px;flex-shrink:0">'
+      +'<div style="display:flex;gap:6px;flex-shrink:0;align-items:center">'
+      +'<select class="bdiam-cat" data-l="'+esc(a.label)+'" onchange="bdiActionCatSet(this.getAttribute(\'data-l\'),this.value)" title="Bu işlem hangi touch tipine bağlı" style="font-size:11px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px">'+Object.keys(BDI_CAT_LBL).map(function(c){return '<option value="'+c+'"'+(c===cat?' selected':'')+'>'+esc(BDI_CAT_LBL[c])+'</option>'}).join("")+'</select>'
       +'<button class="btn-sm" onclick="bdiamEdit('+i+')" style="font-size:11px">Duzenle</button>'
       +'<button class="btn-sm" onclick="bdiamDelete('+i+')" style="font-size:11px;color:#dc2626;border-color:#fca5a5">Sil</button>'
       +'</div></div>';
-  }
-  wrap.innerHTML=h||'<p class="hint">Henuz islem yok. "Yeni Islem Ekle" ile baslayin.</p>';
+    });
+  });
+  wrap.innerHTML=raw.length?h:'<p class="hint">Henuz islem yok. "Yeni Islem Ekle" ile baslayin.</p>';
   try{renderBdiChipSettings()}catch(e){} // islem eklenince/silinince balon ayar listesi de tazelensin
 }
 function bdiamNew(){
@@ -9901,6 +9930,18 @@ function bdiIssueConfirmFrom(id){
 }
 // Misafir butler temasi olmadan cikti (2026-11-01): issue gecmisine "nocontact" olayi (kapanis gunune). Butler Did It
 // touch'i yazilmaz (kimseye sayilmaz) ama Butler Did It raporunun Guest Issues bolumunde "temas olmadan cikti" diye gorunur.
+// Acik issue'yu butler temasi olmadan kapat (2026-11-01): kapanis + "temas olmadan" olayi; Butler Did It touch'i yazilmaz.
+// "Ne yapildi?" kutusuna yazilan not sebep olarak kalir (raporda gorunur).
+function bdiIssueCloseNC(id){
+  var list=bdiGetIssues(),is=bdiIssueById(list,id);if(!is||bdiIssueState(is).status!=="open")return;
+  var t=((document.getElementById("bdiIsN_"+id)||{}).value||"").trim();if(t&&!bdiKvkkOk(t))return;
+  if(!confirm("Oda "+(is.room||"?")+" ("+(is.guest||"")+") issue butler teması olmadan kapatılsın mı?"+(t?"\n\nNot: "+t:"")))return;
+  var now=Date.now();is.events=is.events||[];
+  is.events.push({id:bdiEvId(),ts:now,type:"close",butler:"",by:"",text:"",src:"manual"});
+  is.events.push({id:bdiEvId(),ts:now,type:"nocontact",butler:"",text:t,src:"manual",u:now});
+  is.u=now;delete _bdiIssueDraft[id];_bdiIssueOpen[id]=false;
+  bdiSaveIssues(list);renderBdiIssues();bdiIssueBadge();bdiRefreshDerived();
+}
 function bdiIssueHasNC(is){return (is&&is.events||[]).some(function(e){return e&&!e.del&&e.type==="nocontact"})}
 function bdiIssueNoContact(id,text){
   var list=bdiGetIssues(),is=bdiIssueById(list,id);if(!is||bdiIssueHasNC(is))return;
@@ -10317,6 +10358,7 @@ function renderBdiIssues(){
         h+='<input type="text" id="bdiIsN_'+is.id+'" placeholder="Ne yapıldı? (opsiyonel)" value="'+esc(dr.n||"")+'" oninput="bdiIssueDraftSet(\''+is.id+'\',\'n\',this.value)">';
         h+='<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueAct(\''+is.id+'\',\'touch\')">İlgilendim</button>';
         h+='<button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiIssueAct(\''+is.id+'\',\'close\')">Kapat</button></div>';
+        h+='<div class="bd-ncclose"><button type="button" class="bd-link" onclick="bdiIssueCloseNC(\''+is.id+'\')">Temas olmadan kapat</button><span class="bd-sub"> misafir butlerla görüşmeden çıktıysa ya da issue başka departmanda kapandıysa; touch yazılmaz, raporda "temas olmadan" görünür</span></div>';
       }else{
         h+='<div class="bd-act bd-act-closed"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueAct(\''+is.id+'\',\'reopen\')">Yeniden aç</button></div>';
       }
@@ -13677,7 +13719,7 @@ function bdiIssueActOf(l){
   var cat=l.touchCategory||"",said="",det="",lab;
   if(l.action==="Issue Closed"||l.action==="Issue Follow-up"){lab=l.action==="Issue Closed"?"Resolved & closed":"Followed up";det=l.note||""}
   else if(l.action==="Guest Issue / Recovery / Room Move"||l.patternType==="issue"){
-    lab=cat==="Recovery"?"Recovery":cat==="Room Move"?"Room move":"Handled";
+    lab=cat==="Recovery"?"Recovery":cat==="Room Move"?"Room move":(l.action&&l.action!=="Guest Issue / Recovery / Room Move"?l.action:"Handled"); // ayarlarda Guest Recovery'ye baglanan islemin adi
     var sn=String(l.sentence||""),p="Butler "+(l.butler||"")+" ",k=sn.indexOf(p);
     det=k>=0?sn.slice(k+p.length):((l.meta&&l.meta.butlerAction)||l.note||"");
     det=det.charAt(0).toUpperCase()+det.slice(1);
@@ -13763,6 +13805,8 @@ function downloadDidIt(){
     '.summary{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin:8mm 0;padding:6mm 0;background:#FBF8F3;border-radius:8px}' +
     '.summary .item{text-align:center;min-width:80px}.summary .num{font-size:22pt;font-weight:700;color:#af8d69;display:block}.summary .lbl{font-size:8pt;color:#8C7D6A;text-transform:uppercase;letter-spacing:1px}' +
     '.summary .sub{display:block;font-size:7.5pt;color:#a08f78;margin-top:.8mm}' +
+    '.badge.ct-preference{background:#e8f1f8;color:#3b5f80}.badge.ct-issue{background:#fbe9e6;color:#a23b2c}.badge.ct-occasion{background:#f3eefb;color:#5b4691}' +
+    '.cats{text-align:center;font-size:8.5pt;color:#8C7D6A;margin:-5mm 0 5mm}.cats b{color:#2d2d2d}' +
     '.summary .num small{font-size:12pt;color:#8C7D6A;font-weight:600}.summary.summary-b{background:none;margin:-4mm 0 4mm;padding:0 0 2mm}.summary.summary-b .num{font-size:15pt}' +
     'table{width:100%;border-collapse:collapse;font-size:9.5pt;margin-top:8mm}' +
     'th{text-align:left;padding:3mm 4mm;color:#af8d69;font-size:8pt;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #af8d69}' +
@@ -13819,7 +13863,10 @@ function downloadDidIt(){
   var _as=bdiAlertStats(_rg.start||ds,_rg.end||ds);
   if(_as.tot)h+='<div class="item"><span class="num">'+_as.vis+'<small>/'+_as.tot+'</small></span><span class="lbl">Butler Alerts Visited · '+Math.round(_as.vis/_as.tot*100)+'%</span>'+(_as.miss.length?'<span class="sub">not visited: '+esc(_as.miss.slice(0,8).join(", "))+(_as.miss.length>8?' …':'')+'</span>':'')+'</div>';
   if(RS.depN)h+='<div class="item"><span class="num">'+RS.depPre+'<small>/'+RS.depN+'</small></span><span class="lbl">Touched Before Departure · '+Math.round(RS.depPre/RS.depN*100)+'%</span>'+(RS.depOnly||RS.depNone?'<span class="sub">'+[RS.depOnly?RS.depOnly+' only on departure day':'',RS.depNone?RS.depNone+' not touched':''].filter(Boolean).join(' · ')+'</span>':'')+'</div>';
-  h+='</div><div class="summary summary-b">';
+  h+='</div>';
+  var _cc={service:0,preference:0,issue:0,occasion:0};logs.forEach(function(l){if(bdiIsTouch(l))_cc[bdiLogCat(l)]++});
+  if(_cc.preference||_cc.issue||_cc.occasion)h+='<div class="cats">'+Object.keys(_cc).filter(function(k){return _cc[k]}).map(function(k){return esc(BDI_CAT_LBL[k])+' <b>'+_cc[k]+'</b>'}).join(' &nbsp;·&nbsp; ')+'</div>';
+  h+='<div class="summary summary-b">';
   var bkeys=Object.keys(bc);
   for(var k=0;k<bkeys.length;k++){h+='<div class="item"><span class="num">'+bc[bkeys[k]]+'</span><span class="lbl">'+esc(bkeys[k])+'</span></div>'}
   h+='</div>';
@@ -13846,7 +13893,7 @@ function downloadDidIt(){
       h+='<tr class="gh"><td colspan="'+_ncol+'"><div class="gx"><span class="nm">'+esc(gh.anon?"Guest name not recorded":gh.name)+'</span><span class="rc">'+rs.map(function(r){return '<i>'+esc(r)+'</i>'}).join("")+'</span><span class="sp"></span><span class="ct">'+gh.rows.length+' touch'+(gh.rows.length>1?'es':'')+'</span></div></td></tr>';continue}
     var ld=l._date||ds;var dd2=new Date(ld+"T00:00:00");var fD2=("0"+dd2.getDate()).slice(-2)+"."+("0"+(dd2.getMonth()+1)).slice(-2)+"."+dd2.getFullYear();
     h+='<tr>'+(hasDate?'<td style="font-size:8pt;color:#8a6e47;white-space:nowrap">'+fD2+'</td>':'');
-    h+='<td>'+esc(l.butler)+'</td><td style="font-weight:700;text-align:center">'+esc(l.room)+'</td><td><span class="badge">'+esc(l.action)+'</span>'+((l.meta&&l.meta.alertVisit)||l.touchCategory==="Alert Visit"?' <span class="badge al">Alert</span>':'')+'</td><td>'+esc(l.sentence)+(l.note&&String(l.sentence||"").indexOf(l.note)<0?' <i style="color:#999">'+esc(l.note)+'</i>':'')+'</td></tr>';
+    h+='<td>'+esc(l.butler)+'</td><td style="font-weight:700;text-align:center">'+esc(l.room)+'</td><td><span class="badge">'+esc(l.action)+'</span>'+(bdiLogCat(l)!=="service"?' <span class="badge ct-'+bdiLogCat(l)+'">'+esc(BDI_CAT_LBL[bdiLogCat(l)])+'</span>':'')+((l.meta&&l.meta.alertVisit)||l.touchCategory==="Alert Visit"?' <span class="badge al">Alert</span>':'')+'</td><td>'+esc(l.sentence)+(l.note&&String(l.sentence||"").indexOf(l.note)<0?' <i style="color:#999">'+esc(l.note)+'</i>':'')+'</td></tr>';
   }
   if(logs.length)h+='</tbody></table>';
   h+=_issHtml;
@@ -13862,6 +13909,8 @@ function downloadDidIt(){
 // Rapor gruplamasi (2026-11-01): misafir basligi altinda. Ayni misafirin farkli odalardaki (oda degisikligi, iki oda)
 // kayitlari bir arada; gruplar misafirin en kucuk oda numarasina gore, grup icinde gun -> oda -> saat.
 // Kimlik: isim (yazim farki / alias misafir hafizasindan birlesir); isimsiz kayitta o saatte odada kalan misafir.
+// Kaydin touch tipi (rapor): tercih / ozel gun / recovery; digerleri Butler Did It
+function bdiLogCat(l){var t=l&&l.patternType;return t==="preference"||t==="occasion"?t:t==="issue"?"issue":"service"}
 function bdiReportGuestGroups(logs,ds){
   var G={},order=[],gm=_bdiGM&&_bdiGM.loaded,prof=gm?bdiGMProfiles():null;
   logs.forEach(function(l){
@@ -13889,11 +13938,11 @@ function downloadDidItXlsx(){
   var data=_ord.map(function(l){
     var row={};
     if(bdiViewMode!=="day"){var dd3=new Date((l._date||ds)+"T00:00:00");row.Date=("0"+dd3.getDate()).slice(-2)+"."+("0"+(dd3.getMonth()+1)).slice(-2)+"."+dd3.getFullYear()}
-    row.Butler=l.butler;row.Room=l.room;row.Guest=l.guest||"";row.Action=l.action;row.Details=l.sentence;row.Note=l.note||"";
+    row.Butler=l.butler;row.Room=l.room;row.Type=BDI_CAT_LBL[bdiLogCat(l)];row.Guest=l.guest||"";row.Action=l.action;row.Details=l.sentence;row.Note=l.note||"";
     return row;
   });
   var ws=XLSX.utils.json_to_sheet(data);
-  var cols=bdiViewMode!=="day"?[{wch:10},{wch:16},{wch:6},{wch:22},{wch:20},{wch:60},{wch:30}]:[{wch:16},{wch:6},{wch:22},{wch:20},{wch:60},{wch:30}];
+  var cols=bdiViewMode!=="day"?[{wch:10},{wch:16},{wch:6},{wch:16},{wch:22},{wch:20},{wch:60},{wch:30}]:[{wch:16},{wch:6},{wch:16},{wch:22},{wch:20},{wch:60},{wch:30}];
   ws["!cols"]=cols;
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Butler Did It");
@@ -16330,7 +16379,7 @@ function buildAlertList(parsedGuests, traceList){
     seen[g.roomNo]=true;
 
     // Preserve visit status from previous state if room existed
-    var prev=alertList.find(function(a){return a.roomNo===g.roomNo&&!a.manual});
+    var prev=_prev.find(function(a){return a&&a.roomNo===g.roomNo&&!a.manual&&(!a.guest||a.guest==="—"||bdiNameNear(a.guest,g.lastName+", "+g.firstName))});
     newAlerts.push({
       roomNo:g.roomNo,
       guest:g.lastName+", "+g.firstName,
@@ -16350,7 +16399,12 @@ function buildAlertList(parsedGuests, traceList){
   var _pm={};_prev.forEach(function(a){if(a&&a.roomNo&&!a.manual)_pm[a.roomNo]=a});
   newAlerts.forEach(function(a){var o=_pm[a.roomNo];if(!o)return;if(o.guest&&a.guest&&o.guest!=="—"&&a.guest!=="—"&&!bdiNameNear(o.guest,a.guest))return; // odada baska misafir: isaret tasinmaz
     ["visited","visitedBy","notVisitedReason","linkedTouch","visitedVia"].forEach(function(k){if(o[k]!==undefined&&o[k]!==null&&o[k]!=="")a[k]=o[k]})});
-  var _list=manuals.concat(newAlerts);_list.forEach(alertNormalizeEntry);_list.sort(function(a,b){return a.roomNo-b.roomNo});
+  // yeni raporda gorunmeyen (giris yapti, sebep degisti...) alert'ler sen silmedikce kalir
+  var _nr={};newAlerts.forEach(function(a){_nr[a.roomNo]=1});
+  var _later={};Object.keys(_swArrDays||{}).forEach(function(d){if(d>_ad)(_swArrDays[d]||[]).forEach(function(g){var k=bdiGuestKey((g.lastName||"")+" "+(g.firstName||""));if(k)_later[k]=1})});
+  var _kept=_prev.filter(function(a){return a&&a.roomNo&&!a.manual&&!_nr[a.roomNo]&&!_later[bdiGuestKey(String(a.guest||"").split(",").reverse().join(" "))]});
+  var _list=manuals.concat(newAlerts,_kept);_list.forEach(alertNormalizeEntry);_list.sort(function(a,b){return a.roomNo-b.roomNo});
+  try{bdiAlertBackfill(_ad,_list)}catch(e){} // once girilmis welcome / visit kayitlari
   if(!_live){
     localStorage.setItem("alert_"+_ad,JSON.stringify(cleanAlertLegacyUpsellFields(_list)));if(typeof _bdiAlertSnapCache!=="undefined")delete _bdiAlertSnapCache[_ad];
     try{bdiToast("Butler Alert: "+bdiFmtD(_ad)+" için "+_list.length+" alert hazırlandı. Bugünün listesi değişmedi.")}catch(e){}
@@ -17591,7 +17645,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueRestoreSkipped, bdiIssueNoContact, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueRestoreSkipped, bdiIssueNoContact, bdiIssueCloseNC, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
