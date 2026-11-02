@@ -592,7 +592,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-lbl{display:block;font-size:12px;font-weight:600;color:var(--mut);margin-bottom:5px}
 #page-didit .bd-inline{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--mut)}
 #page-didit .bd-inline input{width:auto}
-#page-didit input[type=text],#page-didit input[type=number],#page-didit input[type=time],#page-didit input[type=date],#page-didit select{width:100%;height:36px;padding:0 10px;border:1px solid #d3ddd9;border-radius:8px;font:13px 'Segoe UI',system-ui,sans-serif;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
+#page-didit input[type=text]:not(#bdiTab_alert *),#page-didit input[type=number]:not(#bdiTab_alert *),#page-didit input[type=time]:not(#bdiTab_alert *),#page-didit input[type=date]:not(#bdiTab_alert *),#page-didit select:not(#bdiTab_alert *){width:100%;height:36px;padding:0 10px;border:1px solid #d3ddd9;border-radius:8px;font:13px 'Segoe UI',system-ui,sans-serif;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
 #page-didit textarea.bd-ta{width:100%;min-height:76px;padding:8px 10px;border:1px solid #d3ddd9;border-radius:8px;font:13px/1.55 'Segoe UI',system-ui,sans-serif;color:var(--ink);resize:vertical}
 #page-didit input:focus,#page-didit select:focus,#page-didit textarea:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px rgba(15,84,70,.13)}
 #page-didit button:focus-visible,#page-didit [role=button]:focus-visible{outline:2px solid var(--g);outline-offset:2px}
@@ -839,6 +839,9 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-nt-sum span.w{background:var(--amber-t);border-color:#f1d9b0;color:var(--amber)}
 #page-didit .bd-nt-leg{font-size:11.5px;color:var(--mut);line-height:1.6;margin-top:10px}
 #page-didit .bd-isslink{font-size:12px;color:var(--mut);margin:8px 0 0}
+#page-didit .bd-alert-auto{font-size:12.5px;line-height:1.7;padding:8px 12px;margin-bottom:10px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
+#page-didit .bd-alert-act{display:inline-block;font-size:11.5px;font-weight:600;color:var(--g);background:var(--gt);border-radius:10px;padding:1px 8px;margin:0 2px}
+#page-didit .bd-alertpane .card{box-shadow:none}
 #page-didit .bd-at-past{display:inline-block;font-size:11px;font-weight:600;color:var(--amber);background:var(--amber-t);border-radius:10px;padding:1px 8px;margin-left:6px}
 #page-didit .bd-isslink .bd-link{margin-left:4px}
 .bdicfg-r{display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
@@ -1173,13 +1176,10 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <!-- Havuz eslesme serit uyarisi: hangi sayfada olursan ol gorunur -->
 <div id="radarWatchBanner" style="display:none;background:#dc2626;color:#fff;padding:10px 24px;font-size:13px;font-weight:600;cursor:pointer" onclick="showPage('radar')"></div>
 <div class="nav">
-<button class="nav-btn active" onclick="showPage('letters')">Mektuplar</button>
-<!-- Traces Board ve Ekipman Takip 2026-08-16'da kaldirildi (kullanici istegi). JS fonksiyonlari guard'li olarak duruyor. -->
+<!-- 2026-11-02: Mektuplar kaldirildi; Butler Alert, Butler Did It icinde bir sekme. Butler Did It ilk ve acilis sayfasi. -->
+<button class="nav-btn active" onclick="showPage('didit')">Butler Did It</button>
 <button class="nav-btn" onclick="showPage('py')">Passionately Yours</button>
-<button class="nav-btn" onclick="showPage('didit')">Butler Did It</button>
 <button class="nav-btn" onclick="showPage('radar')">Inspector Radar<span id="radarNavDot" style="display:none;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-left:6px;vertical-align:middle"></span></button>
-<button class="nav-btn" onclick="showPage('alert')">Butler Alert</button>
-<!-- Shift Handoff 2026-08-16'da kaldirildi; JS'i 2026-08-17 temizliginde silindi. -->
 <button class="nav-btn" onclick="showPage('settings')">Ayarlar</button>
 </div>
 
@@ -1219,62 +1219,9 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div>
 
-<!-- ===== LETTERS PAGE ===== -->
-<div class="page active" id="page-letters">
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-<div class="tabs" style="margin-bottom:0">
-<div class="tab active" onclick="switchLetterTab('pdf')">Opera PDF</div>
-<div class="tab" onclick="switchLetterTab('search')">Misafir Ara</div>
-<div class="tab" onclick="switchLetterTab('manual')">Elle Gir</div>
-</div>
-<button class="btn-sm" style="border-color:#7c3aed;color:#7c3aed" onclick="exportGuestHistoryXlsx()">&#128202; VIP Top 20 Raporu</button>
-</div>
-<div class="card" id="ltPdfCard">
-<h2>Opera ARR01102 PDF Yukle</h2>
-<div class="upload-area" id="dropArrPDF" onclick="document.getElementById('arrPdfInput').click()">
-<div style="font-size:24px;margin-bottom:6px">&#128196;</div>
-<div style="font-size:13px;font-weight:600;color:#374151">Arrival PDF surukle veya tikla</div>
-<input type="file" id="arrPdfInput" accept=".pdf" style="display:none" onchange="handleArrPDF(this.files[0])">
-</div>
-<div id="arrPdfStatus" style="margin-top:8px;font-size:12px;color:#6b7280"></div>
-</div>
-<div class="card" id="ltSearchCard" style="display:none">
-<h2>Misafir Gecmisinde Ara</h2>
-<p class="hint" style="margin-bottom:10px">Daha once mektubu basilmis misafirleri arayip tabloya ekleyin.</p>
-<div style="display:flex;gap:8px;margin-bottom:10px">
-  <input id="historySearchInput" type="text" placeholder="Isim veya soyad yazin..." style="flex:1;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px" oninput="searchGuestHistory()" onkeydown="if(event.key==='Enter')addFirstHistoryResult()">
-  <button class="btn btn-primary" onclick="addAllHistoryResults()" style="font-size:12px">Tumunu Ekle</button>
-</div>
-<div id="historySearchResults" style="max-height:300px;overflow-y:auto"></div>
-</div>
-<div class="card" id="ltManualCard" style="display:none">
-<div class="card-header"><h2>Misafir Listesi</h2><button class="btn-sm" onclick="loadSample()">Ornek</button></div>
-<textarea id="guestInput" placeholder="Soyad,Isim,Unvan&#10;Ornek: Akyolcu,Emre,Mr."></textarea>
-<div style="margin-top:8px"><button class="btn btn-primary" onclick="parseManualAndRender()">Ayristir</button></div>
-</div>
-<div class="card" id="tableCard" style="display:none">
-<div class="card-header"><h2 id="guestCount"></h2>
-<div style="display:flex;gap:6px">
-<button class="btn-sm" style="background:#fef9c3" onclick="setAllType('NEW')">Hepsi Yeni</button>
-<button class="btn-sm" style="background:#d1fae5" onclick="setAllType('REPEAT')">Hepsi Repeat</button>
-</div></div>
-<div class="stats" id="statsBar"></div>
-<div id="letterPreflightPanel" style="display:none;margin:10px 0 12px"></div>
-<!-- Search & Quick Print -->
-<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-  <div style="position:relative;flex:1;min-width:220px">
-    <input id="letterSearch" type="text" placeholder="Misafir ara (isim, soyad veya oda no)..." oninput="filterGuestTable()" style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px">
-    <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;color:#9ca3af">&#128269;</span>
-  </div>
-  <span id="printedStats" style="font-size:11px;color:#6b7280"></span>
-</div>
-<div id="guest-table-wrap"></div>
-<div class="actions">
-<button class="btn btn-primary" onclick="downloadLetters()">&#x2B07; Mektup Indir</button>
-<button class="btn btn-dark" onclick="downloadEnvelopes()">&#x2709; Zarf Indir</button>
-</div>
-</div>
-</div>
+<!-- ===== MEKTUPLAR (2026-11-02 kaldirildi, kullanici istegi) =====
+     Mektup isleri ayri uygulamada (Mektup Kalemi). Varis raporu (ARR) Rapor Merkezi'nden PY, Inspector Radar, Butler Alert ve
+     Butler Did It'e akmaya devam eder; mektup listesi kodu veri olarak duruyor ama ekrani yok (renderGuestTable guard'li). -->
 
 <!-- ===== TRACES PAGE ===== -->
 <!-- Traces Board + Ekipman Takip sayfalari 2026-08-16'da kaldirildi. -->
@@ -1490,7 +1437,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </style>
 
 <!-- ===== BUTLER DID IT PAGE ===== -->
-<div class="page" id="page-didit">
+<div class="page active" id="page-didit">
 <!-- BDI v2 (2026-10-23): sinif tabanli yeni arayuz. TUM eski id'ler korunur (JS bunlara bagli). -->
 <header class="bd-head">
   <div>
@@ -1503,6 +1450,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
   <button type="button" class="bd-tab" data-tab="brief" onclick="switchBdiTab('brief')">Brifing</button>
   <button type="button" class="bd-tab" data-tab="log" onclick="switchBdiTab('log')">Log ve rapor</button>
   <button type="button" class="bd-tab" data-tab="issues" onclick="switchBdiTab('issues')">Issues <span id="bdiIssueTabCount" class="bd-count"></span></button>
+  <button type="button" class="bd-tab" data-tab="alert" onclick="switchBdiTab('alert')">Butler Alert <span id="bdiAlertTabCount" class="bd-count"></span></button>
   <button type="button" class="bd-tab" data-tab="guests" onclick="switchBdiTab('guests')">Misafirler</button>
   <button type="button" class="bd-tab" data-tab="atelier" onclick="switchBdiTab('atelier')">Atölye</button>
   <button type="button" class="bd-tab" data-tab="alice" onclick="switchBdiTab('alice')">Alice</button>
@@ -1625,7 +1573,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
     <div id="bdiVacConfidence" class="bd-confidence" style="display:none"></div>
     <div class="upload-area bd-drop bd-drop-sm" id="bdiArrDropZone" onclick="document.getElementById('bdiArrPdfInput').click()" style="margin-top:8px">
       <b>Varış (ARR01102)</b>
-      <span>Gelenler, notları ve trace'leri (Mektuplar, PY, Radar ile ortak)</span>
+      <span>Gelenler, notları ve trace'leri (PY, Radar, Butler Alert ile ortak)</span>
       <input type="file" id="bdiArrPdfInput" accept=".pdf" style="display:none" onchange="bdiRepSlot('arr',this.files[0]);this.value=''">
     </div>
     <div id="bdiArrStatus" class="bd-status"></div>
@@ -1849,41 +1797,10 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </section>
 
-</div><!-- end page-didit -->
+<!-- TAB: Butler Alert (2026-11-02: ust menuden buraya tasindi; Gunluk + Analitik) -->
+<section id="bdiTab_alert" class="bd-pane bd-alertpane" style="display:none">
+<div id="bdiAlertAuto" class="bd-alert-auto"></div>
 
-<div class="page" id="page-radar">
-<div class="card" id="radarWatchCard" style="display:none;border:1.5px solid #fca5a5;background:#fef2f2">
-<div class="card-header"><h2 style="color:#991b1b">&#128680; Havuz Eslesmeleri</h2></div>
-<div id="radarWatchMatches"></div>
-</div>
-<div class="card">
-<div class="card-header"><h2>&#128373; Inspector Radar</h2><span id="radarBriefDate" class="hint"></span></div>
-<p class="hint" style="margin-bottom:10px">Mektuplar icin yuklediginiz arrival PDF'inden otomatik hesaplanir; istersen buradan da yukleyebilirsin (ayni motor, tum sekmeler dolar).</p>
-<div class="upload-area" id="dropRadarArrPDF" onclick="document.getElementById('radarArrPdfInput').click()" style="padding:12px;margin-bottom:12px">
-<div style="font-size:18px;margin-bottom:2px">&#128373;</div>
-<div style="font-size:12px;font-weight:600;color:#374151">Arrival PDF surukle veya tikla</div>
-<input type="file" id="radarArrPdfInput" accept=".pdf" style="display:none" onchange="handleArrPDF(this.files[0])">
-</div>
-<div id="radarBrief"><p class="hint">Henuz arrival PDF yuklenmedi. Buradan ya da Mektuplar sekmesinden gunun PDF'ini yukleyin; supheliler kendiliginden belirir.</p></div>
-</div>
-<div class="card">
-<div class="card-header"><h2>&#128218; Bilinen Isimler &amp; Sirketler (Havuz)</h2><span class="hint" id="radarWatchCount"></span></div>
-<p class="hint" style="margin-bottom:10px">Buraya eklenen isim veya sirket/acente kelimesi arrival'da denk gelirse KIRMIZI ALARM cikar. Uc bilgisayarda ortak (senkronla tasinir).</p>
-<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end;margin-bottom:8px">
-  <div><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Soyad</label><input id="rwLast" type="text" placeholder="Smith" style="width:110px;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
-  <div><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Ad</label><input id="rwFirst" type="text" placeholder="John" style="width:110px;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
-  <div style="flex:1;min-width:140px"><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Not (opsiyonel)</label><input id="rwNote" type="text" placeholder="2024 LQA denetcisi" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" onkeydown="if(event.key==='Enter')rwAddName()"></div>
-  <button class="btn btn-primary" style="padding:6px 14px;font-size:12px" onclick="rwAddName()">+ Isim Ekle</button>
-</div>
-<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end;margin-bottom:10px">
-  <div style="flex:1;min-width:160px"><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Sirket / acente kelimesi</label><input id="rwCompany" type="text" placeholder="orn. LQA, Coyle, denetim firmasi..." style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" onkeydown="if(event.key==='Enter')rwAddCompany()"></div>
-  <div style="flex:1;min-width:140px"><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Not (opsiyonel)</label><input id="rwCompanyNote" type="text" placeholder="denetim acentesi" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" onkeydown="if(event.key==='Enter')rwAddCompany()"></div>
-  <button class="btn" style="padding:6px 14px;font-size:12px;border:1.5px solid #1a6b5c;color:#1a6b5c;background:#f0f7f5" onclick="rwAddCompany()">+ Sirket Ekle</button>
-</div>
-<div id="rwList"></div>
-</div>
-</div>
-<div class="page" id="page-alert">
 
 <!-- Alert Page Tabs -->
 <div class="tabs" style="margin-bottom:0">
@@ -1984,7 +1901,43 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 </div><!-- end alertTab_analytics -->
 
-</div><!-- end page-alert -->
+
+</section>
+</div><!-- end page-didit -->
+
+<div class="page" id="page-radar">
+<div class="card" id="radarWatchCard" style="display:none;border:1.5px solid #fca5a5;background:#fef2f2">
+<div class="card-header"><h2 style="color:#991b1b">&#128680; Havuz Eslesmeleri</h2></div>
+<div id="radarWatchMatches"></div>
+</div>
+<div class="card">
+<div class="card-header"><h2>&#128373; Inspector Radar</h2><span id="radarBriefDate" class="hint"></span></div>
+<p class="hint" style="margin-bottom:10px">Raporlar'a bıraktığın varış raporundan (ARR) otomatik hesaplanır; istersen buradan da yükleyebilirsin (aynı motor, PY ve Butler Alert de dolar).</p>
+<div class="upload-area" id="dropRadarArrPDF" onclick="document.getElementById('radarArrPdfInput').click()" style="padding:12px;margin-bottom:12px">
+<div style="font-size:18px;margin-bottom:2px">&#128373;</div>
+<div style="font-size:12px;font-weight:600;color:#374151">Arrival PDF surukle veya tikla</div>
+<input type="file" id="radarArrPdfInput" accept=".pdf" style="display:none" onchange="handleArrPDF(this.files[0])">
+</div>
+<div id="radarBrief"><p class="hint">Henüz varış raporu yüklenmedi. Buradan ya da Raporlar'dan günün ARR PDF'ini yükle; şüpheliler kendiliğinden belirir.</p></div>
+</div>
+<div class="card">
+<div class="card-header"><h2>&#128218; Bilinen Isimler &amp; Sirketler (Havuz)</h2><span class="hint" id="radarWatchCount"></span></div>
+<p class="hint" style="margin-bottom:10px">Buraya eklenen isim veya sirket/acente kelimesi arrival'da denk gelirse KIRMIZI ALARM cikar. Uc bilgisayarda ortak (senkronla tasinir).</p>
+<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end;margin-bottom:8px">
+  <div><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Soyad</label><input id="rwLast" type="text" placeholder="Smith" style="width:110px;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
+  <div><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Ad</label><input id="rwFirst" type="text" placeholder="John" style="width:110px;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
+  <div style="flex:1;min-width:140px"><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Not (opsiyonel)</label><input id="rwNote" type="text" placeholder="2024 LQA denetcisi" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" onkeydown="if(event.key==='Enter')rwAddName()"></div>
+  <button class="btn btn-primary" style="padding:6px 14px;font-size:12px" onclick="rwAddName()">+ Isim Ekle</button>
+</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end;margin-bottom:10px">
+  <div style="flex:1;min-width:160px"><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Sirket / acente kelimesi</label><input id="rwCompany" type="text" placeholder="orn. LQA, Coyle, denetim firmasi..." style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" onkeydown="if(event.key==='Enter')rwAddCompany()"></div>
+  <div style="flex:1;min-width:140px"><label style="font-size:11px;display:block;margin-bottom:2px;color:#6b7280">Not (opsiyonel)</label><input id="rwCompanyNote" type="text" placeholder="denetim acentesi" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px" onkeydown="if(event.key==='Enter')rwAddCompany()"></div>
+  <button class="btn" style="padding:6px 14px;font-size:12px;border:1.5px solid #1a6b5c;color:#1a6b5c;background:#f0f7f5" onclick="rwAddCompany()">+ Sirket Ekle</button>
+</div>
+<div id="rwList"></div>
+</div>
+</div>
+<!-- Butler Alert 2026-11-02 Butler Did It icine tasindi (bdiTab_alert) -->
 
 <!-- Shift Handoff sayfasi 2026-08-16'da kaldirildi; JS'i 2026-08-17 temizliginde tamamen silindi. -->
 
@@ -2080,13 +2033,13 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <!-- ==================== GENEL ==================== -->
 <div class="settings-segment">
 <div class="settings-header" onclick="toggleSettingsSection(this)">
-<span>Butler Alert</span><span class="settings-arrow">&#9660;</span>
+<span>Butler Did It › Butler Alert</span><span class="settings-arrow">&#9660;</span>
 </div>
 <div class="settings-body" style="display:none">
 
 <div class="section">
-<h3>Alert'e bağlanan touch'lar</h3>
-<div class="settings-info">Butler Alert listesindeki bir odaya bu işlemlerden biri girilince (Kayıt, sözlü bildirim, kat turu, iPad) alert kendiliğinden "gidildi" olur ve touch o butlerın alert ziyareti sayılır. Ayrıca "Butler Alert Visit" kaydı açılmaz, aynı ziyaret iki kez sayılmaz.</div>
+<h3>Alert'i otomatik tikleyen işlemler</h3>
+<div class="settings-info">Butler Alert listesindeki bir odaya burada işaretli işlemlerden biri girilince (Kayıt, sözlü bildirim, kat turu, iPad) alert kendiliğinden "gidildi" olur ve touch o butlerın alert ziyareti sayılır; ayrıca "Butler Alert Visit" kaydı açılmaz, aynı ziyaret iki kez sayılmaz. İşareti kaldırırsan o işlem artık alert'i tiklemez. Alert listesi sonradan gelirse o günün kayıtları da geriye dönük bağlanır.</div>
 <div id="alertLinkActs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px"></div>
 </div>
 
@@ -2142,7 +2095,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <span>Section Based Ayar Yedekleme</span><span class="settings-arrow">&#9660;</span>
 </div>
 <div class="settings-body" style="display:none">
-<div class="settings-info">Sadece secilen ayar bolumunu yedekler, geri yukler veya varsayilana dondurur. Operasyon kayitlari, mektuplar, alert loglari ve Butler Touch gunlukleri silinmez.</div>
+<div class="settings-info">Sadece secilen ayar bolumunu yedekler, geri yukler veya varsayilana dondurur. Operasyon kayitlari, alert loglari ve Butler Touch gunlukleri silinmez.</div>
 <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:10px 0 12px">
   <div>
     <label style="font-size:11px;display:block;margin-bottom:4px;color:#475569">Ayar bolumu</label>
@@ -2457,6 +2410,8 @@ function updDatePrev(){var d=document.getElementById("dateInput").value;document
 
 // ===== NAVIGATION =====
 function showPage(p){
+  if(p==="alert"){showPage("didit");switchBdiTab("alert");return} // 2026-11-02: Butler Alert, Butler Did It icinde
+  if(p==="letters")p="didit"; // Mektuplar kaldirildi
   var target=document.getElementById("page-"+p);
   if(!target)return; // kaldirilmis sayfa (handoff/traces/equipment) - sessiz no-op
   document.querySelectorAll(".page").forEach(function(el){el.classList.remove("active")});
@@ -2464,12 +2419,10 @@ function showPage(p){
   document.querySelectorAll(".nav-btn").forEach(function(el){
     var t=el.textContent;
     el.classList.toggle("active",
-      (p==="letters"&&t.indexOf("Mektup")>=0)||
       (p==="equipment"&&t.indexOf("Ekipman")>=0)||
       (p==="py"&&t.indexOf("Passionately")>=0)||
       (p==="didit"&&t.indexOf("Butler Did")>=0)||
       (p==="radar"&&t.indexOf("Inspector")>=0)||
-      (p==="alert"&&t.indexOf("Butler Alert")>=0)||
       (p==="settings"&&t.indexOf("Ayar")>=0))});
   if(p==="settings"){renderKWTags();renderPyKWTagsSettings();renderAlertReasonSettings();renderAlertKwSettings();renderAlertLinkActs();bdiamRender();renderBdiChipSettings();renderBdiCfgAll();if(typeof renderSettingsManager==="function")renderSettingsManager();}
   if(p==="radar"){renderRadarBrief();renderWatchlist();renderRadarWatchUI();}
@@ -2479,7 +2432,7 @@ function showPage(p){
 }
 
 // ===== LETTER TAB SWITCHING =====
-function switchLetterTab(t){
+function switchLetterTab(t){if(!document.getElementById("ltPdfCard"))return;
   ["pdf","search","manual"].forEach(function(k,i){
     var cards={pdf:"ltPdfCard",search:"ltSearchCard",manual:"ltManualCard"};
     document.getElementById(cards[k]).style.display=k===t?"block":"none";
@@ -2514,16 +2467,17 @@ function handleChangesPDF(file){
 setupDrop("dropChangesPDF",handleChangesPDF);
 
 // ===== ARRIVAL PDF PARSING =====
+function swElOr(id){return document.getElementById(id)||{style:{},textContent:"",innerHTML:""}}
 async function handleArrPDF(file){
   if(!file)return;
-  document.getElementById("arrPdfStatus").textContent="Okunuyor: "+file.name+"...";
+  swElOr("arrPdfStatus").textContent="Okunuyor: "+file.name+"...";
   try{
     var buf=await file.arrayBuffer();
     var parsed=await parseResDetail(buf);
     if(swArrPastAsk(parsed,file,"arrPdfStatus"))return;
     feedAllModules(parsed,"letters");swArrSave(parsed,file.name);var _ad=swArrDay(parsed);swRepLog("arr",file.name,parsed.length,parsed.length+" misafir"+(_ad?" · varış "+bdiFmtD(_ad).slice(0,5):""),{arrDay:_ad});
-    document.getElementById("arrPdfStatus").innerHTML='<span style="color:#059669">&#10003; '+parsed.length+' misafir bulundu</span>';
-  }catch(err){document.getElementById("arrPdfStatus").innerHTML='<span style="color:#dc2626">Hata: '+err.message+'</span>';console.error(err)}
+    swElOr("arrPdfStatus").innerHTML='<span style="color:#059669">&#10003; '+parsed.length+' misafir bulundu</span>';try{renderRadarBrief()}catch(e){}
+  }catch(err){swElOr("arrPdfStatus").innerHTML='<span style="color:#dc2626">Hata: '+err.message+'</span>';console.error(err)}
 }
 
 
@@ -3117,8 +3071,7 @@ function swSetupHtml(s){
   if(!s.folder)h+=row("bad","Ortak klasör","Seçilmedi. Diğer bilgisayarlarla paylaşılan klasörü (ör. ağ sürücüsündeki SmartWorker klasörü) bir kez seç.",s.fs?b("Klasörü seç","swSetupPickFolder()",1):"");
   else if(!granted)h+=row("warn","Ortak klasör","<b>"+esc(s.folder)+"</b> seçili; tarayıcı bu açılışta tekrar izin istiyor.",b("Erişim ver","swSetupGrant()",1));
   else h+=row("ok","Ortak klasör","<b>"+esc(s.folder)+"</b> · PY, Butler Did It, issue, misafir hafızası ve ayarlar buraya senkronlanıyor"+(s.sync&&s.sync.t?" · son senkron "+bdiFmtTs(s.sync.t):"")+".",b("Değiştir","swSetupPickFolder()"));
-  if(s.guest)h+=row(s.guest.inFolder?"ok":"warn","Mektup / misafir geçmişi",esc(s.guest.name)+(s.guest.inFolder?" (ortak klasörde)":" (ortak klasörün dışında, ayrı dosya)"));
-  else h+=row("off","Mektup / misafir geçmişi","Klasör seçilince ortak klasörde kendiliğinden oluşturulur.");
+  // "Mektup / misafir gecmisi" satiri 2026-11-02 kaldirildi (Mektuplar yok); dosya arka planda eskisi gibi esitlenir
   if(s.backup)h+=row(s.backupErr?"warn":"ok","Otomatik yedek","Son yedek: <b>"+bdiFmtTs(s.backup.t)+"</b> · "+esc(SW_BACKUP_DIR+"/"+s.backup.name)+" · "+s.backup.kb+" KB · her gün; son "+SW_BACKUP_KEEP_DAYS+" gün + aylık yedekler saklanır"+(s.backupErr?'<br><span style="color:#b45309">Son deneme hatası: '+esc(s.backupErr)+'</span>':'')+".",granted?b("Şimdi yedekle","swBackupNow(false)"):"");
   else h+=row(granted?"warn":"off","Otomatik yedek",granted?"Henüz yedek yok.":"Ortak klasör bağlanınca her gün "+esc(SW_BACKUP_DIR)+" klasörüne tam yedek alınır.",granted?b("Şimdi yedekle","swBackupNow(false)",1):"");
   h+=granted?row("ok","iPad Butler Rehberi","Sabah rehberi <b>"+esc(s.folder+"/"+BGD_DIR)+"</b> altına yazılır; butlerların dönüşleri <b>"+esc(BGD_DIR+"/"+BGD_IN)+"</b> klasöründen kendiliğinden alınır (Butler Did It › Brifing › iPad rehberi)."):row("off","iPad Butler Rehberi","Ortak klasör bağlanınca Rehber ve Rehber/Gelen klasörleri kendiliğinden kurulur.");
@@ -4188,6 +4141,7 @@ function updGF(i,f,v){
   renderGuestTable();
 }
 function renderGuestTable(){
+  if(!document.getElementById("tableCard"))return; // Mektuplar sayfasi kaldirildi (2026-11-02)
   if(!guests.length){document.getElementById("tableCard").style.display="none";return}
   document.getElementById("tableCard").style.display="block";
   document.getElementById("guestCount").textContent=guests.length+" Misafir";
@@ -6804,11 +6758,11 @@ function bdiIssueDepTag(is){
 // Varis raporu (ARR) sayfa yenilense de kalsin diye yalniz o gun icin AYRI bir yerel depoda tutulur (sw_reports IndexedDB):
 // gunluk yedege ve senkrona GIRMEZ (icinde kasa notlari var). Ortak klasordeki Raporlar/ dosyalari 7 gun sonra silinir (KVKK).
 var SW_REP_TYPES={
-  arr:["Varış raporu (ARR01102)","Mektuplar · Passionately Yours · Inspector Radar · Butler Alert · trace'ler · BDI varışlar · kat turu · Atölye"],
+  arr:["Varış raporu (ARR01102)","Passionately Yours · Inspector Radar · Butler Alert · trace'ler · BDI varışlar · kat turu · Atölye"],
   gih:["In-house raporu (GIH01102)","BDI oda-misafir · kat turu · iPad rehberi · Atölye"],
   vac:["Oda durumu (VAC · HSK01124)","BDI oda-misafir · kat turu (oda hazır mı, bugün gelecekler) · iPad rehberi"],
   dep:["Çıkış raporu (DEP01100)","Oda listesi (çıkan odadan düşer) · Sen yokken çıkanlar · brifing · issue'lar · BDI raporu çıkış kapsaması"],
-  xls:["Opera misafir Excel'i","Mektuplar"],
+  xls:["Opera misafir Excel'i","Kullanılmıyor (Mektuplar kaldırıldı)"],
   alice:["Alice Ticket List","BDI Alice · sorulmadan yap"],
   issue:["Issue Excel'i","BDI Issues · kat turu · Protel Issues"],
   pref:["Tercih formu (PDF)","Atölye → misafir hafızası"],
@@ -6838,7 +6792,7 @@ var _swArrDays={};
 // Modul kutusuna gecmis gunun varis raporu birakilirsa: varsayilan olarak yalniz o gunun duzeltmesi (modul listeleri degismez)
 function swArrPastAsk(parsed,file,statusId){
   var ad=swArrDay(parsed),t=getToday();if(!ad||ad>=t)return false;
-  if(!confirm("Bu varış raporu geçmiş güne ait ("+bdiFmtD(ad)+").\n\nTamam: yalnız o günün Butler Did It kayıtları düzeltilsin; Mektuplar / PY / Radar / Alert listeleri değişmesin.\nİptal: yine de bu modüle yüklensin."))return false;
+  if(!confirm("Bu varış raporu geçmiş güne ait ("+bdiFmtD(ad)+").\n\nTamam: yalnız o günün Butler Did It kayıtları düzeltilsin; PY / Radar / Alert listeleri değişmesin.\nİptal: yine de bu modüle yüklensin."))return false;
   swArrSave(parsed,file.name,true);var _an=parsed.filter(function(g){return g.wnGroups&&g.wnGroups.some(function(x){return x&&x.length})}).length;
   var fx=bdiFixDayNames([ad],"ARR "+file.name),msg="geçmiş gün varış raporu ("+bdiFmtD(ad)+"): "+parsed.length+" misafir o güne yazıldı · "+(_an?_an+" misafirin profil notu Atölye'ye geldi · ":"")+bdiFixMsg(fx)+" · modül listeleri değişmedi";
   swRepHist("arr",file.name,ad,msg);var st=document.getElementById(statusId);if(st)st.innerHTML='<span style="color:#0f5446">'+esc(msg)+'</span>';
@@ -6926,16 +6880,16 @@ async function swRepIngest(files,src){
         try{rebuildVacRooms();if(typeof _bdiGMProf!=="undefined")_bdiGMProf=null;bdiGMSchedule();if(document.getElementById("bdiBriefBody")&&_bdiBriefMode)renderBdiBriefTab()}catch(e){}
         if(past){var afx=bdiFixDayNames([ad],"ARR "+file.name);r.ok=true;
           var _an=parsed.filter(function(g){return g.wnGroups&&g.wnGroups.some(function(x){return x&&x.length})}).length;
-          r.msg="geçmiş gün varış raporu ("+bdiFmtD(ad)+"): "+parsed.length+" misafir o güne yazıldı · "+(_an?_an+" misafirin profil notu Atölye'ye geldi · ":"")+bdiFixMsg(afx)+" · Mektuplar / PY / Radar / Alert'e girmedi";swRepHist("arr",file.name,ad,r.msg);
+          r.msg="geçmiş gün varış raporu ("+bdiFmtD(ad)+"): "+parsed.length+" misafir o güne yazıldı · "+(_an?_an+" misafirin profil notu Atölye'ye geldi · ":"")+bdiFixMsg(afx)+" · PY / Radar / Alert'e girmedi";swRepHist("arr",file.name,ad,r.msg);
         }else{
         swRepLog("arr",file.name,parsed.length,parsed.length+" misafir"+(ad?" · varış "+bdiFmtD(ad).slice(0,5):"")+(feed?"":" · sadece Butler Did It"),{arrDay:ad});r.ok=true;
-        r.msg=parsed.length+" misafir"+(ad?" · varış "+bdiFmtD(ad):"")+(feed?"":" · Butler Did It için saklandı; Mektuplar / PY "+bdiFmtD(curD)+" listesinde kaldı");}
+        r.msg=parsed.length+" misafir"+(ad?" · varış "+bdiFmtD(ad):"")+(feed?"":" · Butler Did It için saklandı; PY / Radar "+bdiFmtD(curD)+" listesinde kaldı");}
       }else if(d.type==="gih"||d.type==="vac"){
         await handleVacPDF(file);
         if(d.type==="gih"){var gr2=bdiGihReport||{};r.ok=!!gr2.rows;r.msg=gr2.hist?gr2.msg:(gr2.rows||0)+" oda · "+(gr2.arrToday||0)+" gelen · "+(gr2.withNotes||0)+" notlu"}
         else{var rp=bdiVacParserReport||{};r.ok=!!rp.matched;r.msg=rp.old?rp.msg:rp.source==="HSK"?rp.occ+" dolu · "+rp.dueIn+" gelecek · "+rp.vacant+" boş":(rp.matched||0)+" oda"}
       }else if(d.type==="dep"){var DR=await bdiDepLoad(d.pdf,file);r.ok=!!DR.rows;r.msg=(DR.past&&DR.past.length?"geçmiş gün ("+DR.past.map(function(x){return bdiFmtD(x).slice(0,5)}).join(", ")+") · "+bdiFixMsg(DR.fix)+" · ":"")+DR.rows+" oda · "+DR.ck+" çıktı · "+DR.du+" çıkacak"+(DR.total?(DR.total.rooms===DR.rows?" · Opera toplamıyla aynı":" · Opera toplamı "+DR.total.rooms+"!"):"")}
-      else if(d.type==="xls"){r.ok=true;r.msg=(await swRepXls(file))+" misafir"}
+      else if(d.type==="xls"){r.ok=false;r.msg="Opera misafir Excel'i yalnız Mektuplar içindi; Mektuplar kaldırıldı, dosya kullanılmadı"}
       else if(d.type==="alice"){await bdiAliceImportFile(file);r.ok=true;r.msg=((document.getElementById("bdiAliceStatus")||{}).textContent||"").slice(0,90)}
       else if(d.type==="issue"){var IR=await bdiIssueImportFile(file);r.ok=!!IR;r.msg=IR?IR.added+" yeni, "+IR.updated+" güncellendi"+((IR.closed||0)+(IR.gone||0)?", "+((IR.closed||0)+(IR.gone||0))+" kapandı":"")+(IR.tombIds&&IR.tombIds.length?" · "+IR.tombIds.length+" silinmiş satır alınmadı (Issues › Silinenler'den geri getirilebilir)":""):"Dosya okunamadı"}
       else if(d.type==="ipad"){var R=await bgdImportObj(d.obj,file.name);r.ok=true;r.msg=bgdSummary(R)}
@@ -6965,7 +6919,7 @@ function bdiRepSlotStatus(){
   var dp=document.getElementById("depPdfStatus");if(dp&&!/Okunuyor/.test(dp.textContent))dp.innerHTML=bdiDepStatusHtml();
   var a=document.getElementById("bdiArrStatus"),t=getToday(),tl=bdiTodayArrivals(),cur=(typeof allGuests!=="undefined"&&allGuests)||[],cd=cur.length?swArrDay(cur):"";
   if(a&&!/Okunuyor/.test(a.textContent))a.innerHTML=(tl.length?'<span style="color:#059669">&#10003; Bugün ('+esc(bdiFmtD(t).slice(0,5))+'): '+tl.length+' varış</span>':(cur.length?'<span style="color:#b45309">Bugünün varış raporu yok</span>':''))+
-    (cur.length&&cd&&cd!==t?'<div class="bd-sub">Mektuplar / PY: '+esc(bdiFmtD(cd).slice(0,5))+' listesi ('+cur.length+' misafir). Butler Did It bugünün raporunu kullanır.</div>':'');
+    (cur.length&&cd&&cd!==t?'<div class="bd-sub">PY / Radar: '+esc(bdiFmtD(cd).slice(0,5))+' listesi ('+cur.length+' misafir). Butler Did It bugünün raporunu kullanır.</div>':'');
 }
 // --- ortak klasor: Raporlar/ (Opera'dan buraya kaydedilen raporlar kendiliginden okunur) ---
 async function swRepScanFolder(silent){
@@ -7625,7 +7579,7 @@ function getBdiActions(){
 
 // ===== BDI TAB SWITCHING =====
 function switchBdiTab(tab){
-  ["entry","brief","log","issues","guests","atelier","alice","dept","coverage"].forEach(function(t){
+  ["entry","brief","log","issues","alert","guests","atelier","alice","dept","coverage"].forEach(function(t){
     var el=document.getElementById("bdiTab_"+t);
     if(el)el.style.display=t===tab?"block":"none";
   });
@@ -7636,6 +7590,7 @@ function switchBdiTab(tab){
   if(tab==="log"){loadBdiLogs();renderBdiLog()}
   if(tab==="coverage"){loadBdiLogs();loadBdiOccupied();renderBdiCoverage();renderBdiAttentionBoard();renderUntouchedRooms();renderStorageDashboard()}
   if(tab==="issues"){renderBdiIssues();bdiIssueSetupDrop()}
+  if(tab==="alert"){if(!alertList.length)loadAlertSnapshot();loadAlertTarget();renderAlertTable();renderBdiAlertAuto()}
   if(tab==="guests"){scanBdiGuests()}
   if(tab==="alice"){bdiAliceSetupDrop();renderBdiAlice()}
   if(tab==="brief"){renderBdiBriefTab()}
@@ -7691,6 +7646,7 @@ function initDidIt(){
   renderBdiFloorPanel();
   renderBdiTodayCard();
   bdiIssueBadge();
+  try{if(!alertList.length)loadAlertSnapshot();bdiAlertTabBadge()}catch(e){}
   bdiGMLoad().then(function(){bdiGMSchedule()}).catch(function(e){console.warn("Misafir hafizasi acilamadi:",e)});
 }
 
@@ -8051,11 +8007,20 @@ function bdiAlertBackfill(date,list){
   if(chL){saveBdiArrayForDate(date,arr);refreshBdiIfSameDate(date,arr)}
   return chA;
 }
+// Butler Did It > Butler Alert ust satiri: hangi islemler alert'i kendiliginden tikliyor (Ayarlar'dan secilir)
+function renderBdiAlertAuto(){
+  var el=document.getElementById("bdiAlertAuto");if(!el)return;var a=bdiAlertLinkActs();
+  el.innerHTML='<b>Otomatik tik:</b> '+(a.length?a.map(function(x){return '<span class="bd-alert-act">'+esc(x)+'</span>'}).join(" "):'<span class="bd-sub">hiçbir işlem seçili değil</span>')+' <span class="bd-sub">Bu işlemlerden biri alert\'li odaya girilince (Kayıt, sözlü bildirim, kat turu, iPad) alert kendiliğinden "gidildi" olur.</span> <button type="button" class="bd-link" onclick="bdiAlertAutoSettings()">Ayarlar\'dan seç</button>';
+  bdiAlertTabBadge();
+}
+function bdiAlertAutoSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("alertLinkActs");if(!el)return;var body=el.closest(".settings-body");if(body)body.style.display="block";el.scrollIntoView({block:"center"})},80)}
+function bdiAlertTabBadge(){var c=document.getElementById("bdiAlertTabCount");if(!c)return;var n=0;try{if(getAlertDate()===getToday())n=(alertList||[]).filter(function(a){return a&&a.visited!==true&&a.visited!==false}).length}catch(e){}c.textContent=n?String(n):""}
 function renderAlertLinkActs(){
   var el=document.getElementById("alertLinkActs");if(!el)return;var on=bdiAlertLinkActs();
+  try{renderBdiAlertAuto()}catch(e){}
   el.innerHTML=getBdiActions().map(function(a){var c=on.indexOf(a.label)>=0;return '<label class="kw-tag" style="cursor:pointer;'+(c?'background:#e6f1ee;color:#0f5446;font-weight:600':'')+'"><input type="checkbox" value="'+esc(a.label)+'"'+(c?' checked':'')+' onchange="bdiAlertLinkToggle(this.value,this.checked)" style="margin:0 5px 0 0;vertical-align:-1px">'+esc(a.label)+'</label>'}).join("");
 }
-function bdiAlertListOn(date){
+function bdiAlertListOn(date){try{bdiAlertTabBadge()}catch(e){}
   if(date===getAlertDate())return {list:alertList,live:true};
   try{return {list:JSON.parse(localStorage.getItem("alert_"+date)||"[]")||[],live:false}}catch(e){return {list:[],live:false}}
 }
@@ -8790,6 +8755,7 @@ function addManuelDidIt(){
   var now=new Date();
   var entry={butler:butler,room:room,action:action,verb:"performed",note:"",time:time,sentence:sentence,guest:guest,ts:now.getTime(),manual:true};
   bdiNormalizeLogEntry(entry,document.getElementById("bdiDate").value,bdiLogs.length);
+  bdiAlertLink(entry,document.getElementById("bdiDate").value); // 2026-11-02: elle girilen Welcome vb. de alert'i tikler
   bdiLogs.push(entry);
   saveBdiLogs();
   document.getElementById("bdiManRoom").value="";
@@ -12254,7 +12220,7 @@ function bdiProtelListHtml(){
   h+='<p class="bd-sub" style="margin:0 0 12px">Protel\'e girilecek <b>'+t.blocks+' blok</b> ('+t.guests+' misafir)'+(t.okN?' · '+t.okN+' misafirin notları Protel\'de güncel':'')+'. Akış: <b>Notları aç</b> → bloğu kopyala → Protel\'de Web Note olarak yapıştır → <b>Girildi</b>. Bir blok sonradan değişirse (yeni tercih onaylandı, yeni issue) burada <b>değişti</b> diye tekrar çıkar.</p>';
   var sec=function(title,list,empty,note){h+='<div class="bd-bf-sec"><h3 class="bd-h3">'+title+' <span class="bd-sub">'+list.length+'</span></h3>'+(note?'<p class="bd-sub" style="margin:-4px 0 8px">'+note+'</p>':'')+(list.length?list.map(bdiProtelRowHtml).join(""):'<p class="bd-empty">'+empty+'</p>')+'</div>'};
   h+=bdiProtelDayHtml();
-  sec("Bugün gelenler",G.arr,bdiTodayArrivals().length?"Bugün gelenlerin Protel notları güncel.":"Varış listesi yok (Mektuplar sekmesinde ARR yükle).","Arrival raporuna basılmadan önce girilmeli.");
+  sec("Bugün gelenler",G.arr,bdiTodayArrivals().length?"Bugün gelenlerin Protel notları güncel.":"Varış listesi yok (Raporlar'a günün ARR raporunu bırak).","Arrival raporuna basılmadan önce girilmeli.");
   sec("Oteldekiler",G.inh,"Oteldeki misafirlerin notları güncel.","Butler Did It bloğu konaklamanın özeti: misafir ayrılınca listeye girer.");
   sec("Son 7 günde ayrılanlar",G.dep,"Yeni ayrılan misafirlerin notları güncel.","Konaklamanın Butler Did It ve Issues blokları.");
   if(G.oth.length)h+='<details class="bd-bf-sec"><summary class="bd-h3" style="cursor:pointer">Diğer misafirler <span class="bd-sub">'+G.oth.length+' · onaylı notu olan eski misafirler</span></summary>'+G.oth.slice(0,60).map(bdiProtelRowHtml).join("")+(G.oth.length>60?'<p class="bd-sub">… ve '+(G.oth.length-60)+' misafir daha</p>':'')+'</details>';
@@ -12306,8 +12272,8 @@ function bdiBriefFor(gids){
   var prof=bdiGMProfiles();
   var items=gids?gids.map(function(g){var p=prof.byGid[g];return p?{p:p,room:Object.keys((p.currentStay||p.stays[p.stays.length-1]||{rooms:{}}).rooms).join(", ")}:null}).filter(Boolean):null;
   var label="Seçili misafir";
-  if(!items){var c=bdiBriefCandidates();items=c.list;label=c.src==="arrivals"?"Bugünkü varışlar (Mektuplar listesi)":"In-house tekrar misafirler (VAC)";
-    if(!items.length){alert("Brief icin tekrar misafir ya da onayli notu olan misafir bulunamadi.\nMektuplar sekmesinde gunun varis listesini yukle ya da VAC PDF'ini oku.");return}}
+  if(!items){var c=bdiBriefCandidates();items=c.list;label=c.src==="arrivals"?"Bugünkü varışlar (varış raporu)":"In-house tekrar misafirler (VAC)";
+    if(!items.length){alert("Brief icin tekrar misafir ya da onayli notu olan misafir bulunamadi.\nRaporlar'a günün varış raporunu (ARR) bırak ya da VAC PDF'ini oku.");return}}
   var css='@page{size:A4;margin:14mm 16mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;color:#1b2a27;font-size:10pt}'+
     '.toolbar{position:fixed;top:0;left:0;right:0;background:#0f5446;color:#fff;padding:10px 20px;display:flex;gap:12px;align-items:center}.toolbar button{padding:7px 16px;border:0;border-radius:6px;font-weight:600;cursor:pointer;background:#fff;color:#0f5446}'+
     '@media screen{body{background:#eef2f1;padding:56px 12px 20px}.wrap{max-width:190mm;margin:0 auto;background:#fff;padding:12mm 14mm}}@media print{.toolbar{display:none}}'+
@@ -12912,7 +12878,7 @@ async function bgdGenerate(){
     await BdiKV.ready();try{await bdiGMIngest()}catch(e){}
     _bdiGMProf=null;
     var day=getToday(),data=bgdBuild(day);
-    if(!data.guests.length){alert("Rehbere girecek misafir yok.\n\nÖnce Kayıt sekmesinde günün VAC PDF'ini yükle (ya da Mektuplar'da ARR raporunu).");return}
+    if(!data.guests.length){alert("Rehbere girecek misafir yok.\n\nÖnce Kayıt sekmesinde günün VAC PDF'ini yükle (ya da Raporlar'a ARR raporunu).");return}
     var html=bgdHtml(data),name="Butler_Rehberi_"+day+".html",where="";
     if(dir&&perm==="granted"){
       try{var rd=await dir.getDirectoryHandle(BGD_DIR,{create:true});await rd.getDirectoryHandle(BGD_IN,{create:true});
@@ -13694,7 +13660,7 @@ function bdiKatHtml0(){
   if(plan){h+='<div class="bd-seg" role="group" aria-label="Butler"><button type="button" class="'+(!_bdiKatSel?'active':'')+'" onclick="bdiKatSetSel(\'\')">Tümü</button>'+butlers.map(function(b){return '<button type="button" class="'+(_bdiKatSel===b?'active':'')+'" onclick="bdiKatSetSel(\''+esc(b).replace(/'/g,"\\'")+'\')">'+esc(b)+' <span class="bd-sub">'+esc(bdiFloorsOf(today,b))+'</span></button>'}).join("")+'</div>'}
   h+='<span style="flex:1"></span><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiKatPrint()">'+(_bdiKatSel?esc(_bdiKatSel)+' listesini yazdır':(plan?'Butler başına yazdır':'Yazdır'))+'</button></div>';
   h+='<p class="bd-sub" style="margin:0 0 10px">'+(srcTxt?esc(srcTxt)+' · ':'')+(plan?'Kat dağılımı: '+esc(plan.blocks.map(function(b){return bdiFloorLabel(b)+" "+(b.butler||"?")}).join(", ")):'Kat dağılımı yapılmadı: Kayıt sekmesindeki <b>Kat dağılımı</b>\'ndan butlerları seç, liste butler başına bölünür.')+'</p>';
-  if(!vacN&&!bdiTodayArrivals().length)return h+'<p class="bd-empty">Oda listesi yok. Kayıt sekmesinde <b>in-house raporunu (GIH01102)</b> ya da VAC PDF\'ini yükle; varışlar için Mektuplar\'da ARR yükle.</p>';
+  if(!vacN&&!bdiTodayArrivals().length)return h+'<p class="bd-empty">Oda listesi yok. Kayıt sekmesinde <b>in-house raporunu (GIH01102)</b> ya da VAC PDF\'ini yükle; varışlar için Raporlar\'a ARR bırak.</p>';
   var G=bdiKatGroups(_bdiKatSel),sec=function(t,n,note,list,mode){h+='<div class="bd-bf-sec"><h3 class="bd-h3">'+t+' <span class="bd-sub">'+n+'</span></h3>'+(note?'<p class="bd-sub" style="margin:-4px 0 8px">'+note+'</p>':'')+(list.length?list.map(function(x){return bdiKatRoomHtml(x,mode)}).join(""):'<p class="bd-empty">Yok.</p>')+'</div>'};
   var di=G.insp.filter(function(x){return bdiKatDone(x.room,/inspection/i)}).length,da=G.arr.filter(function(x){var pr=_bdiKatC.prep[x.key];return pr&&!pr.off}).length;
   sec("Bugün gelenler: odaya bırakılacaklar",da+"/"+G.arr.length+" hazır","Misafire özel hazırlık + mektup taslağı. Hazırlanınca <b>Oda hazır</b>, misafir gelince <b>Welcome</b>.",G.arr,"arr");
@@ -13801,9 +13767,16 @@ function bdiShiftModel(date,key){
   bdiGetIssues().forEach(function(is){var s=bdiIssueState(is);if(s.status==="open")open.push({k:"issue",t:"Issue, oda "+(is.room||"?")+" "+(is.guest||"")+": "+String(is.concern||"").slice(0,90)+" ("+Math.floor(bdiHoursSince(bdiYmd(new Date(is.createdAt||Date.now()))+" "+bdiNowTime(new Date(is.createdAt||Date.now()))))+" saattir açık)"})});
   // Sabah herkes "bugun temas yok"tur; liste yalniz dunden beri hic dokunulmayanlari sayar (gercek risk), digerleri tek satir
   if(date===bdiYmd(new Date())){var yd=bdiAddDays(date,-1),nT=0,n2=0,cold=[];
-    bdiGMProfiles().list.forEach(function(p){if(!p.noTouchToday)return;nT++;var cs=p.currentStay;
-      if(!cs||cs.from>yd||p.events.some(function(e){return e.date===yd}))return;
-      if(cs.from===yd)cold.push({k:"temas",t:"Dün geldi, hâlâ karşılanmadı: "+p.name+" (oda "+Object.keys(cs.rooms||{}).join(", ")+")",r:Object.keys(cs.rooms||{})[0]});else n2++});
+    // gercek gelis gunu (2026-11-02): hafizada ilk gorulen gun degil, in-house / oda durumu raporundaki Arr. Date
+    // (uygulama yeni kullanilmaya baslandiginda 28.10'da gelen misafir "dun geldi" sayiliyordu)
+    var realArr=function(p,cs){var rs=Object.keys(cs.rooms||{}).map(function(r){return ("000"+r).slice(-4)}),a="";
+      bdiGihRows().forEach(function(r){if(!a&&r.arr&&rs.indexOf(("000"+r.room).slice(-4))>=0&&bdiNameNear(bdiGihPerson(r.name),p.name))a=r.arr});
+      if(!a)rs.forEach(function(r){var v=bdiVacSt[r]||bdiVacSt[String(+r)];if(!a&&v&&v.arr&&v.name&&bdiNameNear(bdiGihPerson(v.name),p.name))a=v.arr});
+      return a||cs.from};
+    bdiGMProfiles().list.forEach(function(p){if(!p.noTouchToday)return;nT++;var cs=p.currentStay;if(!cs)return;
+      var ra=realArr(p,cs);if(ra>yd)return; // bugun geldi
+      if(p.events.some(function(e){return e.date===yd&&e.kind!=="stay"}))return; // dun temas (otelde gorunmesi temas degil)
+      if(ra===yd)cold.push({k:"temas",t:"Dün geldi, hâlâ karşılanmadı: "+p.name+" (oda "+Object.keys(cs.rooms||{}).join(", ")+")",r:Object.keys(cs.rooms||{})[0]});else n2++});
     cold.sort(function(a,b){return bdiRoomNum(a.r)-bdiRoomNum(b.r)});
     if(nT)open.push({k:"temas",t:"Bugün henüz temas yok: "+nT+" misafir"+(n2?" · "+n2+" misafire 2 gündür hiç dokunulmadı (liste: Kapsam sekmesi)":"")});
     open=open.concat(cold);}
@@ -17034,7 +17007,7 @@ function getFilteredAlerts(){
   return out;
 }
 
-function renderAlertTable(){
+function renderAlertTable(){try{bdiAlertTabBadge()}catch(e){}
   var wrap=document.getElementById("alertTableWrap");
   var badge=document.getElementById("alertBadge");
   var sumEl=document.getElementById("alertSummary");
@@ -17413,7 +17386,7 @@ function loadAlertSnapshot(){
 function switchAlertTab(tab){
   document.getElementById("alertTab_daily").style.display=tab==="daily"?"block":"none";
   document.getElementById("alertTab_analytics").style.display=tab==="analytics"?"block":"none";
-  document.querySelectorAll("#page-alert > .tabs .tab").forEach(function(el,i){
+  document.querySelectorAll("#bdiTab_alert > .tabs .tab").forEach(function(el,i){
     el.classList.toggle("active",i===(tab==="daily"?0:1));
   });
   if(tab==="daily"){renderAlertTable()}
@@ -18068,6 +18041,8 @@ window.swSetupSnooze = swSetupSnooze;
 window.swBackupNow = swBackupNow;
 window.swRestoreFile = swRestoreFile;
 swSetupBoot();
+// 2026-11-02: acilis sayfasi Butler Did It (Mektuplar kaldirildi). Kayitlar IndexedDB'den gelince doldurulur.
+try{BdiKV.ready().then(function(){var pg=document.getElementById("page-didit");if(pg&&pg.classList.contains("active")){try{initDidIt()}catch(e){console.warn("Butler Did It acilamadi:",e)}}})}catch(e){}
 setTimeout(swLsHousekeeping,4000);
 setTimeout(renderSwAdminRow,0);
 window.removeKW = removeKW;
@@ -18159,7 +18134,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueRestoreSkipped, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueRestoreSkipped, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, bdiAlertAutoSettings, renderBdiAlertAuto, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
