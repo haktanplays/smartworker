@@ -843,7 +843,8 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-irci-tab td{vertical-align:middle}
 #page-didit .bd-irci-tab tr.warn td{background:#fffaf0}
 #page-didit .bd-irci-etd{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-#page-didit .bd-irci-etd input[type=time]{width:120px;height:32px}
+#page-didit #bdiIrciPanel .bd-irci-etd input[type=time]{width:130px;flex:0 0 130px;height:32px}
+#page-didit .bd-irci-tab td.tm{white-space:nowrap;color:var(--mut);font-size:11.5px}
 #page-didit .bd-irci-etd .bd-btn.on{background:var(--gt);border-color:var(--g);color:var(--g)}
 #page-didit .bd-alert-auto{font-size:12.5px;line-height:1.7;padding:8px 12px;margin-bottom:10px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
 #page-didit .bd-alert-act{display:inline-block;font-size:11.5px;font-weight:600;color:var(--g);background:var(--gt);border-radius:10px;padding:1px 8px;margin:0 2px}
@@ -7763,7 +7764,7 @@ function renderBdiIrci(){
   h+='<div class="bd-table-wrap"><table class="bd-nt-tab bd-irci-tab"><thead><tr><th>Guest Name</th><th>Room Number</th><th>Departure Time</th><th>By</th><th></th></tr></thead><tbody>';
   R.forEach(function(r){var da=' data-d="'+esc(d)+'" data-k="'+esc(r.key)+'"',na=r.etd==="N/A";
     h+='<tr class="'+(r.etd?'done':'warn')+'"><td>'+(r.name?esc(r.name):'<i class="bd-sub">isim yok</i>')+'</td><td class="r">'+esc(r.room)+'</td><td><div class="bd-irci-etd"><input type="time"'+da+' value="'+(na?"":esc(r.etd))+'" onchange="bdiIrciEtdEl(this)" aria-label="ETD"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm'+(na?' on':'')+'"'+da+' onclick="bdiIrciEtdSet(this,\''+(na?'':'N/A')+'\')" title="Misafir çıkış saati vermedi">N/A</button>'+
-      (r.sug&&r.etd!==r.sug?'<button type="button" class="bd-link"'+da+' onclick="bdiIrciEtdSet(this,\''+esc(r.sug)+'\')" title="Protel: '+esc(r.src)+'">Protel '+esc(r.sug)+'</button>':'')+'</div></td><td>'+esc(r.by)+'</td><td class="n" title="'+esc(r.butler+" · "+r.action)+'">'+esc(r.time)+'</td></tr>'});
+      (r.sug&&r.etd!==r.sug?'<button type="button" class="bd-link"'+da+' onclick="bdiIrciEtdSet(this,\''+esc(r.sug)+'\')" title="Protel: '+esc(r.src)+'">Protel '+esc(r.sug)+'</button>':'')+'</div></td><td>'+esc(r.by)+'</td><td class="tm" title="'+esc(r.butler+" · "+r.action)+'">kayıt '+esc(r.time)+'</td></tr>'});
   h+='</tbody></table></div>'+bdiIrciFoot(acts);
   el.innerHTML=h;bdiIrciTabBadge();
 }
