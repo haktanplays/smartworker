@@ -6747,7 +6747,8 @@ var SW_REP_TYPES={
   alice:["Alice Ticket List","BDI Alice · sorulmadan yap"],
   issue:["Issue Excel'i","BDI Issues · kat turu · Protel Issues"],
   pref:["Tercih formu (PDF)","Atölye → misafir hafızası"],
-  ipad:["iPad rehberi dönüşü","BDI kayıtları · issue'lar · DNA önerileri"]
+  ipad:["iPad rehberi dönüşü","BDI kayıtları · issue'lar · DNA önerileri"],
+  oalert:["Opera Alerts (RES01166)","Butler Alert: CALBUTIN kodlu, o gün gelenler (oteldekiler atlanır)"]
 };
 var SW_REP_DAILY=["arr","gih","vac"],SW_REP_DIR="Raporlar",SW_REP_KEEP=7,_swRepBusy=false,_swRepLast=[];
 function swRepAll(){try{var o=JSON.parse(localStorage.getItem("sw_reports_v1")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return {}}}
@@ -6815,6 +6816,7 @@ async function swRepDetect(file){
   }
   if(/\.pdf$/.test(n)){
     var pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise,L=await bdiPdfLines(pdf,1),txt=L.map(function(l){return l.map(function(x){return x.t}).join(" ")}).join("\n");
+    if(/RES01166|Alert Code/i.test(txt)&&/Alert/i.test(txt))return {type:"oalert",pdf:pdf}; // Opera Alerts (CALBUTIN)
     if(/GIH01102|Guests in House/i.test(txt))return {type:"gih",pdf:pdf};
     if(/DEP0\d{4}|Departures all/i.test(txt))return {type:"dep",pdf:pdf}; // VAC'tan once: oda numarali her PDF'i VAC sanmasin
     if(/HSK01124|Vacant Rooms/i.test(txt))return {type:"vac",pdf:pdf};
@@ -6857,6 +6859,7 @@ async function swRepIngest(files,src){
       else if(d.type==="alice"){await bdiAliceImportFile(file);r.ok=true;r.msg=((document.getElementById("bdiAliceStatus")||{}).textContent||"").slice(0,90)}
       else if(d.type==="issue"){var IR=await bdiIssueImportFile(file);r.ok=!!IR;r.msg=IR?IR.added+" yeni, "+IR.updated+" güncellendi"+((IR.closed||0)+(IR.gone||0)?", "+((IR.closed||0)+(IR.gone||0))+" kapandı":"")+(IR.tombIds&&IR.tombIds.length?" · "+IR.tombIds.length+" silinmiş satır alınmadı (Issues › Silinenler'den geri getirilebilir)":""):"Dosya okunamadı"}
       else if(d.type==="ipad"){var R=await bgdImportObj(d.obj,file.name);r.ok=true;r.msg=bgdSummary(R)}
+      else if(d.type==="oalert"){var OA=await bdiOAlertLoad(d.pdf,file);r.ok=!!OA.arr;r.msg=OA.msg;swRepLog("oalert",file.name,OA.arr,OA.msg)}
       else if(d.type==="pref"){var pf=await bdiPrefFormLoad(d.pdf,file);r.ok=true;r.msg=pf.n+" tercih"+(pf.guess?" · "+pf.guess:" · misafir Atölye'de seçilecek")}
       else if(d.type==="backup")r.msg="Yedek dosyası: Kurulum › Geri yükle'den yükle (rapor değil)";
       else if(d.type==="bad")r.msg="Dosya okunamadı";
@@ -7706,6 +7709,76 @@ function bdiAlertUnlink(l,date){
   if(!l||!l.id)return;var o=bdiAlertListOn(date),ch=false;
   o.list.forEach(function(a){if(a&&a.linkedTouch===l.id){a.visited=null;a.visitedBy="";delete a.linkedTouch;delete a.visitedVia;ch=true}});
   if(ch)bdiAlertSaveOn(date,o);
+}
+// ===== Opera Alerts (RES01166, 2026-11-02) =====
+// Opera'nin alert raporu verilen gun icin o gun GELENLERI de OTELDE KALANLARI da listeler. Yalniz Alert Code'u
+// CALBUTIN olan ve varis tarihi raporun tarihi (From-To araligi) olan satirlar alinir; oteldekiler ve baska kodlar atlanir.
+// Varis raporuyla caprazlanmaz (kod yeterli). Butler Alert listesine "Call Butler" (ya da aciklamadaki kisi:
+// "Call Lale & Turus", "Call Beyza") sebebiyle eklenir. Gune gore saklanir (oalert_<gun>; "alert_" ile baslamaz: Alert arsivi onlari liste sanar): varis raporu sonradan yenilense de sebep kaybolmaz.
+async function bdiOAlertParse(pdf){
+  var rows=[],day="",to="",C=null,cur=null;
+  for(var pn=1;pn<=pdf.numPages;pn++){
+    var lines=await bdiPdfLines(pdf,pn);cur=null;
+    for(var li=0;li<lines.length;li++){
+      var L=lines[li],f=L[0],txt=L.map(function(x){return x.t}).join(" ");
+      if(!day){var fm=/From Date\s+(\d{2}-\d{2}-\d{2})(?:\s+To Date\s+(\d{2}-\d{2}-\d{2}))?/.exec(txt);if(fm){day=bdiVacDate(fm[1]);if(fm[2])to=bdiVacDate(fm[2])}}
+      if(L.some(function(x){return x.t==="Conf. No."})){var X=function(t){var m=L.filter(function(x){return x.t===t})[0];return m?m.x:null};C={room:X("Room No."),name:X("Name"),arr:X("Arr. Date"),dep:X("Dep.Date"),rt:X("Room Type"),area:X("Alert Area"),code:X("Alert Code"),desc:X("Alert Description")};continue}
+      if(!C)continue;
+      if(f.x<C.room-10&&/^\d{4,8}$/.test(f.t)){
+        var inC=function(a,b){return L.filter(function(x){return x.x>=a-6&&(b==null||x.x<b-4)}).map(function(x){return x.t}).join(" ").trim()};
+        var nm=inC(C.name,C.arr),dates=L.map(function(x){return x.t}).join(" ").match(/\d{2}-\d{2}-\d{2}/g)||[];
+        nm=nm.replace(/\s*\d{2}-\d{2}-\d{2}.*$/,"").trim(); // isim hucresi uzunsa tarih ayni metin parcasina yapisir
+        cur={conf:f.t,room:("000"+inC(C.room,C.name).replace(/\D/g,"")).slice(-4),name:nm.replace(/\s*,\s*/g,","),arr:bdiVacDate(dates[0]||""),dep:bdiVacDate(dates[1]||""),code:inC(C.code,C.desc),desc:inC(C.desc,null)};
+        if(cur.room==="0000")cur.room="";rows.push(cur);continue;
+      }
+      if(f.x<C.room-10){cur=null;continue} // Filter / sayfa sonu satirlari
+      if(cur&&f.x>=C.name-6&&f.x<C.arr-4){var nc=L.filter(function(x){return x.x>=C.name-6&&x.x<C.arr-4}).map(function(x){return x.t}).join(" ").trim();if(nc&&cur.name.length<80)cur.name=(/^[a-zçğıöşü]/.test(nc)?cur.name+nc:cur.name+" "+nc).replace(/\s*,\s*/g,",")}
+    }
+  }
+  return {day:day,to:to,rows:rows};
+}
+function bdiOAlertReason(desc){
+  var t=String(desc||"").replace(/\s+/g," ").trim().replace(/^please\s+/i,"").replace(/\s+upon arrival\.?$/i,"");
+  if(/passionately yours/i.test(t))return "PY profile check";
+  var m=/^call\s+(.+)$/i.exec(t);
+  if(m){var who=m[1].trim();if(/^butler$/i.test(who))return "Call Butler";who=who.replace(/^butler\s+/i,"");return "Call "+who}
+  return t.length>32?t.slice(0,31)+"…":t;
+}
+function bdiOAlertGet(day){try{return JSON.parse(localStorage.getItem("oalert_"+day)||"null")}catch(e){return null}}
+// Bir gunun listesine Opera alert'lerini uygula (yerinde); eklenen/guncellenen sayisi
+function bdiOAlertApply(day,list){
+  var O=bdiOAlertGet(day);if(!O||!Array.isArray(O.rows)||!list)return 0;var n=0;
+  O.rows.forEach(function(r){
+    var rn=parseInt(r.room,10);if(!rn)return;var pn=String(r.name||"").split(","),guest=(pn[0]||"").trim()+(pn[1]?", "+pn[1].trim():"");
+    var rs=r.descs.map(function(d){return {label:bdiOAlertReason(d),detail:d+" (Opera CALBUTIN)"}});
+    var a=list.filter(function(x){return x&&parseInt(x.roomNo,10)===rn&&(!x.guest||x.guest==="—"||bdiNameNear(x.guest,guest))})[0];
+    if(a){var before=JSON.stringify(a.reasons||[]);alertMergeReasons(a,rs);if(JSON.stringify(a.reasons)!==before){try{alertNormalizeEntry(a)}catch(e){}n++}return}
+    var ad=new Date(day+"T12:00:00"),dd=r.dep?new Date(r.dep+"T12:00:00"):null;
+    a={roomNo:rn,guest:guest||"—",title:pn[2]?pn[2].trim():"",reasons:rs,visited:null,notVisitedReason:"",visitedBy:"",manual:false,depDate:r.dep||"",nights:dd?Math.max(0,Math.round((dd-ad)/864e5)):0,resStatus:"",src:"opera"};
+    try{alertNormalizeEntry(a)}catch(e){}list.push(a);n++;
+  });
+  if(n)list.sort(function(a,b){return a.roomNo-b.roomNo});
+  return n;
+}
+async function bdiOAlertLoad(pdf,file){
+  var P=await bdiOAlertParse(pdf),from=P.day||getToday(),to=P.to&&P.to>=from&&P.to<=bdiAddDays(from,13)?P.to:from;
+  var days={},inhS={},other=0;for(var d=from;d<=to;d=bdiAddDays(d,1))days[d]={};
+  P.rows.forEach(function(r){
+    if(!/CALBUT/i.test(r.code||"")&&!(!r.code&&/\bcall\b/i.test(r.desc||""))){other++;return} // yalniz CALBUTIN
+    if(!days[r.arr]){inhS[r.conf+"|"+r.room]=1;return} // otelde kalan (varis tarihi rapor tarihinden once)
+    var D=days[r.arr],k=r.conf+"|"+r.room,x=D[k];if(!x)x=D[k]={conf:r.conf,room:r.room,name:r.name,arr:r.arr,dep:r.dep,descs:[]};
+    if(r.desc&&x.descs.indexOf(r.desc)<0)x.descs.push(r.desc);
+  });
+  var tot=0,inh=Object.keys(inhS).length;
+  Object.keys(days).forEach(function(day){
+    var rows=Object.keys(days[day]).map(function(k){return days[day][k]});tot+=rows.length;
+    localStorage.setItem("oalert_"+day,JSON.stringify({day:day,at:Date.now(),file:file&&file.name||"",rows:rows,inh:inh}));
+    var o=bdiAlertListOn(day);bdiOAlertApply(day,o.list);try{bdiAlertBackfill(day,o.list)}catch(e){}
+    bdiAlertSaveOn(day,o);
+  });
+  var lbl=from===to?(from!==getToday()?" ("+bdiFmtD(from).slice(0,5)+")":""):" ("+bdiFmtD(from).slice(0,5)+"–"+bdiFmtD(to).slice(0,5)+")";
+  var msg=tot+" gelen misafirde CALBUTIN"+lbl+" · "+inh+" oteldeki atlandı"+(other?" · "+other+" başka kodlu satır atlandı":"")+" · Butler Alert'e işlendi";
+  return {arr:tot,inh:inh,other:other,day:from,msg:msg};
 }
 // Rapor "Butler Alerts" bolumu (2026-11-01): her alert'li misafir icin karsilandi mi, kim karsiladi (hangi islemle) ya da
 // neden karsilanmadi (Alert sekmesindeki "gitmedi sebebi") ve o gun kat kimindi (kat dagilimi).
@@ -16404,6 +16477,7 @@ function buildAlertList(parsedGuests, traceList){
   var _later={};Object.keys(_swArrDays||{}).forEach(function(d){if(d>_ad)(_swArrDays[d]||[]).forEach(function(g){var k=bdiGuestKey((g.lastName||"")+" "+(g.firstName||""));if(k)_later[k]=1})});
   var _kept=_prev.filter(function(a){return a&&a.roomNo&&!a.manual&&!_nr[a.roomNo]&&!_later[bdiGuestKey(String(a.guest||"").split(",").reverse().join(" "))]});
   var _list=manuals.concat(newAlerts,_kept);_list.forEach(alertNormalizeEntry);_list.sort(function(a,b){return a.roomNo-b.roomNo});
+  try{bdiOAlertApply(_ad,_list)}catch(e){} // Opera Alerts (CALBUTIN) sebepleri
   try{bdiAlertBackfill(_ad,_list)}catch(e){} // once girilmis welcome / visit kayitlari
   if(!_live){
     localStorage.setItem("alert_"+_ad,JSON.stringify(cleanAlertLegacyUpsellFields(_list)));if(typeof _bdiAlertSnapCache!=="undefined")delete _bdiAlertSnapCache[_ad];
