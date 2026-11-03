@@ -6621,11 +6621,13 @@ function rebuildVacRooms(){
   try{var _t=getToday();swArrFor(_t).forEach(function(g){var ad=bdiVacDate(String(g.arrDate||"").replace(/\//g,"-"));if(!g.roomNo||(ad&&ad!==_t))return;if(vacRooms[String(g.roomNo).padStart(4,"0")]||vacRooms[String(g.roomNo)])return;vacRooms[String(g.roomNo)]=g.lastName+", "+g.firstName})}catch(e){} // bugun gelenler (yarinin raporu yuklu olsa da)
   applyPmRooms();
   try{bdiIssueFollowMoves()}catch(e){console.warn("Oda degisikligi issue'lara uygulanamadi:",e)}
+  try{bdiAlertSyncRooms()}catch(e){console.warn("Oda degisikligi alert'lere uygulanamadi:",e)}
 }
 // VAC satirindaki tarih (dd-mm-yy, dd.mm.yyyy, dd/mm/yy) -> yyyy-mm-dd. Satirda 2+ tarih varsa sonuncusu ayrilis kabul edilir.
 function bdiVacDate(t){var m=/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{2}|\d{4})$/.exec(String(t||"").trim());if(!m)return "";var y=m[3].length===2?"20"+m[3]:m[3];return y+"-"+m[2]+"-"+m[1]}
+var _bdiVacAt=0; // VAC'in gosterdigi an (basim saati, yoksa dosya saati): alert odalari bundan yeni bilgiyi ezmez
 function bdiVacSave(fileName){
-  try{BdiKV.set("bdi_vac_v1",JSON.stringify({day:bdiVacDay,printed:bdiVacPrinted||"",at:Date.now(),file:fileName||"",rooms:bdiPdfRooms,dep:bdiPdfDep,st:bdiVacSt,report:bdiVacParserReport}))}catch(e){console.warn("VAC saklanamadi:",e)}
+  try{BdiKV.set("bdi_vac_v1",JSON.stringify({day:bdiVacDay,printed:bdiVacPrinted||"",at:Date.now(),fat:_bdiVacAt||0,file:fileName||"",rooms:bdiPdfRooms,dep:bdiPdfDep,st:bdiVacSt,report:bdiVacParserReport}))}catch(e){console.warn("VAC saklanamadi:",e)}
 }
 function bdiVacStatusHtml(o){
   var n=Object.keys(vacRooms).length,pm=loadPmRooms().length,old=o.day&&o.day!==getToday();
@@ -6640,7 +6642,7 @@ function bdiVacRestore(){
   if(Object.keys(bdiPdfRooms).length)return false;
   var o=null;try{o=JSON.parse(BdiKV.get("bdi_vac_v1")||"null")}catch(e){}
   if(!o||!o.rooms||!Object.keys(o.rooms).length)return false;
-  bdiPdfRooms=o.rooms;bdiPdfDep=o.dep||{};bdiVacSt=o.st||{};bdiVacDay=o.day||"";bdiVacPrinted=o.printed||"";bdiVacParserReport=o.report||null;
+  bdiPdfRooms=o.rooms;bdiPdfDep=o.dep||{};bdiVacSt=o.st||{};bdiVacDay=o.day||"";bdiVacPrinted=o.printed||"";bdiVacParserReport=o.report||null;_bdiVacAt=o.fat||o.at||0;
   rebuildVacRooms();if(typeof _bdiGMProf!=="undefined")_bdiGMProf=null;
   var st=document.getElementById("vacPdfStatus");if(st)st.innerHTML=bdiVacStatusHtml(o);_bdiGih=null;
   try{renderBdiVacConfidence()}catch(e){}
@@ -7110,6 +7112,7 @@ function swArrPastAsk(parsed,file,statusId){
   swRepHist("arr",file.name,ad,msg);var st=document.getElementById(statusId);if(st)st.innerHTML='<span style="color:#0f5446">'+esc(msg)+'</span>';
   return true;
 }
+var _bdiArrSrcAt=0; // feedAllModules'a giden varis raporunun dosya saati (alert satirinin odasi o andan)
 function swArrSave(parsed,file,noFeed){
   var ad=swArrDay(parsed)||getToday(),rec={day:getToday(),arrDay:ad,at:Date.now(),file:file||"",guests:parsed};_swArrDays[ad]=parsed;
   try{bdiArrhSave(ad,parsed,file)}catch(e){console.warn("Varis ozeti saklanamadi:",e)}
@@ -7140,7 +7143,7 @@ async function swArrRestore(){
   var o=null;try{o=await swRepIdbDo("readonly",function(st){return st.get("arr")})}catch(e){return false}
   if(!o||!Array.isArray(o.guests)||!o.guests.length)return false;
   var t=getToday();if(o.day!==t&&!(o.arrDay&&o.arrDay>=t)){try{await swRepIdbDo("readwrite",function(st){return st.delete("arr")})}catch(e){}return false} // gecmis gunun varisi gecerli degil; dun aksam cekilen bugunun raporu gecerli
-  try{feedAllModules(o.guests,"kayıt")}catch(e){console.warn("Varis raporu geri yuklenemedi:",e);return false}
+  _bdiArrSrcAt=o.at||0;try{feedAllModules(o.guests,"kayıt")}catch(e){console.warn("Varis raporu geri yuklenemedi:",e);return false}finally{_bdiArrSrcAt=0}
   var st=document.getElementById("arrPdfStatus");if(st)st.innerHTML='<span style="color:#059669">&#10003; '+o.guests.length+' misafir · bugünün varış raporu geri yüklendi ('+esc(o.file||"PDF")+', '+esc(bdiFmtTs(o.at))+')</span>';
   return true;
 }
@@ -7184,7 +7187,7 @@ async function swRepIngest(files,src){
         if(src==="klasör"&&ad&&ad<today){r.msg="geçmiş günün varış raporu ("+bdiFmtD(ad)+"), atlandı";out.push(r);continue}
         var curD=(typeof allGuests!=="undefined"&&allGuests.length)?swArrDay(allGuests):"",past=!!(ad&&ad<today),feed=!past&&!(ad&&curD&&ad<curD); // yarinin listesi yukluyse bugunun raporu Mektuplar/PY'yi ezmez; gecmis gunun raporu hicbir modulu beslemez (2026-11-02)
         if(feed){
-          feedAllModules(parsed,"rapor");
+          _bdiArrSrcAt=file.lastModified||0;try{feedAllModules(parsed,"rapor")}finally{_bdiArrSrcAt=0}
           var as=document.getElementById("arrPdfStatus");if(as)as.innerHTML='<span style="color:#059669">&#10003; '+parsed.length+' misafir (Raporlar: '+esc(file.name)+')</span>';
           var ps=document.getElementById("pyPdfStatus");if(ps)ps.innerHTML='<span style="color:#059669">&#10003; '+((typeof pyGuests!=="undefined"&&pyGuests.length)||0)+' PY misafiri (Raporlar)</span>';
         }
@@ -7660,8 +7663,10 @@ async function handleVacPDF(file){
     report.totalKnown=cnt;
     report.confidence=report.rows?Math.round((report.matched/report.rows)*100):0;
     report.source=VC?"HSK":"VAC";bdiVacParserReport=report;
-    bdiVacDay=getToday();bdiVacSave(file.name);if(typeof _bdiGMProf!=="undefined")_bdiGMProf=null;
+    bdiVacDay=getToday();_bdiVacAt=bdiVacPrintedAt||file.lastModified||Date.now();bdiVacSave(file.name);if(typeof _bdiGMProf!=="undefined")_bdiGMProf=null;
     try{bdiVacSnap(bdiVacPrintedAt&&bdiYmd(new Date(bdiVacPrintedAt))===getToday()?bdiVacPrintedAt:Date.now())}catch(e){console.warn("VAC anlik goruntusu:",e)} // gun ici giris / cikis
+    try{bdiIssueFollowMoves()}catch(e){console.warn("Oda degisikligi issue'lara uygulanamadi:",e)} // VAC oda listesini kendisi kurar (rebuildVacRooms'a ugramaz)
+    try{bdiAlertSyncRooms()}catch(e){console.warn("Oda degisikligi alert'lere uygulanamadi:",e)}
     if(status)status.innerHTML=bdiVacStatusHtml({day:bdiVacDay,at:Date.now(),file:file.name,report:report});
     renderBdiVacConfidence();
     swRepLog("vac",file.name,report.matched,VC?report.occ+" dolu · "+report.dueIn+" gelecek · "+report.vacant+" boş":report.matched+" oda");
@@ -18340,7 +18345,8 @@ function buildAlertList(parsedGuests, traceList){
       manual:false,
       depDate:g.depDate||"",
       nights:g.nights||0,
-      resStatus:g.resStatus||""
+      resStatus:g.resStatus||"",
+      srcAt:_bdiArrSrcAt||Date.now() // odanin hangi raporun hangi anina ait oldugu (oda raporu bundan eskiyse satiri tasimaz)
     });
   }
 
@@ -18622,7 +18628,7 @@ function renderAlertTable(){try{bdiAlertTabBadge()}catch(e){}
     var prioMark=getAlertPriority(a).level==="high"?' <span title="Yuksek oncelik" style="cursor:help">&#128293;</span>':'';
 
     h+='<tr style="background:'+rowBg+';border-bottom:1px solid #f3f4f6">';
-    h+='<td style="font-weight:700;text-align:center">'+a.roomNo+prioMark+(a.movedFrom?'<div style="font-size:9.5px;font-weight:600;color:#6b7280" title="Gün içinde oda değişti; eski odanın satırı kaldırıldı, işareti buraya taşındı">önce '+esc(String(a.movedFrom))+'</div>':'')+'</td>';
+    h+='<td style="font-weight:700;text-align:center">'+a.roomNo+prioMark+(a.movedFrom?'<div style="font-size:9.5px;font-weight:600;color:#6b7280;white-space:nowrap" title="Gün içinde oda değişti (oda raporuna göre); işareti ve sebebi bu odaya taşındı">önce '+esc(String(a.movedFrom))+'</div>':'')+'</td>';
     var _bt=getBdiTouchesForRoom(a.roomNo);
     var _btBadge=_bt?'<span style="display:inline-block;margin-left:4px;padding:1px 5px;border-radius:8px;font-size:9px;font-weight:700;color:#1a6b5c;background:#d1fae5;border:1px solid #86efac;cursor:help" title="Bugun '+_bt+' BDI touch">BDI:'+_bt+'</span>':'';
     h+='<td style="font-size:11px;white-space:nowrap">'+esc(a.guest)+_btBadge+'</td>';
@@ -18854,18 +18860,53 @@ function saveAlertSnapshot(){
 // Ayni misafir iki odada: bugunun oda raporu (VAC / in-house) o odada artik BASKA birini (ya da kimseyi) gosteriyor ve misafir
 // diger odada gorunuyorsa eski satir bayattir (gun icinde oda degisti). Isaret / sebep kalan satira tasinir. Iki odada gercekten
 // kalan misafir (raporda iki odada da o) ya da rapor yoksa dokunulmaz. Yalniz bugunun listesi icin (oda raporu bugune ait).
+// Oda raporunun (VAC / in-house) gosterdigi an; bugune ait oda raporu yoksa 0 (alert odalari tahminle degismez)
+function bdiAlertRoomAt(){
+  var t=getToday(),v=0;
+  if(bdiVacDay===t&&Object.keys(bdiPdfRooms||{}).length&&!(bdiVacPrintedAt&&bdiYmd(new Date(bdiVacPrintedAt))<t))v=_bdiVacAt||1;
+  try{if(bdiGihInUse()){var g=bdiGih();if(g&&g.day===t)v=Math.max(v,g.at||1)}}catch(e){}
+  return v;
+}
 function bdiAlertDedupeStale(list){
   var out={list:list,n:0};if(!Array.isArray(list)||getAlertDate()!==getToday()||!Object.keys(vacRooms||{}).length)return out;
+  var vt=bdiAlertRoomAt();if(!vt)return out;
+  var fresh=function(a){return !(a&&a.srcAt&&a.srcAt>vt)}; // satirin odasi oda raporundan yeni bir rapordan geldiyse oda raporu onu ezmez
   var occ=function(r){var k=String(r),k4=("000"+k).slice(-4);var x=vacRooms[k]!=null?k:vacRooms[k4]!=null?k4:"";return x?vacNameFmt(x):""};
-  var by={};list.forEach(function(a){if(!a||a.manual||!a.guest||a.guest==="—")return;var k=bdiGuestKey(a.guest);if(k)(by[k]=by[k]||[]).push(a)});
-  var drop=[];
-  Object.keys(by).forEach(function(k){var rows=by[k];if(rows.length<2)return;
-    var here=rows.filter(function(a){var o=occ(a.roomNo);return o&&bdiNameNearK(bdiGuestKey(o),k)});if(!here.length||here.length===rows.length)return;
-    rows.forEach(function(a){if(here.indexOf(a)>=0)return;var t=here[0];
-      if(t.visited!==true&&t.visited!==false)["visited","visitedBy","notVisitedReason","linkedTouch","visitedVia"].forEach(function(f){if(a[f]!==undefined&&a[f]!==null&&a[f]!=="")t[f]=a[f]});
-      if(!t.movedFrom)t.movedFrom=a.roomNo;drop.push(a)})});
-  if(drop.length){out.list=list.filter(function(a){return drop.indexOf(a)<0});out.n=drop.length}
+  // 1) ayni misafir iki satirda: oda raporunun misafiri gosterdigi satir kalir, digerinin isareti / sebebi ona tasinir
+  var merge=function(){
+    var by={};out.list.forEach(function(a){if(!a||a.manual||!a.guest||a.guest==="—")return;var k=bdiGuestKey(a.guest);if(k)(by[k]=by[k]||[]).push(a)});
+    var drop=[];
+    Object.keys(by).forEach(function(k){var rows=by[k];if(rows.length<2)return;
+      var here=rows.filter(function(a){var o=occ(a.roomNo);return o&&bdiNameNearK(bdiGuestKey(o),k)});if(!here.length||here.length===rows.length)return;
+      rows.forEach(function(a){if(here.indexOf(a)>=0||!fresh(a))return;var t=here[0];
+        if(t.visited!==true&&t.visited!==false)["visited","visitedBy","notVisitedReason","linkedTouch","visitedVia"].forEach(function(f){if(a[f]!==undefined&&a[f]!==null&&a[f]!=="")t[f]=a[f]});
+        if(!t.movedFrom)t.movedFrom=a.roomNo;drop.push(a)})});
+    if(drop.length){out.list=out.list.filter(function(a){return drop.indexOf(a)<0});out.n+=drop.length}
+  };
+  merge();
+  // 2026-11-03 (Haktan: "vac'a gore odalari degismiyor"): tek satirli misafir de VAC'a gore odasini takip eder. Eski odada
+  // raporda baskasi var (ya da oda bos) ve misafir raporda TEK bir baska odada gorunuyorsa satir oraya tasinir ("once 709").
+  // Misafir raporda iki odada ya da hic gorunmuyorsa, o odada zaten bir alert satiri varsa dokunulmaz.
+  var rk=null,have={},mv=0;out.list.forEach(function(a){if(a)have[parseInt(a.roomNo,10)]=1});
+  out.list.forEach(function(a){
+    if(!a||a.manual||!a.guest||a.guest==="—")return;var k=bdiGuestKey(a.guest);if(!k)return;var o=occ(a.roomNo);
+    if(o&&bdiNameNearK(bdiGuestKey(o),k))return; // hala bu odada
+    if(!fresh(a))return; // oda bilgisi oda raporundan yeni
+    if(!rk)rk=Object.keys(vacRooms||{}).map(function(r){return {r:parseInt(r,10),k:bdiGuestKey(vacNameFmt(r))}});
+    var hits=rk.filter(function(x){return x.r&&bdiNameNearK(x.k,k)}).map(function(x){return x.r}).filter(function(r,i,arr){return arr.indexOf(r)===i});
+    if(hits.length!==1||hits[0]===parseInt(a.roomNo,10))return;
+    if(have[hits[0]]){mv++;return} // o odada zaten bir satir var: ayni misafirse asagidaki birlestirme halleder
+    delete have[parseInt(a.roomNo,10)];if(!a.movedFrom)a.movedFrom=a.roomNo;a.roomNo=hits[0];have[hits[0]]=1;out.n++;mv++;
+  });
+  if(mv)merge(); // tasinan satir, misafirin oda raporundaki odada zaten duran satirla birlesir (905 + 906 -> 804)
+  if(out.n)out.list.sort(function(a,b){return a.roomNo-b.roomNo});
   return out;
+}
+// VAC / in-house yuklenince bugunun alert listesi de odalari takip etsin (alert sekmesi acik olmasa da)
+function bdiAlertSyncRooms(){
+  if(getAlertDate()!==getToday())return;if(!alertList||!alertList.length){try{loadAlertSnapshot()}catch(e){}return}
+  var r=bdiAlertDedupeStale(alertList);if(!r.n)return;alertList=r.list;window.alertList=alertList;saveAlertSnapshot();
+  var t=document.getElementById("bdiTab_alert");if(t&&t.style.display==="block"){try{renderAlertTable()}catch(e){}}
 }
 function loadAlertSnapshot(){
   var key=getAlertSnapshotKey();
