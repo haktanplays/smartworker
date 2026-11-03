@@ -538,6 +538,16 @@ td input,td select{padding:3px 5px;border:1px solid #e5e7eb;border-radius:4px;fo
 .settings-header span:first-child{font-size:14px;font-weight:600;color:#1e293b}
 .settings-arrow{font-size:10px;color:#94a3b8;transition:transform .2s}
 .settings-header.open .settings-arrow{transform:rotate(180deg)}
+.settings-header span:first-child{display:flex;flex-direction:column;gap:2px}
+.settings-sub{font-size:11.5px;font-weight:400;color:#64748b;line-height:1.4}
+.sw-set-index{margin-top:10px}
+.sw-set-index input{width:100%;max-width:420px;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px}
+#swSetList{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.sw-set-grp{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.sw-set-g{font-size:11.5px;font-weight:700;color:#475569;margin-right:4px}
+.sw-set-chip{border:1px solid #d6e4df;background:#fff;color:#0f5446;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer}
+.sw-set-chip:hover{background:#eef6f3}
+.section.sw-set-flash{box-shadow:0 0 0 3px rgba(15,84,70,.25);border-radius:8px;transition:box-shadow .3s}
 .settings-body{padding:0 18px 16px}
 .settings-info{margin:10px 0 14px;padding:10px 14px;background:#f0f9ff;border-left:3px solid #3b82f6;border-radius:0 6px 6px 0;font-size:11px;line-height:1.6;color:#1e40af}
 .section{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #f3f4f6}
@@ -2106,6 +2116,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 <div style="padding:14px 18px;border-bottom:1px solid #e5e7eb">
 <h2 style="margin:0">Ayarlar</h2>
 <p class="hint" style="margin:6px 0 0">Her bolum ilgili module aittir. Degisiklikler localStorage'a kaydedilir. Basliga tiklayarak ac/kapa.</p>
+<div id="swSetIndex" class="sw-set-index"><input id="swSetQ" type="search" placeholder="Ayar ara (ör. sebep, departman, butler)" oninput="swSetIndexRender()" onkeydown="swSetQKey(event)" aria-label="Ayar ara"><div id="swSetList"></div></div>
 </div>
 <div id="setupPanel" style="padding:14px 18px;border-bottom:1px solid #e5e7eb"></div>
 
@@ -2605,7 +2616,7 @@ function showPage(p){
       (p==="didit"&&t.indexOf("Butler Did")>=0)||
       (p==="radar"&&t.indexOf("Inspector")>=0)||
       (p==="settings"&&t.indexOf("Ayar")>=0))});
-  if(p==="settings"){renderKWTags();renderPyKWTagsSettings();renderAlertReasonSettings();renderAlertKwSettings();renderAlertLinkActs();bdiamRender();renderBdiChipSettings();renderBdiCfgAll();renderIrciActs();if(typeof renderSettingsManager==="function")renderSettingsManager();}
+  if(p==="settings"){renderKWTags();renderPyKWTagsSettings();renderAlertReasonSettings();renderAlertKwSettings();renderAlertLinkActs();bdiamRender();renderBdiChipSettings();renderBdiCfgAll();renderIrciActs();if(typeof renderSettingsManager==="function")renderSettingsManager();try{swSettingsDecorate()}catch(e){}}
   if(p==="radar"){renderRadarBrief();renderWatchlist();renderRadarWatchUI();}
   if(p==="alert"){if(!alertList.length)loadAlertSnapshot();loadAlertTarget();renderAlertTable()}
   if(p==="didit")initDidIt();
@@ -8793,7 +8804,7 @@ function bdiNtSumHtml(D,L){
 }
 var _bdiNtDate="";
 function bdiNtDateSet(v){_bdiNtDate=v||getToday();renderBdiNt()}
-function bdiNtSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("bdiCfg_ntf");if(!el)return;var b=el.closest(".settings-body");if(b)b.style.display="block";el.scrollIntoView({block:"center"})},80)}
+function bdiNtSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("bdiCfg_ntf");if(!el)return;swSetOpen(el);el.scrollIntoView({block:"center"})},80)}
 function bdiNtTabBadge(){var c=document.getElementById("bdiNtTabCount");if(!c)return;var n=0;try{var L=bdiNtList(getToday());n=L?L.rows.length:0}catch(e){}c.textContent=n?String(n):""}
 function renderBdiNt(){
   try{renderUntouchedRooms()}catch(e){}
@@ -11629,7 +11640,7 @@ function bdiNcPick(el,id,k){
   if(el.value==="__new"){var nid=bdiNcAddOpt();bdiIssueDraftSet(id,k,nid);if(nid){renderBdiIssues();var e2=document.getElementById(el.id);if(e2)e2.focus()}else el.value="";return}
   bdiIssueDraftSet(id,k,el.value);el.classList.toggle("bd-nc-need",!el.value);
 }
-function bdiNcSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("bdiCfg_nc");if(!el)return;var b=el.closest(".settings-body");if(b)b.style.display="block";el.scrollIntoView({block:"center"})},80)}
+function bdiNcSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("bdiCfg_nc");if(!el)return;swSetOpen(el);el.scrollIntoView({block:"center"})},80)}
 function bdiNcLabel(e){return !e?"":e.by&&e.by!=="guest"?bdiNcByLbl(e.by)+" (temas yok)":e.by==="guest"?"Temas olmadan çıktı":"Temas olmadan kapandı"}
 function bdiNcSave(id){
   var list=bdiGetIssues(),is=bdiIssueById(list,id),e=bdiNcEv(is);if(!e)return;
@@ -16061,7 +16072,30 @@ function toggleSettingsSection(header){
   var body=header.nextElementSibling;
   if(body.style.display==="none"){body.style.display="block";header.classList.add("open")}
   else{body.style.display="none";header.classList.remove("open")}
+  swSetRemember();
 }
+// 2026-11-03 (Haktan: "ayarlar kisminda ekleme cikarma yok"): bolumler kapali gruplarin icinde kaybolmasin.
+// Ustte arama + bolum listesi (tek tik: grubu acar, bolume gider); grup basliginda icindeki bolumler yazar; acik gruplar hatirlanir.
+function swSetHeaders(){return [].slice.call(document.querySelectorAll("#page-settings .settings-header"))}
+function swSetRemember(){try{localStorage.setItem("sw_set_open",JSON.stringify(swSetHeaders().map(function(h,i){return h.nextElementSibling&&h.nextElementSibling.style.display!=="none"?i:-1}).filter(function(i){return i>=0})))}catch(e){}}
+function swSetOpen(el){var b=el&&el.closest(".settings-body");if(b&&b.style.display==="none"){b.style.display="block";var h=b.previousElementSibling;if(h)h.classList.add("open");swSetRemember()}}
+function swSetFlash(sec){if(!sec)return;sec.classList.add("sw-set-flash");setTimeout(function(){sec.classList.remove("sw-set-flash")},1600)}
+function swSettingsDecorate(){
+  var hs=swSetHeaders(),open=[];try{open=JSON.parse(localStorage.getItem("sw_set_open")||"[]")}catch(e){}
+  hs.forEach(function(h,i){var b=h.nextElementSibling;if(!b)return;var ts=[].slice.call(b.querySelectorAll(".section > h3")).map(function(x){return x.textContent.replace(/^[^A-Za-zÇĞİÖŞÜçğıöşü]+/,"").trim()});
+    var sp=h.querySelector(".settings-sub");if(!sp&&ts.length){sp=document.createElement("small");sp.className="settings-sub";h.firstElementChild.appendChild(sp)}if(sp)sp.textContent=ts.join(" · ");
+    if(open.indexOf(i)>=0&&b.style.display==="none"){b.style.display="block";h.classList.add("open")}});
+  swSetIndexRender();
+}
+function swSetIndexRender(){
+  var box=document.getElementById("swSetIndex");if(!box)return;var q=normTR(((document.getElementById("swSetQ")||{}).value||"").trim()),h='';
+  swSetHeaders().forEach(function(hd,gi){var b=hd.nextElementSibling;if(!b)return;var secs=[].slice.call(b.querySelectorAll(".section > h3"));if(!secs.length)return;
+    var items=secs.map(function(x,si){var t=x.textContent.replace(/^[^A-Za-zÇĞİÖŞÜçğıöşü]+/,"").trim(),txt=normTR(t+" "+((x.parentNode.querySelector(".hint,.settings-info")||{}).textContent||""));var qs=[q];if(/sebep/.test(q))qs.push(q.replace(/sebep/g,"neden"));if(/neden/.test(q))qs.push(q.replace(/neden/g,"sebep"));return {t:t,si:si,hit:!q||qs.some(function(z){return txt.indexOf(z)>=0})}}).filter(function(x){return x.hit});
+    if(!items.length)return;h+='<div class="sw-set-grp"><span class="sw-set-g">'+esc(hd.firstElementChild.firstChild?hd.firstElementChild.firstChild.textContent.trim():"")+'</span>'+items.map(function(x){return '<button type="button" class="sw-set-chip" onclick="swSetGo('+gi+','+x.si+')">'+esc(x.t)+'</button>'}).join("")+'</div>'});
+  var L=document.getElementById("swSetList");if(L)L.innerHTML=h||'<span class="hint">Bu aramayla eşleşen ayar yok.</span>';
+}
+function swSetGo(gi,si){var hd=swSetHeaders()[gi];if(!hd)return;var b=hd.nextElementSibling,sec=b&&b.querySelectorAll(".section > h3")[si];if(!sec)return;swSetOpen(sec);sec.parentNode.scrollIntoView({block:"start",behavior:"smooth"});swSetFlash(sec.parentNode)}
+function swSetQKey(e){if(e.key!=="Enter")return;var c=document.querySelector("#swSetList .sw-set-chip");if(c)c.click()}
 function renderPyKWTagsSettings(){ renderPyKWTagsFor("pyKWTagsSettings","rmPyKWSettings") }
 function addPyKWFromSettings(){var inp=document.getElementById("pyKWInputSettings");var v=inp.value.trim();if(!v)return;if(pyTitleKW.indexOf(v)<0){pyTitleKW.push(v);savePyKW()}inp.value=""}
 function rmPyKWSettings(i){pyTitleKW.splice(i,1);savePyKW()}
@@ -18034,6 +18068,7 @@ function alertMergeReasons(target,reasons){
     }else target.reasons.push({label:lbl,detail:det});
   });
 }
+function alertDepFmt(v){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v||""));return m?m[3]+"-"+m[2]+"-"+m[1].slice(2):String(v||"")} // Opera Alerts ISO -> ARR bicimi (dd-mm-yy)
 function alertNormalizeEntry(a){
   if(!a)return a;
   a.roomNo=parseInt(a.roomNo,10)||a.roomNo;
@@ -18310,9 +18345,16 @@ function buildAlertList(parsedGuests, traceList){
   // yeni raporda gorunmeyen (giris yapti, sebep degisti...) alert'ler sen silmedikce kalir
   var _nr={};newAlerts.forEach(function(a){_nr[a.roomNo]=1});
   var _later={};Object.keys(_swArrDays||{}).forEach(function(d){if(d>_ad)(_swArrDays[d]||[]).forEach(function(g){var k=bdiGuestKey((g.lastName||"")+" "+(g.firstName||""));if(k)_later[k]=1})});
-  var _kept=_prev.filter(function(a){return a&&a.roomNo&&!a.manual&&!_nr[a.roomNo]&&!_later[bdiGuestKey(String(a.guest||"").split(",").reverse().join(" "))]});
+  // 2026-11-03 oda degisikligi: misafir yeni raporda BASKA odadaysa eski odadaki satir tutulmaz (707/709 Abdurova);
+  // eski satirdaki isaret / sebep, yenisinde yoksa ona tasinir
+  var _ng={};newAlerts.forEach(function(a){var k=bdiGuestKey(a.guest||"");if(k&&a.guest!=="—")(_ng[k]=_ng[k]||[]).push(a)});
+  var _kept=_prev.filter(function(a){if(!(a&&a.roomNo&&!a.manual&&!_nr[a.roomNo]&&!_later[bdiGuestKey(String(a.guest||"").split(",").reverse().join(" "))]))return false;
+    var k=bdiGuestKey(a.guest||""),to=k&&_ng[k];if(!to||!to.length)return true;
+    var t=to[0];if(t.visited!==true&&t.visited!==false)["visited","visitedBy","notVisitedReason","linkedTouch","visitedVia"].forEach(function(f){if(a[f]!==undefined&&a[f]!==null&&a[f]!=="")t[f]=a[f]});
+    t.movedFrom=a.roomNo;return false});
   var _list=manuals.concat(newAlerts,_kept);_list.forEach(alertNormalizeEntry);_list.sort(function(a,b){return a.roomNo-b.roomNo});
   try{bdiOAlertApply(_ad,_list)}catch(e){} // Opera Alerts (CALBUTIN) sebepleri
+  try{if(_live)_list=bdiAlertDedupeStale(_list).list}catch(e){}
   try{bdiAlertBackfill(_ad,_list)}catch(e){} // once girilmis welcome / visit kayitlari
   if(!_live){
     localStorage.setItem("alert_"+_ad,JSON.stringify(cleanAlertLegacyUpsellFields(_list)));if(typeof _bdiAlertSnapCache!=="undefined")delete _bdiAlertSnapCache[_ad];
@@ -18380,7 +18422,9 @@ function setAlertNotReason(idx,val){
   alertList[idx].notVisitedReason=val;
   saveAlertSnapshot();renderAlertTable();try{swWarnRefresh()}catch(e){}
 }
-function alertReasonsSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("alertReasonTags");if(!el)return;var b=el.closest(".settings-body");if(b)b.style.display="block";el.scrollIntoView({block:"center"})},80)}
+function alertReasonsSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("alertReasonTags");if(!el)return;swSetOpen(el);el.scrollIntoView({block:"center"});swSetFlash(el.closest(".section"))},80)}
+function alertNvPick(idx,v){if(!v)return;if(v==="__set"){renderAlertTable();alertReasonsSettings();return}
+  setAlertVisited(idx,false);if(v==="__nr")return;setAlertNotReason(idx,v);}
 
 
 function setAlertFilter(f){
@@ -18432,6 +18476,7 @@ function getFilteredAlerts(){
 }
 
 function renderAlertTable(){try{bdiAlertTabBadge()}catch(e){}
+  try{var _dd=bdiAlertDedupeStale(alertList);if(_dd.n){alertList=_dd.list;window.alertList=alertList;saveAlertSnapshot()}}catch(e){}
   var wrap=document.getElementById("alertTableWrap");
   var badge=document.getElementById("alertBadge");
   var sumEl=document.getElementById("alertSummary");
@@ -18544,7 +18589,9 @@ function renderAlertTable(){try{bdiAlertTabBadge()}catch(e){}
       for(var bi=0;bi<butlers.length;bi++)visitH+='<option value="'+esc(butlers[bi])+'">'+esc(butlers[bi])+'</option>';
       visitH+='</select>';
       visitH+='<button onclick="setAlertVisited('+idx+',true,(document.getElementById(\'alertButler_'+idx+'\')||{}).value)" style="cursor:pointer;padding:3px 7px;border-radius:4px;border:1.5px solid #059669;background:#f0fdf4;color:#059669;font-size:10px;font-weight:700">✅</button>';
-      visitH+='<button onclick="setAlertVisited('+idx+',false)" style="cursor:pointer;padding:3px 7px;border-radius:4px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:10px;font-weight:700">❌</button>';
+      // 2026-11-03 (Haktan: "sebepler yine yok"): ❌ dogrudan sebep listesi; sebebi secince tek adimda ❌ + sebep
+      visitH+='<select onchange="alertNvPick('+idx+',this.value)" title="Gidilmedi: sebebi seç" aria-label="Gidilmedi, sebep" style="cursor:pointer;padding:3px 4px;border-radius:4px;border:1.5px solid #dc2626;background:#fef2f2;color:#b91c1c;font-size:10px;font-weight:700;max-width:128px"><option value="">❌ Gidilmedi…</option>'+
+        bdiAbc(getAlertReasons()).map(function(r){return '<option value="'+esc(r)+'">'+esc(r)+'</option>'}).join("")+'<option value="__new">+ Yeni sebep…</option><option value="__nr">❌ sebep sonra</option><option value="__set">sebepleri düzenle…</option></select>';
     }
     visitH+='</div>';
 
@@ -18569,13 +18616,13 @@ function renderAlertTable(){try{bdiAlertTabBadge()}catch(e){}
     var prioMark=getAlertPriority(a).level==="high"?' <span title="Yuksek oncelik" style="cursor:help">&#128293;</span>':'';
 
     h+='<tr style="background:'+rowBg+';border-bottom:1px solid #f3f4f6">';
-    h+='<td style="font-weight:700;text-align:center">'+a.roomNo+prioMark+'</td>';
+    h+='<td style="font-weight:700;text-align:center">'+a.roomNo+prioMark+(a.movedFrom?'<div style="font-size:9.5px;font-weight:600;color:#6b7280" title="Gün içinde oda değişti; eski odanın satırı kaldırıldı, işareti buraya taşındı">önce '+esc(String(a.movedFrom))+'</div>':'')+'</td>';
     var _bt=getBdiTouchesForRoom(a.roomNo);
     var _btBadge=_bt?'<span style="display:inline-block;margin-left:4px;padding:1px 5px;border-radius:8px;font-size:9px;font-weight:700;color:#1a6b5c;background:#d1fae5;border:1px solid #86efac;cursor:help" title="Bugun '+_bt+' BDI touch">BDI:'+_bt+'</span>':'';
     h+='<td style="font-size:11px;white-space:nowrap">'+esc(a.guest)+_btBadge+'</td>';
     h+='<td>'+reasonH+'</td>';
     h+='<td style="text-align:center;font-size:11px">'+(a.nights||"—")+'</td>';
-    h+='<td style="font-size:11px;white-space:nowrap">'+esc(a.depDate)+'</td>';
+    h+='<td style="font-size:11px;white-space:nowrap">'+esc(alertDepFmt(a.depDate))+'</td>';
     h+='<td>'+visitH+'</td>';
     h+='<td><button onclick="removeAlertRow('+idx+')" style="cursor:pointer;background:none;border:none;color:#dc2626;font-size:14px;font-weight:700" title="Sil">×</button></td>';
     h+='</tr>';
@@ -18798,12 +18845,29 @@ function saveAlertSnapshot(){
   alertList=cleanAlertLegacyUpsellFields(alertList||[]);
   localStorage.setItem(key,JSON.stringify(alertList));
 }
+// Ayni misafir iki odada: bugunun oda raporu (VAC / in-house) o odada artik BASKA birini (ya da kimseyi) gosteriyor ve misafir
+// diger odada gorunuyorsa eski satir bayattir (gun icinde oda degisti). Isaret / sebep kalan satira tasinir. Iki odada gercekten
+// kalan misafir (raporda iki odada da o) ya da rapor yoksa dokunulmaz. Yalniz bugunun listesi icin (oda raporu bugune ait).
+function bdiAlertDedupeStale(list){
+  var out={list:list,n:0};if(!Array.isArray(list)||getAlertDate()!==getToday()||!Object.keys(vacRooms||{}).length)return out;
+  var occ=function(r){var k=String(r),k4=("000"+k).slice(-4);var x=vacRooms[k]!=null?k:vacRooms[k4]!=null?k4:"";return x?vacNameFmt(x):""};
+  var by={};list.forEach(function(a){if(!a||a.manual||!a.guest||a.guest==="—")return;var k=bdiGuestKey(a.guest);if(k)(by[k]=by[k]||[]).push(a)});
+  var drop=[];
+  Object.keys(by).forEach(function(k){var rows=by[k];if(rows.length<2)return;
+    var here=rows.filter(function(a){var o=occ(a.roomNo);return o&&bdiNameNearK(bdiGuestKey(o),k)});if(!here.length||here.length===rows.length)return;
+    rows.forEach(function(a){if(here.indexOf(a)>=0)return;var t=here[0];
+      if(t.visited!==true&&t.visited!==false)["visited","visitedBy","notVisitedReason","linkedTouch","visitedVia"].forEach(function(f){if(a[f]!==undefined&&a[f]!==null&&a[f]!=="")t[f]=a[f]});
+      if(!t.movedFrom)t.movedFrom=a.roomNo;drop.push(a)})});
+  if(drop.length){out.list=list.filter(function(a){return drop.indexOf(a)<0});out.n=drop.length}
+  return out;
+}
 function loadAlertSnapshot(){
   var key=getAlertSnapshotKey();
   try{
     var s=localStorage.getItem(key);
     if(s){
       alertList=cleanAlertLegacyUpsellFields(JSON.parse(s));
+      try{var _dd=bdiAlertDedupeStale(alertList);if(_dd.n){alertList=_dd.list;localStorage.setItem(key,JSON.stringify(alertList))}}catch(e){}
       window.alertList=alertList;
       return true;
     }
@@ -19567,7 +19631,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueRestoreSkipped, swBulkOpen, swCfgPvSet, _swAlertPv, bdiCfgEditDeb, bdiCfgAddFrom, bdiNtSel, bdiNtSelCount, bdiNtQuick, bdiBulkToggle, bdiBulkFloor, bdiBulkMine, bdiBulkTg, bdiBulkPick, bdiBulkSave, bdiRetroDay, bdiRetroAdd, bdiEntryGuestSet, renderBdiFu, bdiFuSetFilter, bdiFuSetRange, bdiFuToggleNew, bdiFuNewKeep, bdiFuNewRoomHint, bdiFuQuick, bdiFuAddFromForm, bdiFuFromIssue, bdiFuGoIssue, bdiFuDoneFrom, bdiFuCancelFrom, bdiFuReopenFrom, bdiFuEditToggle, bdiFuEditSave, bdiFuDraftSet, downloadFuReport, downloadFuXlsx, bdiNcPick, bdiNcSettings, bdiAwayToggle, bdiIssueSetOut, bdiIssueSetSort, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, swWarnOpen, swWarnGo, bdiReportGate, swGateRun, bdiAlertManualLink, bdiAlertActFix, alertReasonsSettings, setAlertNotReason, bdiNtChkAll, bdiNtBulkCtl, bdiNtBulkApply, bdiNtCopyAllPrev, bdiNtDateSet, bdiNtSettings, downloadDidntDoIt, downloadDidntDoItXlsx, bdiDateToday, bdiDateWarn, bdiIrciToggle, renderIrciActs, bdiIrciDateSet, bdiIrciEtdEl, bdiIrciEtdSet, bdiIrciApplyAll, bdiIrciXlsx, bdiIrciPrint, bdiIrciSettings, bdiAlertAutoSettings, renderBdiAlertAuto, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueRestoreSkipped, alertNvPick, swSetIndexRender, swSetGo, swSetQKey, swBulkOpen, swCfgPvSet, _swAlertPv, bdiCfgEditDeb, bdiCfgAddFrom, bdiNtSel, bdiNtSelCount, bdiNtQuick, bdiBulkToggle, bdiBulkFloor, bdiBulkMine, bdiBulkTg, bdiBulkPick, bdiBulkSave, bdiRetroDay, bdiRetroAdd, bdiEntryGuestSet, renderBdiFu, bdiFuSetFilter, bdiFuSetRange, bdiFuToggleNew, bdiFuNewKeep, bdiFuNewRoomHint, bdiFuQuick, bdiFuAddFromForm, bdiFuFromIssue, bdiFuGoIssue, bdiFuDoneFrom, bdiFuCancelFrom, bdiFuReopenFrom, bdiFuEditToggle, bdiFuEditSave, bdiFuDraftSet, downloadFuReport, downloadFuXlsx, bdiNcPick, bdiNcSettings, bdiAwayToggle, bdiIssueSetOut, bdiIssueSetSort, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, swWarnOpen, swWarnGo, bdiReportGate, swGateRun, bdiAlertManualLink, bdiAlertActFix, alertReasonsSettings, setAlertNotReason, bdiNtChkAll, bdiNtBulkCtl, bdiNtBulkApply, bdiNtCopyAllPrev, bdiNtDateSet, bdiNtSettings, downloadDidntDoIt, downloadDidntDoItXlsx, bdiDateToday, bdiDateWarn, bdiIrciToggle, renderIrciActs, bdiIrciDateSet, bdiIrciEtdEl, bdiIrciEtdSet, bdiIrciApplyAll, bdiIrciXlsx, bdiIrciPrint, bdiIrciSettings, bdiAlertAutoSettings, renderBdiAlertAuto, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
