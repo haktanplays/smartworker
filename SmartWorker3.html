@@ -1067,6 +1067,13 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-isconf{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
 #page-didit .bd-pill-dep{background:#eef0f6;color:#4f6d9a}
 #page-didit .bd-pill-due0{background:var(--red);color:#fff}
+#page-didit .bd-ncclose{margin-top:12px;padding:8px 10px;border:1px dashed #d6dfdb;border-radius:8px;background:#fff}
+#page-didit .bd-ncclose-t{font-size:12.5px;font-weight:600;margin-bottom:6px}
+#page-didit .bd-ncclose-t .bd-sub{font-weight:400}
+#page-didit .bd-ncclose-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}
+#page-didit .bd-ncclose-r select{grid-column:1/-1}
+#page-didit .bd-ncclose-cfg{font-size:11.5px;margin-top:4px}
+#page-didit select.bd-nc-need{border-color:#e8a29b;background:#fff7f6}
 #page-didit .bd-pill-due1{background:var(--amber-t);color:var(--amber);box-shadow:inset 0 0 0 1px #f0c987}
 #page-didit .bd-pill-due2{background:#fef8ec;color:#8a5a12}
 #page-didit .bd-pill-due{background:var(--soft);color:var(--mut);box-shadow:inset 0 0 0 1px var(--line)}
@@ -2061,6 +2068,12 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 </div>
 
 <div class="section">
+<h3>Issues: temas olmadan kapatma nedenleri</h3>
+<p class="hint">Issue butler teması olmadan kapatılırken seçilen nedenler (açık issue kartında "Temas olmadan kapat", kapanmış issue'da "Kim ilgilendi?"). <b>Seçenek</b> listede görünür; <b>Raporda</b> yazan İngilizce karşılığı Butler Did It raporunun Guest Issues bölümüne "…, no butler contact." diye girer. Eski kayıtlar silinen ya da adı değişen seçenekten etkilenmez.</p>
+<div id="bdiCfg_nc"></div>
+</div>
+
+<div class="section">
 <h3>Butler Didn't Do It: alanlar</h3>
 <p class="hint">Didn't Do It sekmesinde her misafirin satırında doldurulan alanlar; aynı zamanda raporun sütunları. <b>Why not touched</b> sabittir (yukarıdaki sebep listesi). Seçim listesine seçenekleri virgülle yaz; "Butler" türü butler listesinden seçtirir; "Serbest metin" kısa not içindir. Sildiğin alanın eski değerleri saklı kalır, alanı geri eklersen döner.</p>
 <div id="bdiCfg_ntf"></div>
@@ -2181,7 +2194,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 // SmartWorker kopyasi localStorage'a sonradan kayit yazarsa bir sonraki acilista id bazli birlestirilir. Ayni anda acik iki
 // sekme degisiklikleri BroadcastChannel ile paylasir. IndexedDB acilamazsa her sey eskisi gibi localStorage'da calisir.
 var BDI_KV_LS={bdi_chip_counts:1,bdi_chip_hidden:1,bdi_staff_roles:1,bdi_xf_local:1,bdi_guest_merges:1,bdi_guest_notes:1,bdi_me:1,bdi_log_sort:1,
-  bdi_action_cat:1,bdi_pref_cats:1,bdi_occ_types:1,bdi_occ_timing:1,bdi_nt_reasons:1,bdi_irci_acts:1,bdi_nt_fields:1}; // 2026-11-02: ayar senkronuyla giden BDI ayarlari localStorage'da kalir (IndexedDB'ye tasininca ayar ekrani onlari bulamiyordu) // bdi_me / bdi_log_sort: bu bilgisayarin kucuk tercihleri (IndexedDB'ye tasinirsa yenilemede kayboluyordu)
+  bdi_action_cat:1,bdi_pref_cats:1,bdi_occ_types:1,bdi_occ_timing:1,bdi_nt_reasons:1,bdi_irci_acts:1,bdi_nt_fields:1,bdi_nc_by:1}; // 2026-11-02: ayar senkronuyla giden BDI ayarlari localStorage'da kalir (IndexedDB'ye tasininca ayar ekrani onlari bulamiyordu) // bdi_me / bdi_log_sort: bu bilgisayarin kucuk tercihleri (IndexedDB'ye tasinirsa yenilemede kayboluyordu)
 var BdiKV=(function(){
   var map={},ready=false,mode="idb",dbP=null,dirty={},flushQ=false,pending={},hooks=[],extHooks=[],chan=null,info={migrated:0,error:""};
   var own=function(o,k){return Object.prototype.hasOwnProperty.call(o,k)};
@@ -3504,7 +3517,7 @@ var SETTINGS_SYNC_JSON="smartworker_settings_sync.json";
 var SETTINGS_SYNC_KEYS=[
   "kw_equip","kw_amenity","kw_action","kw_deco","kw_butler","kw_bdiaction",   // chip/keyword listeleri + BDI action sablonlari + butler isimleri
   "bdi_action_cat",                                                           // islem -> touch tipi (Butler Did It / Preference / Occasion)
-  "bdi_pref_cats","bdi_occ_types","bdi_occ_timing","bdi_nt_reasons","bdi_irci_acts","bdi_nt_fields", // + In Room Check In islemleri, Didn't Do It alanlari         // tercih / ozel gun alanlari, Butler Didn't Do It sebepleri (2026-11-02)
+  "bdi_pref_cats","bdi_occ_types","bdi_occ_timing","bdi_nt_reasons","bdi_irci_acts","bdi_nt_fields","bdi_nc_by", // + temassiz kapanis nedenleri // + In Room Check In islemleri, Didn't Do It alanlari         // tercih / ozel gun alanlari, Butler Didn't Do It sebepleri (2026-11-02)
   "bdi_chip_hidden",                                                          // hizli balon gizleme
   "bdi_staff_roles",                                                          // Alice personel grup/departman tablosu (2026-10-28)
   "sw_admin_pin",                                                             // yonetici sifresi (ozet; 2026-11-01) - butun bilgisayarlarda ayni
@@ -7963,6 +7976,19 @@ var BDI_CFG={
     {id:"who",l:"Who will see",t:"butler",o:""},
     {id:"note",l:"Note",t:"text",o:""}],
     cols:[{f:"l",ph:"Alan adı (rapora yazılır)",w:"190px"},{f:"t",sel:[["select","Seçim listesi"],["butler","Butler"],["text","Serbest metin"]],w:"150px",fixedTxt:"Sebep listesi"},{f:"o",ph:"Seçenekler (yalnız seçim listesi): virgülle ayır",flex:1}]},
+  // Issue temassiz kapanis nedenleri (2026-11-03, Haktan: "temas olmadan kapatma kismina birkac opsiyon, yonetim kapatti falan"):
+  // kapatirken secilir; Turkce ad listede, Ingilizce karsiligi Butler Did It raporuna yazilir. "guest" sabit (eski kayitlar ve
+  // "Temas olmadan cikti" anlami ona bagli). id'ler eski kayitlarla ayni (guest/mgmt/rec/gr/dept).
+  bdi_nc_by:{el:"bdiCfg_nc",add:"+ Seçenek ekle",idPrefix:"nc",def:[
+    {id:"guest",l:"Misafir butlerla görüşmeden çıktı",en:"Guest left without butler contact",fixed:1},
+    {id:"mgmt",l:"Yönetim kapattı",en:"Closed by Management"},
+    {id:"rec",l:"Resepsiyon kapattı",en:"Closed by Reception"},
+    {id:"gr",l:"Guest Relations kapattı",en:"Closed by Guest Relations"},
+    {id:"dept",l:"Başka departman kapattı",en:"Closed by another department"},
+    {id:"nofu",l:"Takip gerekmiyordu",en:"No follow-up was required"},
+    {id:"noreach",l:"Misafire ulaşılamadı",en:"Guest could not be reached"},
+    {id:"decl",l:"Misafir görüşmek istemedi",en:"Guest preferred not to be contacted"}],
+    cols:[{f:"l",ph:"Seçenek (listede görünür)",w:"240px"},{f:"en",ph:"Raporda (İngilizce), örn. Closed by Duty Manager",flex:1}]},
   bdi_nt_reasons:{el:"bdiCfg_nt",add:"+ Sebep ekle",def:[
     {l:"DND",ex:"Kapıda Rahatsız Etmeyin vardı; kapı çalınmadı."},
     {l:"Guest not in room",ex:"Kapı çalındı, misafir odada değildi. Not bırakıldıysa bu bir touch'tır: Kayıt'a gir."},
@@ -7978,10 +8004,11 @@ function bdiCfg(key){
   var a=bdiCfgRaw(key).filter(function(x){return x&&String(x.l||"").trim()});
   if(key==="bdi_pref_cats"&&!a.some(function(x){return x.l==="Sensitivity"}))a.push(bdiCfgDef(key).filter(function(x){return x.fixed})[0]);
   if(key==="bdi_nt_fields"&&!a.some(function(x){return x.id==="reason"}))a.unshift(bdiCfgDef(key)[0]); // sebep alani hep var
+  if(key==="bdi_nc_by"&&!a.some(function(x){return x.id==="guest"}))a.unshift(bdiCfgDef(key)[0]); // "misafir gorusmeden cikti" hep var
   return a.length?a:bdiCfgDef(key);
 }
 function bdiCfgSave(key,a){localStorage.setItem(key,JSON.stringify(a));bdiCfgChanged(key)}
-function bdiCfgChanged(key){try{bdiCfgFillForm()}catch(e){}if(key==="bdi_nt_reasons"||key==="bdi_nt_fields"){try{renderBdiNt()}catch(e){}try{bdiFeedRefresh()}catch(e){}}}
+function bdiCfgChanged(key){try{bdiCfgFillForm()}catch(e){}if(key==="bdi_nt_reasons"||key==="bdi_nt_fields"){try{renderBdiNt()}catch(e){}try{bdiFeedRefresh()}catch(e){}}if(key==="bdi_nc_by"){try{renderBdiIssues()}catch(e){}}}
 function bdiCfgEdit(el){var key=el.getAttribute("data-k"),i=+el.getAttribute("data-i"),f=el.getAttribute("data-f"),a=bdiCfgRaw(key);if(!a[i]||(a[i].fixed&&f==="l"))return;a[i][f]=String(el.value||"").trim();bdiCfgSave(key,a)}
 function bdiCfgDel(key,i){var a=bdiCfgRaw(key);if(!a[i]||a[i].fixed)return;a.splice(i,1);bdiCfgSave(key,a);renderBdiCfg(key)}
 function bdiCfgUp(key,i){var a=bdiCfgRaw(key);if(i<1||!a[i])return;var t=a[i-1];a[i-1]=a[i];a[i]=t;bdiCfgSave(key,a);renderBdiCfg(key)}
@@ -8468,7 +8495,7 @@ function swWarnCollect(start,end){
     var st=bdiIssueState(is),hs=Object.keys(st.handlers),nc=bdiNcEv(is),nm="Oda "+(is.room||"?")+" "+(is.guest||""),go="bdiFeedIssueOpen("+q(is.id)+")";
     if(st.status==="closed"&&inP(st.closedAt||0)){
       if(!hs.length&&!nc)add("Issues","high",nm+": kapandı ama kimin ilgilendiği girilmedi (raporda \u201cNo butler contact recorded\u201d yazar)",go);
-      else if(nc&&!nc.by)add("Issues","high",nm+": temas olmadan kapandı, kimin kapattığı seçilmedi",go);
+      else if(nc&&!nc.by)add("Issues","high",nm+": temas olmadan kapandı, kimin kapattığı / nedeni seçilmedi",go);
     }
     if(st.status==="open"&&(is.createdAt||0)<=e0){
       var S=null;try{S=bdiIssueDue(is)}catch(e){}
@@ -10901,30 +10928,53 @@ function bdiIssueConfirmFrom(id){
   if(!b){alert("Temas eden butleri seç ya da \"Temas olmadan çıktı\"yı seç.");return}
   if(t&&!bdiKvkkOk(t))return;
   delete _bdiIssueDraft[id];
-  if(b==="__nc"){bdiIssueNoContact(id,t);return}
+  if(b==="__nc"||b.indexOf("__nc:")===0){bdiIssueNoContact(id,t,b.slice(5)||"guest");return}
   bdiIssueConfirm(id,b,t);
 }
 // Misafir butler temasi olmadan cikti (2026-11-01): issue gecmisine "nocontact" olayi (kapanis gunune). Butler Did It
 // touch'i yazilmaz (kimseye sayilmaz) ama Butler Did It raporunun Guest Issues bolumunde "temas olmadan cikti" diye gorunur.
 // Acik issue'yu butler temasi olmadan kapat (2026-11-01): kapanis + "temas olmadan" olayi; Butler Did It touch'i yazilmaz.
 // "Ne yapildi?" kutusuna yazilan not sebep olarak kalir (raporda gorunur).
+// 2026-11-03: neden kapatirken secilir (zorunlu); sonradan karttaki "Neden temas yok?" satirindan degistirilebilir.
 function bdiIssueCloseNC(id){
   var list=bdiGetIssues(),is=bdiIssueById(list,id);if(!is||bdiIssueState(is).status!=="open")return;
-  var t=((document.getElementById("bdiIsN_"+id)||{}).value||"").trim();if(t&&!bdiKvkkOk(t))return;
-  if(!confirm("Oda "+(is.room||"?")+" ("+(is.guest||"")+") issue butler teması olmadan kapatılsın mı?"+(t?"\n\nNot: "+t:"")))return;
+  var sel=document.getElementById("bdiIsNcPick_"+id),by=(sel||{}).value||"";
+  if(!by||by==="__new"){if(sel){sel.classList.add("bd-nc-need");sel.focus()}alert("Önce neden temas olmadan kapandığını seç (ör. Yönetim kapattı).");return}
+  var t=((document.getElementById("bdiIsNcNote_"+id)||{}).value||"").trim()||((document.getElementById("bdiIsN_"+id)||{}).value||"").trim();if(t&&!bdiKvkkOk(t))return;
+  if(!confirm("Oda "+(is.room||"?")+" ("+(is.guest||"")+") issue butler teması olmadan kapatılsın mı?\n\nNeden: "+bdiNcByLbl(by)+(t?"\nNot: "+t:"")))return;
   var now=Date.now();is.events=is.events||[];
   is.events.push({id:bdiEvId(),ts:now,type:"close",butler:"",by:"",text:"",src:"manual"});
-  is.events.push({id:bdiEvId(),ts:now,type:"nocontact",butler:"",by:"",text:t,src:"manual",u:now});
-  is.u=now;delete _bdiIssueDraft[id];_bdiIssueOpen[id]=true; // kart acik kalir: "Kim kapattı?" + not hemen girilsin
-  bdiSaveIssues(list);renderBdiIssues();bdiIssueBadge();bdiRefreshDerived();
-  setTimeout(function(){var el=document.getElementById("bdiIsNcBy_"+id);if(el){el.scrollIntoView({block:"center"});el.focus()}},60);
+  is.events.push({id:bdiEvId(),ts:now,type:"nocontact",butler:"",by:by,text:t,src:"manual",u:now});
+  is.u=now;delete _bdiIssueDraft[id];_bdiIssueOpen[id]=true;
+  bdiSaveIssues(list);renderBdiIssues();bdiIssueBadge();bdiRefreshDerived();try{swWarnRefresh()}catch(e){}
+  try{bdiToast("Temas olmadan kapandı: "+bdiNcByLbl(by)+".")}catch(e){}
 }
 function bdiIssueHasNC(is){return (is&&is.events||[]).some(function(e){return e&&!e.del&&e.type==="nocontact"})}
 // Temassiz kapanis (2026-11-02): kim kapatti + not. Butler temasi olmadan kapanan issue'yu cogu zaman yonetim ya da resepsiyon
 // kapatir; kapattiktan sonra (ya da istedigin zaman) kartta secilir, rapora "Closed by Management, no butler contact" diye girer.
 var BDI_NC_BY=[["guest","Misafir butlerla görüşmeden çıktı","Guest left without butler contact"],["mgmt","Yönetim kapattı","Closed by Management"],["rec","Resepsiyon kapattı","Closed by Reception"],["gr","Guest Relations kapattı","Closed by Guest Relations"],["dept","Başka departman kapattı","Closed by another department"]];
 function bdiNcEv(is){return (is&&is.events||[]).filter(function(e){return e&&!e.del&&e.type==="nocontact"})[0]||null}
-function bdiNcByLbl(k,en){var x=BDI_NC_BY.filter(function(b){return b[0]===k})[0];return x?(en?x[2]:x[1]):(en?"Closed without butler contact":"Temas olmadan kapandı")}
+function bdiNcOpts(){var a=[];try{a=bdiCfg("bdi_nc_by")}catch(e){}return a.length?a:BDI_NC_BY.map(function(b){return {id:b[0],l:b[1],en:b[2]}})}
+function bdiNcByLbl(k,en){
+  var c=bdiNcOpts().filter(function(x){return x.id===k})[0];if(c)return en?(String(c.en||"").trim()||c.l):c.l;
+  var x=BDI_NC_BY.filter(function(b){return b[0]===k})[0];return x?(en?x[2]:x[1]):(en?"Closed without butler contact":"Temas olmadan kapandı")}
+function bdiNcOptsHtml(sel,keep){
+  var o=bdiNcOpts(),h=o.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===sel?' selected':'')+'>'+esc(x.l)+'</option>'}).join("");
+  if(keep&&sel&&!o.some(function(x){return x.id===sel}))h+='<option value="'+esc(sel)+'" selected>'+esc(bdiNcByLbl(sel))+'</option>'; // listeden silinmis eski neden
+  return h;
+}
+// Listeye yeni neden (kapatirken "+ Yeni seçenek…"): Turkce ad + rapordaki Ingilizce karsilik; id dondurur
+function bdiNcAddOpt(){
+  var l=(prompt("Yeni seçenek (listede görünür), örn. Duty Manager kapattı:")||"").trim();if(!l)return "";
+  var en=(prompt("Raporda İngilizce nasıl yazılsın? (örn. Closed by Duty Manager)",l)||"").trim()||l;
+  var a=bdiCfgRaw("bdi_nc_by"),hit=a.filter(function(x){return x&&normTR(x.l||"")===normTR(l)})[0];if(hit)return hit.id;
+  var id="nc"+Date.now().toString(36);a.push({id:id,l:l,en:en});bdiCfgSave("bdi_nc_by",a);try{renderBdiCfg("bdi_nc_by")}catch(e){}return id;
+}
+function bdiNcPick(el,id,k){
+  if(el.value==="__new"){var nid=bdiNcAddOpt();bdiIssueDraftSet(id,k,nid);if(nid){renderBdiIssues();var e2=document.getElementById(el.id);if(e2)e2.focus()}else el.value="";return}
+  bdiIssueDraftSet(id,k,el.value);el.classList.toggle("bd-nc-need",!el.value);
+}
+function bdiNcSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("bdiCfg_nc");if(!el)return;var b=el.closest(".settings-body");if(b)b.style.display="block";el.scrollIntoView({block:"center"})},80)}
 function bdiNcLabel(e){return !e?"":e.by&&e.by!=="guest"?bdiNcByLbl(e.by)+" (temas yok)":e.by==="guest"?"Temas olmadan çıktı":"Temas olmadan kapandı"}
 function bdiNcSave(id){
   var list=bdiGetIssues(),is=bdiIssueById(list,id),e=bdiNcEv(is);if(!e)return;
@@ -10935,14 +10985,14 @@ function bdiNcSave(id){
 }
 function bdiNcRowHtml(is){
   var e=bdiNcEv(is);if(!e)return "";var id=is.id;
-  return '<div class="bd-ncrow"><span class="bd-isconf-lbl">Kim kapattı?</span><select id="bdiIsNcBy_'+id+'" aria-label="Kim kapattı">'+'<option value="">Seç</option>'+BDI_NC_BY.map(function(b){return '<option value="'+b[0]+'"'+(e.by===b[0]?' selected':'')+'>'+esc(b[1])+'</option>'}).join("")+'</select>'+
+  return '<div class="bd-ncrow"><span class="bd-isconf-lbl">Neden temas yok?</span><select id="bdiIsNcBy_'+id+'" aria-label="Neden temas olmadan kapandı"'+(e.by?'':' class="bd-nc-need"')+'>'+'<option value="">Seç</option>'+bdiNcOptsHtml(e.by||"",true)+'</select>'+
     '<input id="bdiIsNcT_'+id+'" value="'+esc(e.text||"")+'" placeholder="Not: ne oldu, kim konuştu (opsiyonel)" aria-label="Kapanış notu" onkeydown="if(event.key===\'Enter\')bdiNcSave(\''+id+'\')">'+
     '<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiNcSave(\''+id+'\')">Kaydet</button></div>';
 }
-function bdiIssueNoContact(id,text){
+function bdiIssueNoContact(id,text,by){
   var list=bdiGetIssues(),is=bdiIssueById(list,id);if(!is||bdiIssueHasNC(is))return;
   var s=bdiIssueState(is),now=Date.now();
-  is.events=is.events||[];is.events.push({id:bdiEvId(),ts:s.closedAt||now,type:"nocontact",butler:"",by:"guest",text:text||"",src:"manual",u:now});is.u=now;
+  is.events=is.events||[];is.events.push({id:bdiEvId(),ts:s.closedAt||now,type:"nocontact",butler:"",by:by||"guest",text:text||"",src:"manual",u:now});is.u=now;
   bdiSaveIssues(list);renderBdiIssues();bdiRefreshDerived();
 }
 function bdiIssueConfirm(id,butler,text){
@@ -11373,7 +11423,7 @@ function renderBdiIssues(){
     var gp=bdiGMProfileByName(is.guest);if(gp&&gp.repeat)h+='<span class="bd-flag bd-flag-rep" style="cursor:pointer" onclick="event.stopPropagation();bdiGuestOpen(\''+gp.gid+'\')">Tekrar misafir, '+gp.stays.length+' konaklama</span>';
     h+='</div></div>';
     if(s.status==="closed"&&!hs.length&&!bdiIssueHasNC(is)&&!is.out){var cd=_bdiIssueDraft[is.id]||{};
-      h+='<div class="bd-isconf-row"><span class="bd-isconf-lbl">Kim ilgilendi?</span><select id="bdiIsCB_'+is.id+'" onchange="bdiIssueDraftSet(\''+is.id+'\',\'cb\',this.value)" aria-label="Temas eden butler">'+bdiButlerOptions(cd.cb||"","Butler seç (opsiyonel)")+'<option value="__nc"'+(cd.cb==="__nc"?' selected':'')+'>Temas olmadan çıktı</option></select><input id="bdiIsCN_'+is.id+'" placeholder="Ne yaptı? (opsiyonel)" value="'+esc(cd.cn||"")+'" oninput="bdiIssueDraftSet(\''+is.id+'\',\'cn\',this.value)" aria-label="Butler ne yaptı"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueConfirmFrom(\''+is.id+'\')">Kaydet</button></div>';
+      h+='<div class="bd-isconf-row"><span class="bd-isconf-lbl">Kim ilgilendi?</span><select id="bdiIsCB_'+is.id+'" onchange="bdiIssueDraftSet(\''+is.id+'\',\'cb\',this.value)" aria-label="Temas eden butler">'+bdiButlerOptions(cd.cb||"","Butler seç (opsiyonel)")+'<optgroup label="Temas olmadan kapandı">'+bdiNcOpts().map(function(x){var v="__nc:"+x.id;return '<option value="'+esc(v)+'"'+(cd.cb===v||(cd.cb==="__nc"&&x.id==="guest")?' selected':'')+'>'+esc(x.l)+'</option>'}).join("")+'</optgroup></select><input id="bdiIsCN_'+is.id+'" placeholder="Ne yaptı? (opsiyonel)" value="'+esc(cd.cn||"")+'" oninput="bdiIssueDraftSet(\''+is.id+'\',\'cn\',this.value)" aria-label="Butler ne yaptı"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueConfirmFrom(\''+is.id+'\')">Kaydet</button></div>';
     }
     if(open){
       h+='<div class="bd-issue-body"><div>'+(is.out?'<div class="bd-isout-box"><b>Outside guest</b> · '+(is.out.auto?'otomatik işaretlendi ('+esc(is.out.why||'')+')':'elle işaretlendi')+' '+esc(bdiFmtShort(is.out.at))+' <button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueSetOut(\''+is.id+'\',0)">Outside değil, listeye geri al</button></div>':bdiIssueStayLine(is,s,x.d))+'<div class="bd-concern">'+esc(is.concern||"")+'</div></div><div>';
@@ -11395,7 +11445,11 @@ function renderBdiIssues(){
         h+='<input type="text" id="bdiIsN_'+is.id+'" placeholder="Ne yapıldı? (opsiyonel)" value="'+esc(dr.n||"")+'" oninput="bdiIssueDraftSet(\''+is.id+'\',\'n\',this.value)">';
         h+='<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueAct(\''+is.id+'\',\'touch\')">İlgilendim</button>';
         h+='<button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiIssueAct(\''+is.id+'\',\'close\')">Kapat</button></div>';
-        h+='<div class="bd-ncclose"><button type="button" class="bd-link" onclick="bdiIssueCloseNC(\''+is.id+'\')">Temas olmadan kapat</button><span class="bd-sub"> misafir butlerla görüşmeden çıktıysa ya da issue\'yu yönetim / resepsiyon / başka departman kapattıysa; touch yazılmaz. Kapattıktan sonra kimin kapattığını ve notu yazarsın, raporda görünür.</span></div>';
+        h+='<div class="bd-ncclose"><div class="bd-ncclose-t">Temas olmadan kapat <span class="bd-sub">misafir butlerla görüşmeden çıktıysa ya da issue\'yu başka biri kapattıysa; touch yazılmaz, seçtiğin neden raporda görünür</span></div>'+
+          '<div class="bd-ncclose-r"><select id="bdiIsNcPick_'+is.id+'" aria-label="Neden temas olmadan kapanıyor" onchange="bdiNcPick(this,\''+is.id+'\',\'nc\')"><option value="">Neden? Seç</option>'+bdiNcOptsHtml(dr.nc||"")+'<option value="__new">+ Yeni seçenek…</option></select>'+
+          '<input type="text" id="bdiIsNcNote_'+is.id+'" placeholder="Not (opsiyonel): kim konuştu, ne oldu" value="'+esc(dr.ncn||"")+'" oninput="bdiIssueDraftSet(\''+is.id+'\',\'ncn\',this.value)" aria-label="Kapanış notu">'+
+          '<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueCloseNC(\''+is.id+'\')">Temas olmadan kapat</button></div>'+
+          '<button type="button" class="bd-link bd-ncclose-cfg" onclick="bdiNcSettings()">seçenekleri düzenle</button></div>';
       }else{
         if(bdiIssueHasNC(is))h+=bdiNcRowHtml(is);
         h+='<div class="bd-act bd-act-closed"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiIssueAct(\''+is.id+'\',\'reopen\')">Yeniden aç</button></div>';
@@ -18770,7 +18824,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueRestoreSkipped, bdiAwayToggle, bdiIssueSetOut, bdiIssueSetSort, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, swWarnOpen, swWarnGo, bdiReportGate, swGateRun, bdiAlertManualLink, bdiAlertActFix, alertReasonsSettings, setAlertNotReason, bdiNtChkAll, bdiNtBulkCtl, bdiNtBulkApply, bdiNtCopyAllPrev, bdiNtDateSet, bdiNtSettings, downloadDidntDoIt, downloadDidntDoItXlsx, bdiDateToday, bdiDateWarn, bdiIrciToggle, renderIrciActs, bdiIrciDateSet, bdiIrciEtdEl, bdiIrciEtdSet, bdiIrciApplyAll, bdiIrciXlsx, bdiIrciPrint, bdiIrciSettings, bdiAlertAutoSettings, renderBdiAlertAuto, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueRestoreSkipped, bdiNcPick, bdiNcSettings, bdiAwayToggle, bdiIssueSetOut, bdiIssueSetSort, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, swWarnOpen, swWarnGo, bdiReportGate, swGateRun, bdiAlertManualLink, bdiAlertActFix, alertReasonsSettings, setAlertNotReason, bdiNtChkAll, bdiNtBulkCtl, bdiNtBulkApply, bdiNtCopyAllPrev, bdiNtDateSet, bdiNtSettings, downloadDidntDoIt, downloadDidntDoItXlsx, bdiDateToday, bdiDateWarn, bdiIrciToggle, renderIrciActs, bdiIrciDateSet, bdiIrciEtdEl, bdiIrciEtdSet, bdiIrciApplyAll, bdiIrciXlsx, bdiIrciPrint, bdiIrciSettings, bdiAlertAutoSettings, renderBdiAlertAuto, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
