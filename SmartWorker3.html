@@ -1114,13 +1114,26 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
 #page-didit .bd-retro-r input,#page-didit .bd-retro-r select{height:32px;font-size:12.5px;padding:0 6px}
 #page-didit .bd-retro-r input[type=time]{border:1px solid #d3ddd9;border-radius:8px;background:#fff}
 @media (max-width:1100px){#page-didit .bd-retro-r{grid-template-columns:84px 82px minmax(0,1fr) minmax(0,1fr)}#page-didit .bd-retro-r input[type=text]{grid-column:1/-2}}
-#page-didit .bd-rg-q{font-size:11.5px;color:var(--mut);margin-right:6px}
-#page-didit .bd-rg{display:inline-flex;flex-direction:column;align-items:flex-start;gap:0;border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 9px;margin:2px 6px 2px 0;font:600 12.5px 'Segoe UI',system-ui,sans-serif;color:var(--ink);cursor:pointer;text-align:left}
-#page-didit .bd-rg small{font-weight:400;font-size:10.5px;color:var(--mut)}
-#page-didit .bd-rg.on{border-color:var(--g);background:var(--gt);box-shadow:0 0 0 2px rgba(15,84,70,.12)}
-#page-didit .bd-rg.k-out small{color:#4f6d9a}#page-didit .bd-rg.k-arr small{color:var(--amber)}
-#page-didit .bd-rg-s{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:8px;background:#eef0f6;color:#4f6d9a;margin-left:4px}
-#page-didit .bd-rg-s.k-arr{background:var(--amber-t);color:var(--amber)}
+#page-didit .bd-rg-q{font-size:12px;font-weight:600;color:var(--mut);white-space:nowrap}
+#page-didit .bd-rg-bar{display:flex;align-items:center;gap:10px;margin:-2px 0 10px;padding:6px 8px 6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
+#page-didit .bd-rg-opts{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+#page-didit .bd-rg-o{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 10px;border:1px solid var(--line);border-radius:17px;background:#fff;font:13px 'Segoe UI',system-ui,sans-serif;color:var(--ink);cursor:pointer;white-space:nowrap;max-width:100%;transition:border-color .12s,background .12s}
+#page-didit .bd-rg-o:hover{border-color:#b9cfc8}
+#page-didit .bd-rg-o b{font-weight:600}
+#page-didit .bd-rg-dot{width:14px;height:14px;border-radius:50%;border:2px solid #b8c4c0;flex:none;box-sizing:border-box}
+#page-didit .bd-rg-o.on{border-color:var(--g);background:var(--gt);box-shadow:0 0 0 2px rgba(15,84,70,.10)}
+#page-didit .bd-rg-o.on .bd-rg-dot{border:4px solid var(--g);background:#fff}
+#page-didit .bd-rg-st{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--mut);font-weight:400}
+#page-didit .bd-rg-st i{width:7px;height:7px;border-radius:50%;background:#9aa3a0;display:inline-block}
+#page-didit .bd-rg-st.k-in i{background:#1f9d6b}#page-didit .bd-rg-st.k-arr i{background:#d48a1a}#page-didit .bd-rg-st.k-out i{background:#8a96a3}
+#page-didit .bd-rg-st.k-arr{color:#8a5a12}
+#page-didit .bd-rg-al{display:inline-block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;padding:1px 8px;border-radius:9px;font-size:11px;font-weight:700;color:#6d28d9;background:#f5f3ff;border:1px solid #ddd6fe}
+#page-didit #bdiGuestHint{min-width:0;align-self:end}
+#page-didit .bd-rg-one{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;max-width:100%;color:var(--ink)}
+#page-didit .bd-rg-one b{font-weight:600;font-size:14px;color:var(--brass);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#page-didit .bd-rg-meta{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;flex-wrap:nowrap}
+#page-didit .bd-rg-meta .bd-rg-al{min-width:0}
+
 #page-didit .bd-pill-fu{background:#eef0fb;color:#3d4aa8}
 #page-didit .bd-pill-fuk{background:var(--soft);color:var(--mut);box-shadow:inset 0 0 0 1px var(--line);font-weight:500}
 #page-didit .bd-count.bd-count-red{background:var(--red-t);color:var(--red)}
@@ -1619,6 +1632,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d1d5db;border
       <div><label class="bd-lbl" for="bdiRoom">Oda <button type="button" class="bd-link bd-bulk-tg" onclick="bdiBulkToggle()" title="Aynı işlemi birçok odaya tek seferde gir">toplu</button></label><input id="bdiRoom" type="text" placeholder="1903" oninput="showVacGuest()"></div>
       <div id="bdiGuestHint" class="bd-guest-hint"></div>
     </div>
+    <div id="bdiGuestPick" class="bd-rg-bar" style="display:none"></div>
     <div id="bdiBulkPanel" class="bd-bulk" style="display:none"></div>
     <div id="bdiTimeline" class="bd-timeline" style="display:none"></div>
     <div id="bdiGuestMemory" class="bd-memory" style="display:none" aria-live="polite"></div>
@@ -7724,26 +7738,29 @@ function bdiEntryGuestSet(room,k){_bdiEntryG[("000"+String(room||"").replace(/\D
 function bdiRgLabel(g){return g.role==="out"?"bugün çıktı"+(g.time?" "+g.time:g.ts?" ~"+bdiNowTime(new Date(g.ts)):""):g.role==="arr"?"bugün gelecek":g.dueOut?"bugün çıkacak "+g.dueOut:"içeride"}
 function showVacGuest(){
   var room=document.getElementById("bdiRoom").value.trim();
-  var hint=document.getElementById("bdiGuestHint");
+  var hint=document.getElementById("bdiGuestHint"),bar=document.getElementById("bdiGuestPick");
   var timeline=document.getElementById("bdiTimeline");
-  var day=(document.getElementById("bdiDate")||{}).value||getToday(),G=room&&room.length>=3&&!/[,\s]/.test(room)?bdiRoomGuests(room,day):[],sel=G.length?bdiEntryGuest(room,day):null;
+  var day=(document.getElementById("bdiDate")||{}).value||getToday(),one=room&&room.length>=3&&!/[,\s]/.test(room),G=one?bdiRoomGuests(room,day):[],sel=G.length?bdiEntryGuest(room,day):null;
+  // 2026-11-03 (Haktan: "burasi bu haliyle cirkin"): birden cok misafir -> formun altinda tam genislikte tek satir secici;
+  // alert etiketi odanin degil ait oldugu misafirin seceneginde, tek satir (tam metin uzerine gelince).
+  var al=room?getAlertForRoomOn(room,day):null,alTxt=al?(al.reasons||[]).map(function(r){return r.label||r}).join(" · "):"",alG=al&&al.guest?bdiGuestKey(bdiGihPerson(al.guest)):"";
+  var alFor=function(g){return al&&(!alG||bdiNameNearK(alG,g.k))};
+  var alB=function(){return '<span class="bd-rg-al" title="Butler Alert: '+esc(alTxt)+'">\u26a0 '+esc(alTxt)+'</span>'};
+  var st=function(g){return '<span class="bd-rg-st k-'+g.role+'"><i></i>'+esc(bdiRgLabel(g))+'</span>'};
+  var alUsed=false;
   if(G.length>1){
-    hint.innerHTML='<span class="bd-rg-q">Kimin için?</span>'+G.map(function(g){var on=sel&&g.k===sel.k;return '<button type="button" class="bd-rg'+(on?' on':'')+' k-'+g.role+'" data-k="'+esc(g.k)+'" onclick="bdiEntryGuestSet(\''+esc(room)+'\',this.getAttribute(\'data-k\'))" title="'+esc(bdiRgLabel(g))+'">'+esc(g.n)+'<small>'+esc(bdiRgLabel(g))+'</small></button>'}).join("");
-  }else if(sel){
-    hint.innerHTML=esc(sel.n)+(sel.role!=="in"||sel.dueOut?' <span class="bd-rg-s k-'+sel.role+'">'+esc(bdiRgLabel(sel))+'</span>':'');
-  }else if(room&&vacRooms[room]){
-    hint.innerHTML=esc(vacNameFmt(room));
+    if(bar){bar.innerHTML='<span class="bd-rg-q">Kimin için?</span><div class="bd-rg-opts" role="radiogroup" aria-label="Kayıt kimin için">'+G.map(function(g){var on=sel&&g.k===sel.k,a=alFor(g)&&!alUsed;if(a)alUsed=true;
+      return '<button type="button" role="radio" aria-checked="'+(on?'true':'false')+'" class="bd-rg-o'+(on?' on':'')+' k-'+g.role+'" data-k="'+esc(g.k)+'" onclick="bdiEntryGuestSet(\''+esc(room)+'\',this.getAttribute(\'data-k\'))"><span class="bd-rg-dot"></span><b>'+esc(g.n)+'</b>'+st(g)+(a?alB():'')+'</button>'}).join("")+'</div>';bar.style.display="flex"}
+    hint.innerHTML="";
   }else{
-    hint.innerHTML=room&&room.length>=3&&!/[,\s]/.test(room)?'<span class="bd-sub">Bu odada bugün misafir görünmüyor</span>':"";
+    if(bar){bar.style.display="none";bar.innerHTML=""}
+    var meta=function(x){return x?'<span class="bd-rg-meta">'+x+'</span>':''};
+    if(sel)hint.innerHTML='<span class="bd-rg-one"><b>'+esc(sel.n)+'</b>'+meta((sel.role!=="in"||sel.dueOut?st(sel):'')+(al?alB():''))+'</span>';
+    else if(room&&vacRooms[room])hint.innerHTML='<span class="bd-rg-one"><b>'+esc(vacNameFmt(room))+'</b>'+meta(al?alB():'')+'</span>';
+    else hint.innerHTML=one?'<span class="bd-sub">Bu odada bugün misafir görünmüyor</span>'+(al?' '+alB():''):"";
+    alUsed=true;
   }
-  // Alert cross-reference
-  if(room){
-    var _alrt=getAlertForRoomOn(room,(document.getElementById("bdiDate")||{}).value);
-    if(_alrt){
-      var _rLabels=(_alrt.reasons||[]).map(function(r){return r.label||r}).join(", ");
-      hint.innerHTML+=' <span style="padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd">\u26a0 '+esc(_rLabels)+'</span>';
-    }
-  }
+  if(al&&!alUsed)hint.innerHTML='<span class="bd-rg-one">'+alB()+'</span>'; // alert listedeki hicbir misafirle eslesmedi: odaya ait
   // Show timeline for this room
   if(room&&room.length>=3){
     renderBdiRoomTimeline(room);
@@ -9459,7 +9476,7 @@ function resetBdiPatternFields(type){
   document.getElementById("bdiPrefDetail").value="";
   document.getElementById("bdiArrangement").value="";
   document.getElementById("bdiPreview").textContent="";
-  document.getElementById("bdiGuestHint").innerHTML="";
+  document.getElementById("bdiGuestHint").innerHTML="";var _gp=document.getElementById("bdiGuestPick");if(_gp){_gp.style.display="none";_gp.innerHTML=""}
   document.getElementById("bdiTimeline").style.display="none";
   toggleBdiCustom();
   toggleBdiIssueSolution();
