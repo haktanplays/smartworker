@@ -8334,17 +8334,23 @@ function bdiFuSweep(){
       if(o[id])return o[id];var sx=getS();if(sx&&sx.gone)return null; // misafir zaten cikmis: yeni takip acilmaz
       var D=bdiFuAutoDue(kind,base,is.concern,is);o[id]={id:id,kind:kind,iss:is.id,room:String(is.room||""),guest:is.guest||"",t:t,at:now,base:base,due:D.due,dueWhy:D.why,st:"open",src:"auto",u:now};ch=true;return o[id];
     };
-    // 1) metin "follow-up required" (son 7 gunde acilmis issue)
-    if(ts==="req"&&!nc&&(is.createdAt||0)>=now-7*864e5)mk("fu_is_"+is.id,"issue",is.createdAt||now,"Issue takibi: "+bdiFuShort(bdiIssueSplitText(is.concern).base||is.concern,120));
+    // Takip ne zamandan beri gerekli: metnin son guncellendigi an (Excel "update" olayi), yoksa issue'nun acilisi.
+    // 2026-11-03 duzeltme (Haktan: "kapali issue neden takip gecikti"): eskiden yalniz takip ACILDIKTAN sonraki temaslar
+    // sayiliyordu; Takip Defteri kurulmadan once yapilmis temas (1503: Beyza 01.11, kapatis 02.11) sayilmayip "gecikti" kaliyordu.
+    var tReq=is.createdAt||0;(is.events||[]).forEach(function(e){if(e&&!e.del&&e.type==="update"&&(e.ts||0)>tReq)tReq=e.ts});
+    // 1) metin "follow-up required": yalniz ACIK issue, son 7 gunde acilmis, metinden sonra butler temasi yoksa
+    if(ts==="req"&&!nc&&st.status==="open"&&(is.createdAt||0)>=now-7*864e5&&!bEv(is,tReq))mk("fu_is_"+is.id,"issue",is.createdAt||now,"Issue takibi: "+bdiFuShort(bdiIssueSplitText(is.concern).base||is.concern,120));
     // 2) kaynak kapatti, butler temasi yok, misafir hala otelde: memnuniyet teyidi (son 48 saatte kapanan)
-    if(st.status==="closed"&&ts!=="req"&&ts!=="no"&&!nc&&!st.closedBy&&!Object.keys(st.handlers).length&&!/^satisf/i.test(is.sat||"")&&(st.closedAt||0)>=now-48*36e5){
+    if(st.status==="closed"&&ts!=="no"&&!nc&&!st.closedBy&&!Object.keys(st.handlers).length&&!/^satisf/i.test(is.sat||"")&&(st.closedAt||0)>=now-48*36e5){
       var sx=getS();if(sx&&!sx.gone&&sx.n>=0)mk("fu_cf_"+is.id,"confirm",st.closedAt,"Memnuniyet teyidi: "+bdiFuShort(bdiIssueSplitText(is.concern).base||is.concern,100));
     }
     ["fu_is_"+is.id,"fu_cf_"+is.id].forEach(function(id){var f=o[id];if(!f||f.del)return;
       if(f.room!==String(is.room||"")||f.guest!==(is.guest||"")){f.room=String(is.room||"");f.guest=is.guest||"";f.u=now;ch=true}
       if(f.st!=="open")return;
       if(nc){if(nc.by!=="guest")close(f,"cancel","nc","",bdiNcByLbl(nc.by)+" (temas yok)",nc.ts);return}
-      var e=bEv(is,Math.max(f.kind==="confirm"?(st.closedAt||f.at):f.at,f.reopened||0));if(e){close(f,"done","issue",e.butler,e.text||"",e.ts,e.id);return}
+      var e=bEv(is,Math.max(f.kind==="confirm"?(st.closedAt||tReq):tReq,f.reopened||0));
+      if(e&&!f.reopened&&e.ts<(f.at||0)){f.st="cancel";f.del=now;f.doneVia="pre";f.doneText="Takip açılmadan önce yapılmıştı";f.u=now;ch=true;return} // gereksiz acilmis: kaldir (raporu bozmasin)
+      if(e){close(f,"done","issue",e.butler,e.text||"",e.ts,e.id);return}
       if(f.reopened)return; // elle yeniden acildi: metin / memnuniyet kendiliginden kapatmaz
       if(f.kind==="issue"&&ts==="no"){close(f,"done","text","","Kaynak metin güncellendi: takip gerekmiyor");return}
       if(f.kind==="confirm"&&/^satisf/i.test(is.sat||"")){close(f,"done","sat","","Kaynakta misafir memnun ("+is.sat+")");return}
