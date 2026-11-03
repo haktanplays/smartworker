@@ -6745,8 +6745,9 @@ function bdiNameTypo(a,b){
   if(oa.length!==1||ob.length!==1||oa[0].length<3||ob[0].length<3)return "";
   return bdiLev(oa[0],ob[0])<=(Math.min(oa[0].length,ob[0].length)>=6?2:1)?oa[0]+" / "+ob[0]:"";
 }
-function bdiNameNear(a,b){
-  var ka=bdiGuestKey(a),kb=bdiGuestKey(b);if(!ka||!kb)return false;if(ka===kb)return true;
+function bdiNameNear(a,b){return bdiNameNearK(bdiGuestKey(a),bdiGuestKey(b))}
+function bdiNameNearK(ka,kb){
+  if(!ka||!kb)return false;if(ka===kb)return true;
   var ta=ka.split(" "),tb=kb.split(" "),sh=ta.length<=tb.length?ta:tb,lo=sh===ta?tb:ta;
   var tokOk=function(t){return lo.some(function(u){return u===t||(t.length>=5&&u.length>=5&&bdiLev(t,u)<=1)})};
   if(sh.length>=2&&sh.every(tokOk))return true;
@@ -6823,6 +6824,10 @@ function bdiIssueMatchesStay(is,r,nm){
 // Issue'nun misafirinin cikis kaydi (oda tutan once; konaklama issue saatini kapsamali, cikistan sonraki 1 gun dahil)
 function bdiIssueDep(is){
   if(!is||bdiGuestBad(is.guest))return null;
+  var X=bdiStayIndex(),mk=bdiStayMemoKey(is);if(Object.prototype.hasOwnProperty.call(X.depMemo,mk))return X.depMemo[mk];
+  return X.depMemo[mk]=bdiIssueDep0(is);
+}
+function bdiIssueDep0(is){
   var cd=bdiYmd(new Date(is.createdAt||Date.now())),rk=is.room?("000"+is.room).slice(-4):"",best=null,score=-1;
   bdiDepAll().forEach(function(r){
     if(!(r.arr<=cd&&cd<=bdiAddDays(r.dep,1)))return;if(!bdiIssueMatchesStay(is,r,bdiDepName(r)))return;
@@ -6863,24 +6868,49 @@ function bdiIssueLive(is){
 // Konaklama issue'nun acildigi gunu kapsamali: ayni misafirin onceki/sonraki konaklamasi karismaz. Eslesme bdiIssueMatchesStay ile ayni
 // (isim yakin; oda farkliysa isim birebir). Hicbir raporda yoksa null.
 var BDI_STAY_SRC={vac:"VAC raporu",gih:"In-house raporu",inh:"In-house raporu",arr:"Varış raporu",dep:"Çıkış raporu"};
+// Konaklama dizini (2026-11-03 hiz, Haktan: "biraz kasiyor"): kaynak raporlarin satirlari BIR KEZ (oda, isim anahtari,
+// tarih) dizine alinir; arama oda + isim parcasi (ilk 4 harf) ile aday satirlara iner. Sonuclar issue basina saklanir.
+// Herhangi bir rapor degisince (cikis / in-house / varis / VAC nesnesi yenilenince) dizin kendiliginden yeniden kurulur; ayrica 2 dk.
+var _bdiStayIx=null;
+function bdiStayIndex(){
+  var dep=bdiDepAll(),inh=bdiInhStore(),ah=bdiArrhStore(),g=bdiGih(),vs=bdiVacSt||{},vn=Object.keys(vs).length,now=Date.now(),t=getToday(),X=_bdiStayIx;
+  if(X&&X.dep===dep&&X.inh===inh&&X.ah===ah&&X.g===g&&X.vs===vs&&X.vn===vn&&X.vd===bdiVacDay&&X.vp===bdiVacPrintedAt&&X.t===t&&now-X.at<120000)return X;
+  X={dep:dep,inh:inh,ah:ah,g:g,vs:vs,vn:vn,vd:bdiVacDay,vp:bdiVacPrintedAt,t:t,at:now,rows:[],byRoom:{},byTok:{},memo:{},depMemo:{}};
+  var add=function(room,name,arr,dp,time,at,src,st,day){
+    dp=String(dp||"");if(!/^\d{4}-\d{2}-\d{2}$/.test(dp))return;var nm=bdiGihPerson(name),k=bdiGuestKey(nm);if(!k)return;
+    var rk=room?("000"+String(room).replace(/\D/g,"")).slice(-4):"",i=X.rows.length;
+    X.rows.push({rk:rk,k:k,arr:String(arr||""),dep:dp,time:time||"",at:at||0,src:src,st:st||"",day:day||""});
+    if(rk)(X.byRoom[rk]||(X.byRoom[rk]=[])).push(i);
+    k.split(" ").forEach(function(tk){var p=tk.slice(0,4),b=X.byTok[p]||(X.byTok[p]=[]);if(b[b.length-1]!==i)b.push(i)});
+  };
+  var ds=bdiDepStore().days;Object.keys(ds).forEach(function(d){var x=ds[d]||{};(x.rows||[]).forEach(function(r){if(r.st!=="CKOT")add(r.room,r.name,r.arr,r.dep,r.time,x.at||Date.parse(d+"T08:00:00"),"dep",r.st)})});
+  if(bdiVacDay&&bdiVacDay>=bdiAddDays(t,-1)){var vat=bdiVacPrintedAt||Date.parse(bdiVacDay+"T12:00:00");Object.keys(vs).forEach(function(r){var v=vs[r]||{};if(v.name&&v.dep)add(r,v.name,v.arr,v.dep,"",vat,"vac")})}
+  if(g&&Array.isArray(g.rows))g.rows.forEach(function(r){add(r.room,r.name,r.arr,r.dep,r.depTime||"",g.at||0,"gih")});
+  Object.keys(inh.days).forEach(function(d){var x=inh.days[d]||{};(x.rows||[]).forEach(function(r){add(r.room,r.name,r.arr,r.dep,"",x.at||Date.parse(d+"T23:00:00"),"inh")})});
+  Object.keys(ah.days).forEach(function(d){var x=ah.days[d]||{};(x.rows||[]).forEach(function(r){add(r.room,r.name,r.arr||d,r.dep,"",x.at||Date.parse(d+"T08:00:00"),"arr","",d)})});
+  return _bdiStayIx=X;
+}
+function bdiStayMemoKey(is){return (is.id||"")+"|"+(is.room||"")+"|"+(is.guest||"")+"|"+(is.createdAt||0)}
 function bdiIssueStay(is){
   if(!is||bdiGuestBad(is.guest))return null;
+  var X=bdiStayIndex(),mk=bdiStayMemoKey(is);
+  if(!Object.prototype.hasOwnProperty.call(X.memo,mk))X.memo[mk]=bdiIssueStayCalc(is,X);
+  var r=X.memo[mk];return r?Object.assign({},r):null;
+}
+function bdiIssueStayCalc(is,X){
   var d0=bdiIssueDep(is),o0=d0?bdiDepOut(d0):0;
   if(o0)return {dep:d0.dep,arr:d0.arr||"",room:d0.room||"",time:d0.time||"",at:o0,src:"dep",st:"CKOT",out:o0};
   var cd=bdiYmd(new Date(is.createdAt||Date.now())),cd1=bdiAddDays(cd,-1),best=null;
   var ik=bdiGuestKey(is.guest),ir=is.room&&/\d/.test(String(is.room))?("000"+String(is.room).replace(/\D/g,"")).slice(-4):"";
-  var consider=function(room,name,arr,dep,time,at,src,st){
-    dep=String(dep||"");if(!/^\d{4}-\d{2}-\d{2}$/.test(dep)||dep<cd1)return;arr=String(arr||"");if(arr&&arr>cd)return; // baska konaklama
-    if(best&&(best.at>(at||0)||(best.at===(at||0)&&(!ir||best.room===ir))))return; // daha yeni rapor zaten var (ayni raporda issue'nun odasi oncelikli)
-    var rk=room?("000"+String(room).replace(/\D/g,"")).slice(-4):"",nm=bdiGihPerson(name);
-    if(ir&&rk!==ir){if(bdiGuestKey(nm)!==ik)return}else if(!bdiNameNear(is.guest,nm))return;
-    best={dep:dep,arr:arr,room:rk,time:time||"",at:at||0,src:src,st:st||""};
-  };
-  var ds=bdiDepStore().days;Object.keys(ds).forEach(function(d){var x=ds[d]||{};(x.rows||[]).forEach(function(r){if(r.st!=="CKOT")consider(r.room,r.name,r.arr,r.dep,r.time,x.at||Date.parse(d+"T08:00:00"),"dep",r.st)})});
-  if(bdiVacDay&&bdiVacDay>=bdiAddDays(getToday(),-1)){var vat=bdiVacPrintedAt||Date.parse(bdiVacDay+"T12:00:00");Object.keys(bdiVacSt||{}).forEach(function(r){var v=bdiVacSt[r]||{};if(v.name&&v.dep)consider(r,v.name,v.arr,v.dep,"",vat,"vac")})}
-  var g=bdiGih();if(g&&Array.isArray(g.rows))g.rows.forEach(function(r){consider(r.room,r.name,r.arr,r.dep,r.depTime||"",g.at||0,"gih")});
-  var ih=bdiInhStore().days;Object.keys(ih).forEach(function(d){var x=ih[d]||{};(x.rows||[]).forEach(function(r){consider(r.room,r.name,r.arr,r.dep,"",x.at||Date.parse(d+"T23:00:00"),"inh")})});
-  var ah=bdiArrhStore().days;Object.keys(ah).forEach(function(d){if(d>cd)return;var x=ah[d]||{};(x.rows||[]).forEach(function(r){consider(r.room,r.name,r.arr||d,r.dep,"",x.at||Date.parse(d+"T08:00:00"),"arr")})});
+  var seen={},cand=[];var take=function(a){(a||[]).forEach(function(i){if(!seen[i]){seen[i]=1;cand.push(i)}})};
+  if(ir)take(X.byRoom[ir]);ik.split(" ").forEach(function(tk){take(X.byTok[tk.slice(0,4)])});
+  cand.sort(function(a,b){return a-b}); // eski tarama sirasi: cikis, VAC, in-house, in-house gecmisi, varis
+  cand.forEach(function(i){var r=X.rows[i];
+    if(r.dep<cd1||(r.arr&&r.arr>cd)||(r.src==="arr"&&r.day>cd))return; // baska konaklama
+    if(best&&(best.at>r.at||(best.at===r.at&&(!ir||best.room===ir))))return; // daha yeni rapor zaten var (ayni raporda issue'nun odasi oncelikli)
+    if(ir&&r.rk!==ir){if(r.k!==ik)return}else if(!bdiNameNearK(ik,r.k))return;
+    best={dep:r.dep,arr:r.arr,room:r.rk,time:r.time,at:r.at,src:r.src,st:r.st};
+  });
   return best;
 }
 // Cikisa kac gun: n=0 bugun, 1 yarin, <0 cikis gunu gecti (DEP gelmemis); gone: cikis raporu cikti diyor
@@ -6933,8 +6963,10 @@ function bdiIssueOutHint(is,list){
   if(rm){why.push("oda yerine \u201c"+rm+"\u201d yazıyor");strong++}
   var k=bdiGuestKey(is.guest);if((list||bdiGetIssues()).some(function(x){return x.out&&!x.del&&x.id!==is.id&&bdiGuestKey(x.guest)===k})){why.push("bu isim daha önce outside işaretlendi");strong++}
   var cd=bdiYmd(new Date(is.createdAt||Date.now())),have=false,seen=false;
-  [bdiAddDays(cd,-1),cd,bdiAddDays(cd,1)].forEach(function(d){var S=bdiDaySrc(d);if(!S.has)return;have=true;if(!seen&&S.names.some(function(n){return bdiNameNear(n,is.guest)}))seen=true});
-  var absent=have&&!seen&&!bdiIssueStay(is)&&!bdiIssueRoomFor(is.guest);
+  var gk=bdiGuestKey(is.guest);
+  [bdiAddDays(cd,-1),cd,bdiAddDays(cd,1)].forEach(function(d){var S=bdiDaySrc(d);if(!S.has)return;have=true;if(!seen&&(S.keys||[]).some(function(k){return bdiNameNearK(k,gk)}))seen=true});
+  var X=bdiStayIndex(),rk="rf|"+gk;if(!Object.prototype.hasOwnProperty.call(X.memo,rk))X.memo[rk]=have&&!seen?bdiIssueRoomFor(is.guest):"";
+  var absent=have&&!seen&&!bdiIssueStay(is)&&!X.memo[rk];
   if(absent)why.unshift("o günün in-house / varış / çıkış raporlarında bu isim yok");
   if(!why.length||(have&&seen))return null; // raporlarda var: otel misafiri
   return {why:why,auto:absent&&strong>0};
@@ -8123,8 +8155,11 @@ function bdiFuList(){var o=bdiFuAll();return Object.keys(o).map(function(k){retu
 // "follow-up is required" sayilmaz (ortusen eslesmede "no" kazanir); en son gecen ifade gecerli (guncelleme ekleri sonda).
 var BDI_FU_REQ=/(needs? (a |further )?follow[- ]?up|(needs?|need) to (be )?follow(ed)?[- ]?up|follow[- ]?up (is |was |will be )?(required|needed|necessary)|requires? (a |further )?follow[- ]?up|will (continue to )?follow[- ]?up|will continue following[- ]?up|to be followed[- ]?up)/i;
 var BDI_FU_NO=/(no (need|further)( need)?( for| to)?( any)?( a)?( further)? ?follow[- ]?up|follow[- ]?up (is |was )?not (required|needed|necessary)|does(n't| not) (need|require) (a |any )?follow[- ]?up|no follow[- ]?up (is )?(required|needed|necessary))/i;
+var _bdiFuTsC=new Map();
 function bdiFuTextState(t){
-  t=String(t||"");var no=[],last=null,m,reN=new RegExp(BDI_FU_NO.source,"ig"),reR=new RegExp(BDI_FU_REQ.source,"ig");
+  t=String(t||"");var c=_bdiFuTsC.get(t);if(c!==undefined)return c;c=bdiFuTextState0(t);if(_bdiFuTsC.size>3000)_bdiFuTsC.clear();_bdiFuTsC.set(t,c);return c;
+}
+function bdiFuTextState0(t){var no=[],last=null,m,reN=new RegExp(BDI_FU_NO.source,"ig"),reR=new RegExp(BDI_FU_REQ.source,"ig");
   while((m=reN.exec(t))){no.push([m.index,m.index+m[0].length]);if(!last||m.index>=last.i)last={i:m.index,s:"no"}}
   while((m=reR.exec(t))){var a=m.index,b=a+m[0].length;if(no.some(function(r){return a<r[1]&&b>r[0]}))continue;if(!last||a>last.i)last={i:a,s:"req"}}
   return last?last.s:"";
@@ -8418,7 +8453,7 @@ function bdiDaySrc(ymd){
   var dep=bdiDepAll().filter(function(r){return r.arr<=ymd&&ymd<=r.dep}),inh=((bdiInhStore().days[ymd]||{}).rows)||[];
   var ah=bdiArrhStore().days[ymd],arr=ah?ah.rows:(swArrFor(ymd)||[]).map(function(g){return {room:g.roomNo?("000"+String(g.roomNo).replace(/\D/g,"")).slice(-4):"",name:(g.lastName||"")+","+(g.firstName||"")}});
   var names=[];dep.forEach(function(r){names.push(bdiDepName(r))});inh.forEach(function(r){names.push(bdiGihPerson(r.name));(r.acc||[]).forEach(function(a){names.push(a)})});arr.forEach(function(r){names.push(bdiGihPerson(r.name))});
-  return _bdiDaySrcC[ymd]={dep:dep,inh:inh,arr:arr,names:names,has:!!(dep.length||inh.length||arr.length)};
+  return _bdiDaySrcC[ymd]={dep:dep,inh:inh,arr:arr,names:names,keys:names.map(function(n){return bdiGuestKey(n)}),has:!!(dep.length||inh.length||arr.length)};
 }
 // O gun, o saatte odada kim vardi - yalniz o gunun raporlarindan. sure: kesin mi (kayit degistirmek icin sart)
 function bdiGuestAtDay(room,ymd,ts){
@@ -11926,7 +11961,12 @@ var BDI_GM_DB="SmartWorkerGuests",BDI_GM_JSON="smartworker_guest_memory.json",BD
 var _bdiGM={loaded:false,events:{},aliases:{},notes:{},dismissed:{},insights:{},state:{}},_bdiGMDbP=null,_bdiGMTimer=null,_bdiGMProf=null,_bdiGMBusy=null;
 var _bdiGMDayRaw={}; // artimli ingest: degismeyen gun kaydi (ayni ham metin) tekrar islenmez (1 yillik veride 450ms -> ~40ms)
 var BDI_TITLE_RE=/^(mr|mrs|ms|miss|mstr|master|dr|prof|sir|lady|lord|sheikh|sheikha|shk|shka|hh|he|hrh|his|her|excellency|highness|royal|madam|mme|mlle|herr|frau|sr|sra|sig|baron|baroness|guest|our)$/;
+var _bdiGkC=new Map(); // 2026-11-03 hiz: bdiGuestKey saf fonksiyon; tek liste ciziminde ayni isimler 46 bin kez normalize ediliyordu
 function bdiGuestKey(name){
+  var raw=String(name||""),hit=_bdiGkC.get(raw);if(hit!==undefined)return hit;
+  var out=bdiGuestKey0(raw);if(_bdiGkC.size>20000)_bdiGkC.clear();_bdiGkC.set(raw,out);return out;
+}
+function bdiGuestKey0(name){
   var s=normTR(String(name||""));
   try{s=s.normalize("NFD").replace(/[̀-ͯ]/g,"")}catch(e){}
   var seen={},out=[];
