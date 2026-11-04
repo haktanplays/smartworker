@@ -75,6 +75,7 @@ body{font-family:var(--sw-font);background:var(--sw-canvas);color:var(--sw-ink);
 <span class="app-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
 </a>
 </main>
-<p class="foot">Raffles Istanbul · Butler Office · <a href="SmartWorker_Demo.html" style="color:var(--sw-brand)">Sunum için demo</a> <span style="opacity:.8">(örnek verilerle; gerçek kayıtlara dokunmaz)</span></p>
+<p class="foot">Raffles Istanbul · Butler Office · <a href="SmartWorker_Demo.html" style="color:var(--sw-brand)">Sunum için demo</a> <span style="opacity:.8">(Ctrl+K · örnek verilerle; gerçek kayıtlara dokunmaz)</span></p>
+<script>document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&!e.altKey&&!e.shiftKey&&(e.code==="KeyK"||String(e.key).toLowerCase()==="k")){e.preventDefault();location.href="SmartWorker3.html?demo"}},true)</script>
 </body>
 </html>
