@@ -2523,6 +2523,37 @@ label{color:var(--sw-ink-2)}
 <script>
 (function(){
 "use strict";
+// ===== DEMO MODU: yalitim (2026-11-04, Haktan: "showcase yapacagim, her alanda dolu dolu") =====
+// SmartWorker3.html?demo ile acilir (SmartWorker_Demo.html ayni yere gonderir). Tarayici bilgisayardaki tum yerel HTML'lere
+// ayni hafizayi verdigi icin demo GERCEK hafizaya hic dokunmaz:
+//  - localStorage -> bu sekmenin sessionStorage'i ("swdemo:" on eki); sekme kapaninca biter
+//  - IndexedDB -> "swdemo_<oturum>_" on ekli ayri veritabanlari (eski demo veritabanlari sonra silinir)
+//  - sekmeler arasi kanal ayri ad; ortak klasor / dosya secicileri kapali (demo verisi gercek klasore yazilamaz)
+var SW_DEMO=/(^|[?&#])demo\b/.test(String(location.search||"")+String(location.hash||"")),SW_DEMO_SID="";
+if(SW_DEMO)(function(){
+  var SS=window.sessionStorage,P="swdemo:";
+  SW_DEMO_SID=SS.getItem(P+"__sid")||"";if(!SW_DEMO_SID){SW_DEMO_SID=Date.now().toString(36);SS.setItem(P+"__sid",SW_DEMO_SID)}
+  var mem={},has=function(k){return Object.prototype.hasOwnProperty.call(mem,k)};
+  for(var i=0;i<SS.length;i++){var k=SS.key(i);if(k&&k.indexOf(P)===0&&k.indexOf(P+"__")!==0)mem[k.slice(P.length)]=SS.getItem(k)}
+  var api={getItem:function(k){k=String(k);return has(k)?mem[k]:null},
+    setItem:function(k,v){k=String(k);v=String(v);mem[k]=v;try{SS.setItem(P+k,v)}catch(e){console.warn("Demo hafizasi dolu:",e)}},
+    removeItem:function(k){k=String(k);delete mem[k];try{SS.removeItem(P+k)}catch(e){}},
+    clear:function(){Object.keys(mem).forEach(function(k){api.removeItem(k)})},
+    key:function(i){var ks=Object.keys(mem);return i>=0&&i<ks.length?ks[i]:null}};
+  var shim=new Proxy(api,{
+    get:function(t,p){if(p==="length")return Object.keys(mem).length;if(typeof p!=="string"||Object.prototype.hasOwnProperty.call(api,p))return t[p];return api.getItem(p)},
+    set:function(t,p,v){api.setItem(p,v);return true},deleteProperty:function(t,p){api.removeItem(p);return true},
+    has:function(t,p){return has(p)||Object.prototype.hasOwnProperty.call(api,p)},ownKeys:function(){return Object.keys(mem)},
+    getOwnPropertyDescriptor:function(t,p){return has(p)?{value:mem[p],writable:true,enumerable:true,configurable:true}:undefined}});
+  try{Object.defineProperty(window,"localStorage",{configurable:true,get:function(){return shim}})}catch(e){alert("Bu tarayıcı demo modunu desteklemiyor.");throw e}
+  var pre="swdemo_"+SW_DEMO_SID+"_",F=IDBFactory.prototype,o=F.open,dd=F.deleteDatabase;
+  F.open=function(n,v){return arguments.length>1?o.call(this,pre+n,v):o.call(this,pre+n)};
+  F.deleteDatabase=function(n){return dd.call(this,pre+n)};
+  setTimeout(function(){try{indexedDB.databases().then(function(l){(l||[]).forEach(function(x){if(x&&x.name&&x.name.indexOf("swdemo_")===0&&x.name.indexOf(pre)!==0)dd.call(indexedDB,x.name)})})}catch(e){}},8000);
+  if(window.BroadcastChannel){var BC=window.BroadcastChannel;window.BroadcastChannel=function(n){return new BC("swdemo-"+SW_DEMO_SID+"-"+n)}}
+  ["showDirectoryPicker","showOpenFilePicker","showSaveFilePicker"].forEach(function(f){if(window[f])window[f]=function(){alert("Demo modunda ortak klasör ve dosya bağlantısı kapalı: demo verisi gerçek klasörlere yazılmaz.");return Promise.reject(new DOMException("Demo","AbortError"))}});
+  document.title="DEMO · "+document.title;
+})();
 // Design System v1: ust bant ikonlari (cizgi ikon, renk yaziyla ayni)
 var SW_IC=(function(){var o='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
   return {warn:o+'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
@@ -19914,6 +19945,335 @@ window.bdiLogs = bdiLogs;
 ].forEach(function(fn){ if(fn && fn.name) window[fn.name] = fn });
 window.__bdiExtSyncFile = _bdiExtSyncFile; // test kancasi
 window.__bdiGuestMemSyncFile = _bdiGuestMemSyncFile; // test kancasi
+
+// ===== DEMO MODU: kurgusal otel verisi (2026-11-04) =====
+// Butun misafirler, butlerlar, sirketler ve olaylar UYDURMADIR (KVKK: gercek kisi yok; saglik / inanc bilgisi yok).
+// Veri uygulamanin KENDI giris yollarindan gecer (rapor depolari, Excel ice alma, iPad donusu, alert, takip...),
+// boylece demo gercek kullanimla ayni davranir. Tarihler hep "bugun"e gore kurulur; ayni tohum = her seferinde ayni otel.
+var SWD_BUTLERS=["Elif Aydın","Kerem Şahin","Selin Kaya","Can Demir","Nazlı Erten","Burak Tan"];
+function swdRng(s){return function(){s=s+0x6D2B79F5|0;var t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+async function swDemoSeed(){
+  var R=swdRng(20261104),T=getToday(),NOW=Date.now(),out=[];
+  var pick=function(a){return a[Math.floor(R()*a.length)]},ch=function(p){return R()<p},int=function(a,b){return a+Math.floor(R()*(b-a+1))};
+  var p2=function(n){return ("0"+n).slice(-2)},D=function(n){return bdiAddDays(T,n)},TS=function(d,t){return Date.parse(d+"T"+t+":00")};
+  var HM=function(h,m){return p2(h)+":"+p2(m)},dmy=function(d){return d.slice(8,10)+"-"+d.slice(5,7)+"-"+d.slice(2,4)};
+  var dot=function(d,t){return d.slice(8,10)+"."+d.slice(5,7)+"."+d.slice(0,4)+" "+(t||"00:00")};
+  var nowHM=(function(){var x=new Date(NOW);return HM(x.getHours(),x.getMinutes())})();
+  var step=async function(n,fn){try{var r=await fn();out.push(n+": "+(r==null?"ok":r))}catch(e){console.warn("Demo adimi atlandi:",n,e);out.push(n+": HATA "+(e&&e.message))}};
+  var _al=window.alert,_cf=window.confirm,_pr=window.prompt;window.alert=function(){};window.confirm=function(){return true};window.prompt=function(){return null};
+
+  // ---------- 1) ayarlar ----------
+  await step("ayarlar",function(){localStorage.setItem("kw_butler",JSON.stringify(SWD_BUTLERS));localStorage.setItem("bdi_me","Elif Aydın");localStorage.setItem("sw_setup_snooze",T);localStorage.setItem("sw_dayfix",T)});
+
+  // ---------- 2) kurgusal misafirler ve konaklamalar ----------
+  var POOL={EN:{m:["James","William","Henry","George","Thomas","Oliver","Edward","Charles","Arthur","Frederick","Hugo","Rupert","Alistair","Benedict","Julian","Miles"],f:["Olivia","Charlotte","Amelia","Emily","Sophie","Grace","Eleanor","Harriet","Isabel","Florence","Beatrix","Imogen","Rosalind","Clementine","Philippa","Matilda"],l:["Ashby","Bennett","Harrington","Caldwell","Prescott","Langley","Montague","Pembroke","Hale","Thornton","Whitlock","Radcliffe","Kingsley","Ellsworth","Carrington","Hollinsby","Blackwood","Fenwick","Garrick","Lockhart"]},
+    TR:{m:["Ahmet","Murat","Emre","Tolga","Cem","Onur","Kaan","Barış","Arda","Berk","Selim","Umut"],f:["Ayşe","Zeynep","Ece","İpek","Melis","Ela","Nehir","Duru","Ceren","Aslı","Derin","Lara"],l:["Yıldırım","Aksoy","Erdem","Kaplan","Özdemir","Uysal","Karaca","Bozkurt","Güneş","Tunalı","Sezer","Ilgaz","Akın","Durmaz","Erkan","Sönmez","Taşkın","Ünal"]},
+    AR:{m:["Khalid","Faisal","Omar","Saud","Rashid","Hamad","Sultan","Majid","Nasser","Tariq"],f:["Noura","Mariam","Hessa","Reem","Shamma","Alya","Dana","Lulwa","Maha"],l:["Al Mazrouei","Al Hashimi","Al Nuaimi","Al Suwaidi","Al Mehairbi","Al Kaabi","Al Dhaheri","Al Falasi","Al Shehhi","Al Muhairi","Al Ketbi"]},
+    RU:{m:["Sergei","Alexei","Mikhail","Andrei","Pavel"],f:["Anastasia","Ekaterina","Irina","Natalia","Olga"],l:["Sokolov","Orlov","Lebedev","Kuznetsov","Morozov"],lf:["Sokolova","Orlova","Lebedeva","Kuznetsova","Morozova"]},
+    DE:{m:["Lukas","Felix","Maximilian","Jonas","Tobias"],f:["Clara","Lena","Johanna","Marie","Greta"],l:["Weber","Brandt","Fischer","Becker","Krüger","Vogel","Hoffmann"]},
+    FR:{m:["Antoine","Louis","Julien","Hugo","Bastien"],f:["Camille","Chloé","Inès","Manon","Léa"],l:["Lefèvre","Dubois","Laurent","Girard","Fontaine"]},
+    IT:{m:["Matteo","Marco","Davide","Alessandro"],f:["Chiara","Francesca","Sofia","Beatrice"],l:["Romano","Conti","Ricci","Greco","Ferraro"]},
+    ZH:{m:["Wei","Hao","Jun"],f:["Lan","Xin","Yue"],l:["Lin","Zhou","Wang","Huang"]}};
+  var LANGS=["EN","EN","EN","TR","TR","AR","AR","RU","DE","FR","IT","ZH"],used={},G=[];
+  var shortT=function(t){return String(t||"").replace(/\.$/,"")};
+  var newGuest=function(o){o=o||{};var L=o.lang,first=o.first,last=o.last,fem=o.fem;
+    if(!first){for(var i=0;i<80;i++){L=pick(LANGS);var P=POOL[L];fem=ch(.45);first=pick(fem?P.f:P.m);last=fem&&P.lf?pick(P.lf):pick(P.l);if(!used[first+"|"+last])break;if(i===79)first=first+" "+pick(fem?P.f:P.m)}}
+    used[first+"|"+last]=1;var title=o.title||(L==="TR"?(fem?"Bayan":"Bay"):(ch(.07)?"Dr.":fem?(ch(.6)?"Mrs.":"Ms."):"Mr."));
+    var g={first:first,last:last,title:title,lang:L||"EN",fem:!!fem,job:o.job||"",company:o.company||"",vip:o.vip||"",pref:o.pref||null,stays:[]};G.push(g);return g};
+  var SH={}; // vitrin misafirleri (hikayeli)
+  SH.whit=newGuest({first:"James",last:"Whitmore",title:"Dr.",lang:"EN",vip:"V1",job:"Chairman",company:"Ashcombe Maritime"});
+  SH.qas=newGuest({first:"Latifa",last:"Al Qasimi",title:"Mrs.",lang:"AR",fem:1,vip:"V2"});
+  SH.mor=newGuest({first:"Giulia",last:"Moretti",title:"Mrs.",lang:"IT",fem:1});
+  SH.koc=newGuest({first:"Defne",last:"Koç",title:"Bayan",lang:"TR",fem:1});
+  SH.ster=newGuest({first:"William",last:"Sterling",title:"Mr.",lang:"EN",vip:"V1",job:"Chief Executive Officer",company:"Northwind Holdings"});
+  SH.lind=newGuest({first:"Henrik",last:"Lindqvist",title:"Mr.",lang:"EN",company:"Nordic Quality Partners"});
+  SH.volk=newGuest({first:"Dmitri",last:"Volkov",title:"Mr.",lang:"RU"});
+  SH.chen=newGuest({first:"Mei",last:"Chen",title:"Ms.",lang:"ZH",fem:1});
+  SH.ash=newGuest({first:"Charlotte",last:"Ashford",title:"Mrs.",lang:"EN",fem:1,vip:"V2",job:"Founder",company:"Ashford & Vale Studio"});
+  SH.ars=newGuest({first:"Mehmet",last:"Arslan",title:"Bay",lang:"TR"});
+  SH.ben=newGuest({first:"Eleanor",last:"Bennett",title:"Ms.",lang:"EN",fem:1});
+  SH.fair=newGuest({first:"Henry",last:"Fairbanks",title:"Mr.",lang:"EN"});
+  var stays=[],RT=["KGA","KGB","SKA","SKB","SKD","KGC"];
+  var mk=function(room,g,a,b,x){var s=Object.assign({room:room,g:g,arr:a,dep:b,adl:g.fem&&ch(.5)?2:int(1,2),chl:0,arrTime:HM(int(12,21),pick([0,15,30,45])),type:/0[1]$|12$/.test(room)?"SUI":pick(RT)},x||{});g.stays.push(s);stays.push(s);return s};
+  // vitrin konaklamalari (sabit oda / tarih)
+  var fixed=[
+    mk("1802",SH.whit,D(-2),D(3),{adl:1,type:"SUI",occ:null}),
+    mk("1504",SH.qas,D(-1),D(5),{adl:2,chl:2,acc:["Saud Al Qasimi"]}),mk("1505",SH.qas,D(-1),D(5),{adl:1,chl:1,family:1}),
+    mk("2003",SH.mor,D(0),D(5),{adl:2,arrTime:"14:30",occ:{type:"Honeymoon",day:D(0),arr:"rose petals, a bottle of chilled champagne and a handwritten card"},acc:["Lorenzo Moretti"]}),
+    mk("1210",SH.koc,D(-1),D(2),{adl:2,occ:{type:"Birthday",day:D(0),arr:"a small chocolate cake with candles and a handwritten card"}}),
+    mk("2001",SH.ster,D(0),D(3),{adl:1,arrTime:"18:30",type:"SUI"}),
+    mk("0905",SH.lind,D(0),D(1),{adl:1,arrTime:"20:15"}),
+    mk("1609",SH.volk,D(-3),D(2),{adl:2}),
+    mk("1107",SH.chen,D(-4),D(1),{adl:1}),
+    mk("1901",SH.ash,D(-7),D(0),{adl:2,type:"SUI",depTime:"11:20"}),
+    mk("1406",SH.ars,D(-2),D(4),{adl:1}),mk("1406",SH.ars,D(-24),D(-21),{adl:1}),
+    mk("0811",SH.ben,D(-9),D(3),{adl:1}),
+    mk("1802",SH.whit,D(-29),D(-26),{adl:1,type:"SUI"})];
+  var rooms=[];for(var fl=7;fl<=21;fl++)for(var rn=1;rn<=12;rn++)rooms.push(p2(fl)+p2(rn));
+  var NIGHTS=[1,2,2,3,3,3,4,4,5,5,6,7,9];
+  rooms.forEach(function(room){
+    var fx=fixed.filter(function(s){return s.room===room}),d=D(-34-int(0,5));
+    while(d<=D(2)){
+      var n=pick(NIGHTS),a=d,b=bdiAddDays(a,n);
+      var hit=fx.filter(function(s){return !(b<=s.arr||a>=s.dep)})[0];
+      if(hit){d=bdiAddDays(hit.dep,ch(.5)?0:int(1,2));continue}
+      var rep=G.filter(function(g){return g.stays.length&&g.stays[g.stays.length-1].dep<bdiAddDays(a,-6)&&!g.vip&&g!==SH.lind});
+      var g=(ch(.14)&&rep.length)?pick(rep):newGuest();
+      var fam=ch(.07);mk(room,g,a,b,{chl:fam?int(1,2):0,adl:fam?2:undefined});
+      d=bdiAddDays(b,ch(.35)?0:int(1,4));
+    }
+  });
+  stays.forEach(function(s){if(s.adl==null)s.adl=1;
+    if(!s.occ&&!Object.keys(SH).some(function(k){return SH[k]===s.g})&&ch(.03)){var days=[];for(var x=s.arr;x<s.dep;x=bdiAddDays(x,1))days.push(x);s.occ={type:pick(["Birthday","Anniversary","Birthday","Anniversary","Honeymoon"]),day:pick(days),arr:pick(["a chocolate cake and a handwritten card","rose petals and a framed photo of the Bosphorus","a fruit platter with a personal note","macarons and a celebration card"])}}
+    if(!s.depTime)s.depTime=HM(int(6,12),pick([5,20,35,50]));
+    s.gName=s.g.first+" "+s.g.last;s.vac=s.g.last+", "+s.g.first;s.gih=s.g.last+","+s.g.first+","+shortT(s.g.title);s.dep1=s.g.last+","+s.g.first+","+s.g.title});
+  var inhouse=function(d){return stays.filter(function(s){return s.arr<=d&&s.dep>d})},arrOn=function(d){return stays.filter(function(s){return s.arr===d})},depOn=function(d){return stays.filter(function(s){return s.dep===d})};
+  // bugun: varis saati gecenler odada; cikislarin cogu cikmis, birkac gec cikis bekliyor
+  arrOn(T).forEach(function(s){s.inNow=s.arrTime<=nowHM});
+  depOn(T).forEach(function(s,i){if(s.g!==SH.ash&&i%5===0)s.depTime=pick(["14:00","16:00","18:00"]);s.outNow=s.depTime<=nowHM});
+  out.push("misafir "+G.length+", konaklama "+stays.length+", bu gece otelde "+inhouse(T).length+", bugün gelen "+arrOn(T).length+", bugün çıkan "+depOn(T).length);
+
+  // GIH profil notlari (gercekci Protel bicimi; KVKK: saglik / inanc yok)
+  var PREF=["* Guest prefers a semi-hard pillow.","* Extra still water in the room.","* Turkish coffee without sugar in the morning.","* Room temperature at 21°C, please.","* No turndown chocolate; fresh fruit instead.","* Financial Times delivered at 07:00.","* Guest prefers sparkling water.","* Bathrobe size XL.","* Quiet room away from the elevator.","* Extra blanket in the wardrobe.","* Prefers green tea in the afternoon.","* Fresh flowers on the desk, no lilies."];
+  var notesOf=function(s){var g=s.g,n=[];if(g.job)n.push([g.job+" of "+g.company]);
+    var pr=[];var k=(g.first.length+g.last.length)%PREF.length;pr.push(PREF[k]);if(ch(.6))pr.push(PREF[(k+3)%PREF.length]);if(g===SH.whit)pr=["* Earl Grey with lemon at 16:00.","* Financial Times delivered at 07:00.","* No turndown chocolate; fresh fruit instead."];
+    if(g===SH.ars)pr=["* Turkish coffee without sugar in the morning.","* Quiet room away from the elevator."];n.push(pr);
+    if(g.stays.length>1){var pv=g.stays.filter(function(x){return x.dep<s.arr})[0];if(pv)n.push(["1- Butler did sleep ritual for guest. **"+dot(pv.arr).slice(0,10),"2- Guest enjoyed the lavender bath ritual. **"+dot(bdiAddDays(pv.arr,1)).slice(0,10)])}
+    if(g===SH.whit)n.push(["Post departure mail has been sent on "+dot(D(-25)).slice(0,10)+" **EA"]);return n};
+
+  // ---------- 3) touch, Didn't Do It, kat dagilimi: son 30 gun + bugun ----------
+  var ACT={};getBdiActions().forEach(function(a){ACT[a.label]=a});var A=function(l){return ACT[l]||{label:l,verb:"performed",template:""}};
+  var GOOD=["Guest was delighted with the handwritten card.","Guest thanked the team for remembering the pillow preference.","Guest asked to repeat the lavender ritual tomorrow.","Guest said it felt like coming home.","Guest loved the Bosphorus view card.","Guest shared a photo of the setup with family.","Guest complimented the butler by name."];
+  var NEU=["Guest was in a hurry; brief exchange.","Guest accepted politely."],COLD=["Guest was tired after a long flight; keep it short.","Guest still unhappy about the room temperature."];
+  var NTR=[];try{NTR=(bdiCfg("bdi_nt_reasons")||[]).map(function(x){return x.l}).filter(Boolean)}catch(e){}if(!NTR.length)NTR=["DND","Misafir dışarıdaydı","Misafir uyuyordu"];
+  var PLANS=["Courtesy call","Turndown note","Welcome amenity","Visit during turndown","Note left in room"];
+  var teamOf=function(d){var k=(Math.round((Date.parse(d)-Date.parse(D(-60)))/864e5))%3;return [[0,1,2,3],[2,3,4,5],[4,5,0,1]][k].map(function(i){return SWD_BUTLERS[i]})}; // sabah 2 + aksam 2
+  var butlerFor=function(d,room,t){var tm=teamOf(d),hi=parseInt(room.slice(0,2),10)>=15?1:0;return t<"15:00"?tm[hi]:tm[2+hi]};
+  var react=function(s,label,present){if(!ch(present?.62:.14))return null;var cold=s.g===SH.volk&&s.arr<=D(-1)?.6:.05,r=R();var f=r<cold?"cold":r<cold+.2?"neutral":"good";
+    var t=f==="good"?(ch(.45)?pick(GOOD):""):f==="neutral"?(ch(.3)?pick(NEU):""):pick(COLD);return {f:f,t:t}};
+  var mkEntry=function(d,s,label,t,note,x){var a=A(label),b=(x&&x.butler)||butlerFor(d,s.room,t);
+    var e={butler:b,room:s.room,action:a.label,verb:a.verb||"performed",template:a.template||"",note:note||"",time:t,sentence:buildBdiSentence(b,a.label,a.verb||"performed",s.room,note||"",s.gName,a.template||""),guest:s.gName,ts:TS(d,t),manual:false,patternType:"service",touchCategory:"Service",countsAsTouch:true,source:"Kayıt",meta:{}};
+    if(x)for(var k in x)if(k!=="butler")e[k]=x[k];return e};
+  var addMin=function(t,m){var p=t.split(":"),v=Math.min(23*60+50,+p[0]*60+(+p[1])+m);return HM(Math.floor(v/60),v%60)};
+  var nTouch=0,nNt=0;
+  for(var di=-30;di<=0;di++){
+    var d=D(di),list=[],touched={},cutoff=di===0?nowHM:"23:59";
+    var push=function(e,s,present){if(!e||e.time>cutoff)return;var r=e.reaction===undefined?react(s,e.action,present):e.reaction;if(r)e.reaction={f:r.f,t:r.t||"",at:e.ts+int(5,90)*60000};else delete e.reaction;list.push(e);touched[s.g.first+"|"+s.g.last]=1};
+    stays.filter(function(s){return s.arr<=d&&s.dep>=d}).forEach(function(s){
+      var first=s.arr===d,last=s.dep===d,mid=!first&&!last;
+      if(first&&ch(s.g.vip?1:.72))push(mkEntry(d,s,"Welcome / In-room Check-in",addMin(s.arrTime,int(10,35)),s.g.vip?"Welcome amenity with a handwritten card":""),s,true);
+      if(first&&ch(.12))push(mkEntry(d,s,"Unpack",addMin(s.arrTime,int(40,70))),s,true);
+      if(first&&s.g.vip)push(mkEntry(d,s,"Room Inspection",addMin(s.arrTime,-int(60,120)),"VIP set-up checked before arrival",{reaction:null}),s,false);
+      if(!last&&ch(.11))push(mkEntry(d,s,"Turndown",HM(int(19,21),pick([0,15,30,45])),ch(.3)?"Lavender pillow spray and a weather card for tomorrow":""),s,false);
+      if(!last&&ch(.045))push(mkEntry(d,s,"Sleep Ritual",HM(int(20,22),pick([0,20,40])),"Lavender ritual and herbal tea"),s,false);
+      if(mid&&ch(.15))push(mkEntry(d,s,"Touch Call",HM(int(10,12),pick([0,10,25,40]))),s,true);
+      if(mid&&ch(.1))push(mkEntry(d,s,"Amenity Delivery",HM(int(14,17),pick([0,15,30,45])),pick(["Turkish delight and a handwritten card","Seasonal fruit platter","Pistachio baklava with a note","Fresh flowers for the desk"])),s,ch(.4));
+      if(mid&&ch(.045)){var lt=HM(int(9,10),pick([0,20,40]));push(mkEntry(d,s,"Laundry Pickup",lt),s,false)}
+      if(mid&&ch(.03))push(mkEntry(d,s,"Special Request",HM(int(11,18),pick([0,30])),pick(["Arranged a Bosphorus dinner cruise","Booked a table at the rooftop for sunset","Organised a private guide for the Old City","Found a vegan Turkish breakfast option"])),s,true);
+      if(last&&ch(.22)&&s.depTime>"08:00")push(mkEntry(d,s,"Pack",addMin(s.depTime,-int(45,90))),s,true);
+      if(s.occ&&s.occ.day===d){var oe=mkEntry(d,s,"Special Occasion",first?addMin(s.arrTime,-30):HM(13,pick([0,30])),s.occ.type+": "+s.occ.arr,{patternType:"occasion",touchCategory:"Special Occasion",meta:{occasionType:s.occ.type,arrangement:s.occ.arr,timing:"before the guest returns"}});
+        oe.sentence="Butler "+oe.butler+" prepared "+(/^[AEIOU]/i.test(s.occ.type)?"an ":"a ")+s.occ.type.toLowerCase()+" arrangement for "+s.gName+" staying at Room "+s.room+". The setup included "+s.occ.arr+", placed before the guest returns.";push(oe,s,false);if(oe.time<=cutoff)s.occDone=d}
+      if(d===bdiAddDays(s.arr,1)&&ch(.12)){var pc=pick([["Pillow","semi-hard pillow"],["Beverage","sparkling water with lemon"],["Newspaper","Financial Times daily"],["Room temperature","21°C at night"]]);
+        var pe=mkEntry(d,s,"Guest Preference",HM(int(10,18),pick([5,25,45])),pc[0]+": "+pc[1],{patternType:"preference",touchCategory:"Preference",meta:{preferenceCategory:pc[0],preferenceDetail:pc[1],guestProfileSignal:true}});
+        pe.action="Guest Preference";pe.sentence="Butler "+pe.butler+" collected guest preference from "+s.gName+" staying at Room "+s.room+". Guest prefers "+pc[1]+".";push(pe,s,true)}
+    });
+    // vitrin anlari (bugun ve dun)
+    if(di===-1){var sv=SH.volk.stays[0];push(mkEntry(d,sv,"Touch Call","23:40","Called back after the late-night temperature complaint",{reaction:{f:"cold",t:"Guest still unhappy about the room temperature."}}),sv,true)}
+    if(di===0){var sw=SH.whit.stays[0],sa=SH.ash.stays[0],sc=SH.chen.stays[0];
+      push(mkEntry(d,sw,"Amenity Delivery","09:10","Financial Times and Earl Grey set",{reaction:{f:"good",t:"Dr. Whitmore said it felt like coming home."}}),sw,true);
+      push(mkEntry(d,sa,"Pack","10:15","Packing assistance and a farewell card with the Bosphorus sketch",{reaction:{f:"good",t:"Guest was moved by the farewell card and promised to return in spring."}}),sa,true);
+      push(mkEntry(d,sc,"Touch Call","11:05","Followed up after the room change",{reaction:{f:"good",t:"Guest thanked the team; the new room is perfect."}}),sc,true);
+      inhouse(d).filter(function(s){return s.arr<d}).slice(30,33).forEach(function(s,i){var pc=[["Pillow","semi-hard pillow"],["Beverage","sparkling water with lemon"],["Newspaper","Financial Times daily"]][i];
+        var pe=mkEntry(d,s,"Guest Preference",["10:40","12:15","14:05"][i],pc[0]+": "+pc[1],{patternType:"preference",touchCategory:"Preference",meta:{preferenceCategory:pc[0],preferenceDetail:pc[1],guestProfileSignal:true}});
+        pe.action="Guest Preference";pe.sentence="Butler "+pe.butler+" collected guest preference from "+s.gName+" staying at Room "+s.room+". Guest prefers "+pc[1]+".";push(pe,s,true)})}
+    list.sort(function(a,b){return a.ts-b.ts});list.forEach(function(e,i){bdiNormalizeLogEntry(e,d,i)});saveBdiArrayForDate(d,list);nTouch+=list.length;
+    // Didn't Do It: dokunulamayan otel misafirleri
+    if(di>=-10){inhouse(d).forEach(function(s){if(touched[s.g.first+"|"+s.g.last]||!ch(.3))return;var gk=bdiGuestKey(bdiGihPerson(s.gih))||("room:"+s.room);bdiNtSet(d,gk,"r",pick(NTR));if(ch(.6))bdiNtSet(d,gk,"f:plan",pick(PLANS));nNt++})}
+    BdiKV.set("bdi_occ_"+d,String(inhouse(d).length));
+    // kat dagilimi
+    try{var tm=teamOf(d);bdiSetFloorPlan(d,{n:2,blocks:[{from:7,to:14,butler:tm[2]},{from:15,to:99,butler:tm[3]}],start:BDI_FLOOR_WIN.start,end:BDI_FLOOR_WIN.end,u:NOW})}catch(e){}
+  }
+  out.push("touch "+nTouch+", Didn't Do It sebebi "+nNt);
+
+  // ---------- 4) raporlar: gecmis gunler (oteldekiler, cikislar, varislar) ----------
+  await step("geçmiş raporlar",function(){
+    var st=bdiDepStore();
+    for(var i=-30;i<0;i++){var d=D(i);
+      var ih=inhouse(d).map(function(s){return {room:s.room,name:s.gih,arr:s.arr,dep:s.dep,acc:s.acc||[]}});if(ih.length)bdiInhSave(d,ih,TS(d,"23:10"));
+      var dr=depOn(d).map(function(s){return {room:s.room,name:s.dep1,arr:s.arr,dep:s.dep,st:"CKOT",time:s.depTime}});
+      if(dr.length)st.days[d]={at:TS(d,"13:05"),file:"DEP01100.pdf",printed:d,rows:dr,total:{adl:dr.length*2,chl:0,rooms:dr.length}};
+      var ag=arrOn(d).map(function(s){return {roomNo:+s.room,lastName:s.g.last,firstName:s.g.first,arrDate:dmy(s.arr),depDate:dmy(s.dep)}});if(ag.length)bdiArrhSave(d,ag,"ARR01102.pdf");
+    }
+    BdiKV.set(BDI_DEP_KEY,JSON.stringify(st));_bdiDepAll=null;return "30 gün"});
+
+  // ---------- 5) bugunun raporlari: oda durumu (VAC), in-house (GIH), cikis (DEP) ----------
+  var vacAt=NOW-35*60000;
+  await step("VAC",function(){
+    bdiPdfRooms={};bdiPdfDep={};bdiVacSt={};var occ=0,due=0,vac=0;
+    rooms.forEach(function(room){
+      var ih=stays.filter(function(s){return s.room===room&&s.arr<T&&s.dep>T})[0]||stays.filter(function(s){return s.room===room&&s.arr<T&&s.dep===T&&!s.outNow})[0];
+      var ar=stays.filter(function(s){return s.room===room&&s.arr===T})[0];
+      var o={type:(ih||ar||{}).type||pick(RT),fo:"VAC",hk:pick(["CL","IP","DI"]),nv:"",name:"",arr:"",dep:"",res:"",adl:0,chl:0,next:""};
+      if(ar&&ar.inNow){o.fo="OCC";o.hk="IP";o.name=ar.vac;o.arr=ar.arr;o.dep=ar.dep;o.res="Checked In";o.adl=ar.adl;o.chl=ar.chl;occ++}
+      else if(ih){o.fo="OCC";o.hk=pick(["IP","IP","DI"]);o.name=ih.vac;o.arr=ih.arr;o.dep=ih.dep;o.res=ih.dep===T?"Due Out":"Checked In";o.adl=ih.adl;o.chl=ih.chl;occ++;if(ar)o.next=dmy(T)}
+      else if(ar){o.hk=pick(["IP","CL"]);o.name=ar.vac;o.arr=ar.arr;o.dep=ar.dep;o.res="Due In";o.adl=ar.adl;o.chl=ar.chl;due++}
+      else vac++;
+      if(o.name){bdiPdfRooms[room]=o.name;bdiPdfDep[room]=o.dep}bdiVacSt[room]=o;
+    });
+    var n=Object.keys(bdiPdfRooms).length;
+    bdiVacParserReport={source:"HSK",pages:6,rows:rooms.length,matched:rooms.length,unmatched:0,duplicates:0,duplicateRooms:[],unmatchedRows:[],sampleRows:[],occ:occ,dueIn:due,vacant:vac,pm:0,totalKnown:n,confidence:100};
+    bdiVacPrinted=T;bdiVacPrintedAt=vacAt;bdiVacDay=T;_bdiVacAt=vacAt;bdiVacSave("HSK01124.pdf");try{bdiVacSnap(vacAt)}catch(e){}
+    swRepLog("vac","HSK01124.pdf",n,occ+" dolu · "+due+" gelecek · "+vac+" boş");return occ+" dolu, "+due+" gelecek"});
+  await step("GIH",function(){
+    var rows=stays.filter(function(s){return (s.arr<T&&s.dep>=T&&!(s.dep===T&&s.outNow))||(s.arr===T&&s.inNow)}).map(function(s){
+      return {room:s.room,name:s.gih,arr:s.arr,dep:s.dep,depTime:s.dep===T?s.depTime:"",type:s.type,adl:s.adl,chl:s.chl,acc:s.acc||[],spec:s.occ&&s.occ.day>=T&&s.occDone!==T?[s.occ.type]:[],notes:notesOf(s)}});
+    var at=NOW-50*60000;BdiKV.set(BDI_GIH_KEY,JSON.stringify({day:T,at:at,file:"GIH01102.pdf",rows:rows}));bdiInhSave(T,rows,at);
+    try{bdiAtSrcSave("gih",T,rows,"GIH01102.pdf")}catch(e){}_bdiGih=null;
+    swRepLog("gih","GIH01102.pdf",rows.length,rows.length+" oda · "+arrOn(T).filter(function(s){return s.inNow}).length+" gelen",{repDay:T});return rows.length+" oda"});
+  await step("DEP",function(){
+    var st=bdiDepStore(),dr=depOn(T).map(function(s){return {room:s.room,name:s.dep1,arr:s.arr,dep:s.dep,st:s.outNow?"CKOT":"DUOT",time:s.depTime}});
+    st.days[T]={at:NOW-20*60000,file:"DEP01100.pdf",printed:T,rows:dr,total:{adl:dr.length*2,chl:0,rooms:dr.length}};BdiKV.set(BDI_DEP_KEY,JSON.stringify(st));_bdiDepAll=null;
+    var ck=dr.filter(function(r){return r.st==="CKOT"}).length;swRepLog("dep","DEP01100.pdf",dr.length,dr.length+" oda · "+ck+" çıktı · "+(dr.length-ck)+" çıkacak");
+    try{bdiDayHistReset()}catch(e){}try{rebuildVacRooms()}catch(e){}return dr.length+" çıkış"});
+
+  // ---------- 6) bugunun varis raporu (ARR): Butler Alert, PY, Inspector Radar, trace'ler ----------
+  await step("ARR",async function(){
+    var WN={};WN[SH.ster.last]="Guest is the Chief Executive Officer of Northwind Holdings. PY to be presented. Please call butler upon arrival.";
+    WN[SH.mor.last]="Honeymoon couple. Please arrange rose petals turndown on the first night.";WN[SH.lind.last]="Corporate booking. Quiet room requested.";
+    var JOBS=[["Managing Director","Bluewater Capital"],["Founder","Meridian Atelier"],["Chairman","Atlas Maritime"],["General Manager","Orion Hospitality Group"]],pyN=0;
+    var ag=arrOn(T).map(function(s,i){var g=s.g,n=Math.round((Date.parse(s.dep)-Date.parse(s.arr))/864e5);
+      if(!g.job&&g!==SH.lind&&g!==SH.mor&&pyN<JOBS.length&&i%6===2){g.job=JOBS[pyN][0];g.company=JOBS[pyN][1];g.py=1;pyN++}
+      if(g===SH.ster)g.py=1;
+      var wn=(g.py?"Guest has PY ** "+bdiFmtD(D(-int(40,300)))+" EA. ":"")+(WN[g.last]||(g.job?"Guest is the "+g.job+" of "+g.company+".":(ch(.25)?pick(["Repeat guest, please welcome back.","Celebrating a family trip to Istanbul.","Early arrival requested if possible."]):"")));
+      return {roomNo:+s.room,name:g.last+", "+g.first,lastName:g.last,firstName:g.first,title:g.title,company:g.company||"",travelAgent:"",source:"",arrDate:dmy(s.arr),depDate:dmy(s.dep),roomType:s.type,adl:s.adl,chl:s.chl,rms:1,
+        mktCode:g===SH.lind?"COR":pick(["LEI","TA","COR","PKG"]),srcCode:g===SH.lind?"WEB":pick(["DRI","GDS","WEB","TEL"]),resStatus:"",rateCode:g===SH.lind?"CORP1":pick(["RA1","BAR","PKG2"]),currency:"EUR",rateAmount:0,payMethod:"",deposit:0,confNo:String(180400+i),lastRoom:"",
+        arrTime:s.arrTime,etd:pick(["11:00","12:00","12:00","14:00"]),prevStays:g.stays.length-1,prevNights:0,creditCard:"",resComments:"",webNotes:wn,specials:s.occ?s.occ.type:"",preferences:"",membershipType:"",membershipLevel:"",traces:[],accompany:(s.acc||[]).join(", "),
+        routingInstr:"",blockCode:"",packages:"",vipCode:g.vip||"",companyRaw:g.company||"",tLine:"",sLine:"",nights:n,_rawLines:[],_rawLineMeta:[],_sec:{},_wl:[],wnGroups:wn?[[wn]]:[]}});
+    feedAllModules(ag,"rapor");await swArrSave(ag,"ARR01102.pdf");swRepLog("arr","ARR01102.pdf",ag.length,ag.length+" misafir · varış "+bdiFmtD(T).slice(0,5),{arrDay:T});return ag.length+" varış"});
+
+  // ---------- 7) issue Excel'i (ServiceRequests bicimi) + butler hareketleri ----------
+  var ISS=[[SH.volk,-1,"23:10","Engineering","Maintenance","New","Guest called the Butler Office at 23:10 to report that the room was too warm and the thermostat did not respond. Engineering was informed and a portable fan was placed temporarily."],
+    [SH.chen,-3,"08:40","Housekeeping","Noise","Completed","Guest reported construction noise from the neighbouring building in the early morning. A room change to a quieter side was offered and accepted.","Satisfied"],
+    [null,-2,"21:30","Food & Beverage","Delay","Completed","In-room dining order arrived 40 minutes later than promised. The order was refreshed and a dessert was sent with an apology note.","Satisfied"],
+    [null,-1,"07:55","Engineering","Maintenance","Updated","Shower drain is slow; guest asked for it to be fixed while out for breakfast."],
+    [null,0,"09:20","Housekeeping","Cleanliness","New","Guest found the minibar glasses not polished and asked for a full set replacement."],
+    [null,-4,"18:10","Front Office","Billing","Completed","Guest questioned a minibar charge that was not consumed. Charge was reviewed and removed.","Satisfied"],
+    [null,-5,"22:45","All","Noise","Completed","Noise from the room above around 22:30. Security checked; the neighbouring guests apologised."],
+    [null,-6,"12:10","Engineering","Maintenance","Completed","Television remote not working; batteries replaced and remote tested.","Satisfied"],
+    [null,0,"11:35","Housekeeping","Delay","New","Room not serviced by 11:30 although requested at 10:00 before the guest's meeting."],
+    [null,-2,"16:00","Food & Beverage","Food Quality","Updated","Guest felt the afternoon tea scones were not fresh. Pastry chef informed; guest invited to try again tomorrow."],
+    ["room:1609",-19,"22:20","Engineering","Maintenance","Completed","Air conditioning was noisy and did not cool the room. Engineering cleaned the filter.","Satisfied"],
+    ["room:1609",-9,"21:50","Engineering","Maintenance","Completed","Thermostat showed 26°C although set to 21°C. Engineering reset the unit."],
+    ["room:1107",-14,"07:30","Housekeeping","Noise","Completed","Early-morning construction noise from the neighbouring building; guest moved to the garden side.","Satisfied"],
+    ["room:0912",-11,"19:40","Housekeeping","Cleanliness","Completed","Minibar glasses had water marks; full set replaced."]];
+  await step("issue Excel",async function(){
+    var head=["Start Date & Time","Service Type","Room #","Guest Name","Concern Details","Status","Department","Category","Sub Category","Completed Date & Time","Action Plan","Assigned To","Deadline","Action Status","Request Satisfaction"],aoa=[head];
+    var avail=inhouse(D(-1)).filter(function(s){return !s.g.vip&&s.g!==SH.lind&&Object.keys(SH).every(function(k){return SH[k]!==s.g})});
+    ISS.forEach(function(x,i){if(x[1]===0&&x[2]>nowHM)x[2]=HM(Math.max(0,+nowHM.slice(0,2)-1),5);var g=x[0],d=D(x[1]),s=typeof g==="string"?stays.filter(function(z){return z.room===g.slice(5)&&z.arr<=d&&z.dep>d})[0]:g?g.stays[0]:avail[(i*7)%avail.length];
+      if(!s&&typeof g==="string"){var og=newGuest();s={room:g.slice(5),gName:og.first+" "+og.last}}if(!s)return;x.s=s;
+      var done=x[5]==="Completed",ct=done?dot(d,HM(Math.min(23,+x[2].slice(0,2)+2),x[2].slice(3))):"01.01.0001 00:00";
+      aoa.push([dot(d,x[2]),"Guest Issue / Recovery",s.room,s.gName,x[6],x[5],x[3],x[4],"",ct,"","",dot(d,x[2]),"",x[7]||""])});
+    var ws=XLSX.utils.aoa_to_sheet(aoa),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"ServiceRequests");
+    var buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});await bdiIssueImportFile(new File([buf],"ServiceRequests.xlsx",{lastModified:NOW-15*60000}));
+    // butler hareketleri: kim ilgilendi, misafir teyidi
+    var list=bdiGetIssues(),ev=function(is,o){is.events=is.events||[];o.id="ev_demo_"+is.events.length+"_"+Math.floor(R()*1e6).toString(36);is.events.push(o);is.u=NOW};
+    list.forEach(function(is){var x=ISS.filter(function(z){return z.s&&z.s.room===is.room&&typeof z[0]!=="string"})[0];if(!x)return;var c=is.createdAt||NOW;
+      if(x[0]===SH.volk){ev(is,{ts:c+25*60000,type:"touch",butler:"Kerem Şahin",text:"Visited with the engineer; portable fan placed and thermostat reset. Will check again tonight."})}
+      else if(x[0]===SH.chen){ev(is,{ts:c+40*60000,type:"touch",butler:"Selin Kaya",text:"Offered a room on the Bosphorus side; helped with the move."});ev(is,{ts:c+26*3600000,type:"confirm",butler:"Selin Kaya",text:"Guest confirmed she is very happy with the new room."})}
+      else if(ch(.6)){ev(is,{ts:c+int(15,90)*60000,type:"touch",butler:pick(SWD_BUTLERS),text:pick(["Apologised in person and followed up with the department.","Called the guest to confirm the fix.","Visited the room with the duty manager."])})}});
+    bdiSaveIssues(list);swRepLog("issue","ServiceRequests.xlsx",aoa.length-1,(aoa.length-1)+" issue");return (aoa.length-1)+" issue"});
+
+  // ---------- 8) Alice Ticket List ----------
+  await step("Alice",async function(){
+    var head=["Ticket ID","Date Created","Date Closed","Due Date","Type","Guest_Name","Location","Service","Request Details","Special Info","Internal Notes","State","Created_By","Closed_By","Assigned_To"],aoa=[head];
+    var al=function(d,t){var h=+t.slice(0,2),ap=h>=12?"PM":"AM",h12=h%12||12;return d+" "+h12+":"+t.slice(3)+" "+ap};
+    var SV=[["LAUNDRY PICK UP","Item: Laundry bag | Quantity: 1"],["İSTEK / DELIVER","Item: Still water | Quantity: 4"],["İSTEK / DELIVER","Item: Extra pillow | Quantity: 1"],["REFRESH","Item: Minibar refresh | Quantity: 1"],["TESLİM / DELIVER","Item: Ironed shirts | Quantity: 3"],["ALMA TALEBİ / PICK UP","Item: Room service tray | Quantity: 1"],["İSTEK / DELIVER","Item: Bathrobe XL | Quantity: 1"],["KONTROL / CHECK","Item: Minibar | Quantity: 1"]];
+    for(var i=0;i<70;i++){var dd=-int(0,13),d=D(dd),pool=inhouse(d);if(!pool.length)continue;var s=pick(pool),sv=pick(SV),t=HM(int(7,22),pick([0,10,20,30,40,50]));if(dd===0&&t>nowHM)t=HM(Math.max(7,+nowHM.slice(0,2)-1),10);
+      var closed=dd<0||ch(.6),ct=closed?al(d,HM(Math.min(23,+t.slice(0,2)+(ch(.8)?0:1)),Math.min(59,+t.slice(3)+int(4,35)))):"";
+      aoa.push(["T"+(900100+i),al(d,t),ct,al(d,t),ch(.85)?"Guest":"Internal",s.gName,s.room,sv[0],sv[1],"","",closed?"Done":"Open",pick(["Reception - Ayla","Reception - Murat","Guest App"]),closed?butlerFor(d,s.room,t):"","Butler"])}
+    var rep=[[SH.ben,"İSTEK / DELIVER","Item: Still water | Quantity: 4",[-6,-5,-4,-3,-2,-1]],[SH.whit,"İSTEK / DELIVER","Item: Extra pillow | Quantity: 1",[-2,-1]],[SH.qas,"İSTEK / DELIVER","Item: Kids amenity | Quantity: 2",[-1,0]],[SH.ars,"İSTEK / DELIVER","Item: Turkish coffee set | Quantity: 1",[-2,-1,0]]],q=0;
+    rep.forEach(function(x){var s=x[0].stays[0];x[3].forEach(function(dd){var d=D(dd),t=dd===0?HM(Math.max(8,+nowHM.slice(0,2)-2),15):HM(int(8,20),pick([5,25,45]));
+      aoa.push(["T"+(900900+q++),al(d,t),al(d,HM(+t.slice(0,2),Math.min(59,+t.slice(3)+int(6,14)))),al(d,t),"Guest",s.gName,s.room,x[1],x[2],"","","Done","Guest App",butlerFor(d,s.room,t),"Butler"])})});
+    var ws=XLSX.utils.aoa_to_sheet(aoa),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Tickets");
+    await bdiAliceImportFile(new File([XLSX.write(wb,{type:"array",bookType:"xlsx"})],"Ticket_List.xlsx"));return (aoa.length-1)+" ticket"});
+
+  // ---------- 9) iPad rehberi donusu (sahadan gelen kayitlar) ----------
+  await step("iPad dönüşü",async function(){
+    var by="Selin Kaya",dev="ipad_demo",ev=[],seq=0,mkT=function(m){return new Date(NOW-m*60000).toISOString()};
+    var pool=inhouse(T).filter(function(s){return s.arr<T}).slice(10,16);
+    pool.forEach(function(s,i){ev.push({type:"touch",gid:"d"+i,pid:"g_"+s.gName.toLowerCase(),room:s.room,gname:s.g.title+" "+s.gName,action:i%2?"Room Inspection":"Turndown",id:"demo"+(seq++)+SW_DEMO_SID,t:mkT(120-i*9),by:by,day:T,dev:dev,reaction:i===1?"good":undefined})});
+    var s0=SH.whit.stays[0];ev.push({type:"note",gid:"dw",pid:"g_james whitmore",room:s0.room,gname:"Dr. James Whitmore",cat:"delight",text:"Enjoys a short chat about sailing; keeps the Bosphorus map we left.",id:"demo"+(seq++)+SW_DEMO_SID,t:mkT(70),by:by,day:T,dev:dev});
+    var s1=pool[2]||s0;ev.push({type:"issue",gid:"di",pid:"g_"+s1.gName.toLowerCase(),room:s1.room,gname:s1.gName,topic:"Noise",text:"Corridor noise around 23:00 last night.",did:"Apologised and offered a quieter room option.",status:"open",id:"demo"+(seq++)+SW_DEMO_SID,t:mkT(55),by:by,day:T,dev:dev});
+    ev.forEach(function(e){if(e.reaction===undefined)delete e.reaction});
+    var o={app:BGD_APP,v:2,fileDate:T,by:by,dev:dev,sentAt:new Date(NOW-40*60000).toISOString(),count:ev.length,resend:false,guide:{date:T,gen:NOW-8*3600000},events:ev};
+    var r=await bgdImportObj(o,"BDI_Selin_Kaya_"+T.replace(/-/g,"")+".json");try{swRepLog("ipad","BDI_Selin_Kaya.json",ev.length,ev.length+" kayıt")}catch(e){}return JSON.stringify(r&&{touch:r.touch,note:r.note,issue:r.issue})});
+
+  // ---------- 10) takip defteri (soz verilenler) ----------
+  await step("takip",function(){
+    var due=function(t,dd){return TS(D(dd||0),t)};
+    [[SH.whit,"Bosphorus yacht booking for Thursday: confirm the time with the guest","17:00",0,"Elif Aydın"],[SH.qas,"Send the kids club programme to Mrs. Al Qasimi","12:00",0,"Can Demir"],
+     [SH.mor,"Rose petals turndown and champagne for the honeymoon night","19:30",0,"Nazlı Erten"],[SH.ars,"Call back about the airport transfer time","10:00",1,"Kerem Şahin"],
+     [SH.volk,"Check the room temperature again tonight and report to the guest","21:00",0,"Kerem Şahin"],[SH.ben,"Prepare the long-stay laundry plan for next week","15:00",-1,"Selin Kaya"]].forEach(function(x){var s=x[0].stays[0];bdiFuAdd({room:s.room,guest:s.gName,t:x[1],due:due(x[2],x[3]),owner:x[4]})});
+    try{bdiFuSweep()}catch(e){}return "6 madde + otomatik"});
+
+  // ---------- 11) Butler Alert isaretleri, devir notlari, PM oda, Radar havuzu, PY gecmisi ----------
+  await step("alert işaretleri",function(){var n=0,m=0;(alertList||[]).forEach(function(a){if(a.visited===true){n++;return}var s=arrOn(T).filter(function(z){return +z.room===+a.roomNo})[0];if(s&&s.inNow&&m<2){a.visited=false;a.notVisitedReason=m?"Misafir dışarıdaydı":"Misafir uyuyordu";m++}});try{saveAlertSnapshot()}catch(e){}return (alertList||[]).length+" alert, "+n+" otomatik gidildi, "+m+" gidilmedi"});
+  await step("check-in ETD",function(){var rs=[];try{rs=bdiIrciRows(T)}catch(e){}rs.slice(0,Math.max(0,rs.length-2)).forEach(function(r){bdiIrciSetEtd(T,r.key,r.sug||"12:00")});return rs.length+" satır"});
+  await step("vardiya devri",function(){var o={};
+    o[D(-1)+"|aksam"]={t:"1609 Volkov: oda sıcaklığı şikâyeti 23:10, Engineering bilgilendirildi, fan kondu. Sabah ilk iş tekrar kontrol. 1210 Koç: yarın doğum günü, pasta 16:00'da odada olsun.",by:"Burak Tan",u:TS(D(-1),"22:55")};
+    o[T+"|sabah"]={t:"Dr. Whitmore (1802) 5. konaklamasında: Earl Grey 16:00, chocolate yok. Al Qasimi ailesi (1504-1505) çocuk kulübü programını bekliyor. Honeymoon 2003 Moretti 14:30 geliyor; gül yaprakları hazır.",by:"Elif Aydın",u:TS(T,"07:20")};
+    BdiKV.set("bdi_handover_v1",JSON.stringify(o));return "2 not"});
+  await step("PM oda",function(){savePmRooms([{room:"2201",guest:SH.fair.last+", "+SH.fair.first,u:NOW}]);try{applyPmRooms()}catch(e){}});
+  await step("Radar havuzu",function(){var set=function(id,v){var el=document.getElementById(id);if(el)el.value=v};
+    set("rwLast",SH.lind.last);set("rwFirst",SH.lind.first);set("rwNote","Örnek: geçen yılki kalite denetçisi");try{rwAddName()}catch(e){}
+    set("rwCompany","Quality Partners");set("rwCompanyNote","Örnek: denetim firması");try{rwAddCompany()}catch(e){}
+    set("rwLast","Hargreave");set("rwFirst","Simon");set("rwNote","Örnek: gizli müşteri (mystery guest)");try{rwAddName()}catch(e){}});
+  await step("PY geçmişi",function(){var h={},add=function(g,dates){var k=pyGuestKey({lastName:g.last,firstName:g.first});h[k]={displayFirstName:g.first,displayLastName:g.last,jobTitle:g.job||"Managing Director",basedIn:pick(["London","Dubai","Milan","Zurich","New York","Istanbul"]),company:g.company||"",pyCount:dates.length,pyDates:dates,lastGeneratedDate:dates[dates.length-1],lastPyDate:dates[dates.length-1],sources:["demo"],u:NOW}};
+    add(SH.ster,[D(-190)]);add(SH.whit,[D(-400),D(-210),D(-27)]);add(SH.ash,[D(-150),D(-6)]);
+    G.filter(function(g){return g.job}).slice(0,6).forEach(function(g){add(g,[D(-int(30,300))])});
+    [["Oliver","Ashby","Managing Director","Ashby Capital","London"],["Noura","Al Dhaheri","Founder","Dhaheri Design House","Abu Dhabi"],["Lukas","Hoffmann","Chairman","Hoffmann Logistik","Hamburg"],["Chiara","Ferraro","General Manager","Ferraro Moda","Milan"],["Kaan","Ilgaz","CEO","Ilgaz Teknoloji","Istanbul"]].forEach(function(x){add({first:x[0],last:x[1],job:x[2],company:x[3]},[D(-int(60,500))]);h[pyGuestKey({lastName:x[1],firstName:x[0]})].basedIn=x[4]});
+    savePyHistory(Object.assign(getPyHistory(),h));return Object.keys(h).length+" PY"});
+
+  // ---------- 12) misafir hafizasi + DNA (hitap, keyif verenler, kacinilacaklar...) ----------
+  await step("DNA",async function(){
+    await bdiGMIngest();try{_bdiGMProf=null}catch(e){}var P=bdiGMProfiles(),find=function(g){var nm=g.first+" "+g.last;return P.list.filter(function(p){return bdiNameNear(p.name,nm)})[0]};
+    var id=function(){return "m_demo"+Math.floor(R()*1e9).toString(36)},n=0;
+    var put=async function(g,addr,items){var p=find(g);if(!p)return;await bdiDnaPut(p.gid,function(d){if(addr)d.addr=Object.assign({u:NOW,by:"Elif Aydın"},addr);items.forEach(function(it){d.items[id()]={sec:it[0],t:it[1],by:"Elif Aydın",at:NOW-int(1,40)*864e5,u:NOW}})});n++};
+    await put(SH.whit,{form:"Dr. Whitmore",lang:"EN",formality:"Resmi",channel:"Telefon",note:"İlk isimle hitap etmeyin"},[["rhythm","Runs along the Bosphorus at 06:30; breakfast after 08:00"],["delight","Earl Grey with lemon at 16:00"],["delight","Talks about sailing and old maps"],["avoid","No turndown chocolate"],["moments","5th stay this year; first visit 2023"],["bond","Asks for Elif by name"]]);
+    await put(SH.ars,{form:"Mehmet Bey",lang:"TR",formality:"Samimi",channel:"WhatsApp"},[["delight","Şekersiz Türk kahvesi, sabah ilk temasta"],["rhythm","Toplantılar 09:00-18:00; oda servisi 19:00"],["avoid","Asansöre yakın oda istemiyor"]]);
+    await put(SH.qas,{form:"Mrs. Al Qasimi",lang:"AR",formality:"Resmi",channel:"Telefon",note:"Çocuklar: Saud (8) ve Alya (5)"},[["delight","Children love the Turkish delight workshop"],["rhythm","Family breakfast in the room at 09:30"],["bond","Prefers a female butler for the family suite"]]);
+    await put(SH.volk,{form:"Mr. Volkov",lang:"RU",formality:"Resmi",channel:"E-posta"},[["break","Room temperature complaint on this stay; check every evening"],["delight","Enjoys Russian newspapers in the morning"]]);
+    await put(SH.chen,{form:"Ms. Chen",lang:"ZH",formality:"Resmi",channel:"WeChat"},[["delight","Green tea in the afternoon"],["moments","Room change accepted gracefully; thank her personally"]]);
+    await put(SH.ash,{form:"Mrs. Ashford",lang:"EN",formality:"Samimi",channel:"E-posta"},[["delight","Sketches the Bosphorus; loved the farewell card"],["moments","Promised to return in spring"]]);
+    await put(SH.koc,{form:"Defne Hanım",lang:"TR",formality:"Samimi",channel:"WhatsApp"},[["moments","Doğum günü "+bdiFmtD(T).slice(0,5)+": pasta ve el yazısı kart"],["delight","Lavanta uyku ritüeli"]]);
+    await put(SH.mor,{form:"Mrs. Moretti",lang:"IT",formality:"Samimi",channel:"WhatsApp"},[["moments","Honeymoon: first night rose petals and champagne"],["delight","Sunset at the rooftop"]]);
+    // kat turu hazirlik isaretleri: gelenlerin yarisinin odasi hazir
+    var pr=bdiGetPrep(),pd=pr[T]||(pr[T]={}),np=0;P=bdiGMProfiles();
+    arrOn(T).forEach(function(s,i){if(!(s.g.vip||i%2===0))return;var p=P.list.filter(function(q){return bdiNameNear(q.name,s.gName)})[0];var k=p?p.gid:"r:"+s.room;pd[k]={by:butlerFor(T,s.room,"14:00"),at:TS(T,"13:30"),u:NOW};np++});
+    BdiKV.set("bdi_prep_v1",JSON.stringify(pr));
+    // Didn't Do It: bugun hic dokunulmayanlarin cogunun sebebi girilmis, ikisi bekliyor
+    var L=null;try{L=bdiNtList(T)}catch(e){}var nn=0;if(L&&L.rows)L.rows.forEach(function(r,i){if(i>=L.rows.length-2)return;bdiNtSet(T,r.gk,"r",NTR[i%NTR.length]);bdiNtSet(T,r.gk,"f:plan",PLANS[i%PLANS.length]);nn++});
+    return n+" misafir DNA, "+np+" oda hazır, "+nn+" Didn't Do It sebebi"});
+
+  window.alert=_al;window.confirm=_cf;window.prompt=_pr;
+  return out;
+}
+function swDemoReset(){try{var ks=[];for(var i=0;i<sessionStorage.length;i++){var k=sessionStorage.key(i);if(k&&k.indexOf("swdemo:")===0)ks.push(k)}ks.forEach(function(k){sessionStorage.removeItem(k)})}catch(e){}location.reload()}
+function swDemoStart(){
+  if(!SW_DEMO)return;
+  var seeded=sessionStorage.getItem("swdemo:__seeded");
+  if(seeded&&seeded!==getToday()){swDemoReset();return} // gun dondu: bugune gore yeniden kur
+  var css=document.createElement("style");css.textContent='.sw-demo-pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;background:var(--sw-brass-2);color:#1d1a12;font:700 11px/1 var(--sw-font);letter-spacing:.06em}#setupBanner,#syncBtn,#syncStatus{display:none!important}'+
+    '.sw-demo-cover{position:fixed;inset:0;z-index:99999;background:rgba(12,24,20,.72);display:flex;align-items:center;justify-content:center;color:#fff;font:500 15px/1.6 var(--sw-font);text-align:center}.sw-demo-cover b{display:block;font-size:20px;margin-bottom:6px}';
+  document.head.appendChild(css);
+  var r=document.querySelector(".sw-top-r");if(r){var s=document.createElement("span");s.style.cssText="display:inline-flex;align-items:center;gap:8px";s.innerHTML='<span class="sw-demo-pill" title="Örnek verilerle sunum modu. Gerçek kayıtlara dokunulmaz.">DEMO</span><button type="button" class="sw-tb-btn" onclick="swDemoReset()" title="Örnek veriyi baştan kur">Demoyu sıfırla</button>';r.insertBefore(s,r.firstChild)}
+  if(seeded)return;
+  var c=document.createElement("div");c.className="sw-demo-cover";c.innerHTML='<div><b>Demo hazırlanıyor</b>Kurgusal bir otel kuruluyor: misafirler, raporlar, touch\'lar, issue\'lar...<br>Gerçek kayıtlara dokunulmaz. Birkaç saniye sürer.</div>';document.body.appendChild(c);
+  BdiKV.whenReady(function(){setTimeout(async function(){var L=null;try{L=await swDemoSeed();console.log("Demo kuruldu:\n"+L.join("\n"));window.__swDemoLog=L}catch(e){console.error("Demo kurulamadi:",e)}
+    sessionStorage.setItem("swdemo:__seeded",getToday());setTimeout(function(){location.reload()},400)},500)});
+}
+window.swDemoReset=swDemoReset;
+try{swDemoStart()}catch(e){console.error(e)}
 
 })(); // end IIFE
 </script>
