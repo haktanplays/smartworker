@@ -606,6 +606,12 @@ function curMonthKey(){return monthKeyOf(state.year,state.month)}
 function nowU(){return Date.now()}
 function touch(o){o.u=nowU();o.updatedAt=new Date().toISOString();o.dev=deviceId();return o} // dev: degisikligi yapan bilgisayar (Excel'i o yazar)
 function invPrefix(no){let s=String(no||"").trim().toUpperCase();let m=s.match(/^([A-Z0-9]{3})\d{13}$/);return m?m[1]:""} // e-fatura: 3 karakter seri + yil + 9 rakam
+// Ayni belge mi (2026-11-05, Haktan: "fis numaralari gunluk sifirlanan ve essiz olmayan seyler; ustune yazma olmasin").
+// E-fatura numarasi (3 harf seri + 13 rakam) tektir: ayni numara + ayni tutar = ayni belge. Fis numarasi her gun ve her
+// kasada sifirlanir: ancak ayni numara + ayni satici + ayni gun + ayni tutar ayni fistir.
+function docNo(e){return String(e&&e.invoiceNo||"").trim().toLocaleUpperCase("en-US")}
+function sameAmount(a,b){return Math.abs((+a.totalAmount||0)-(+b.totalAmount||0))<0.01}
+function sameDoc(a,b){let n=docNo(a);if(!n||n!==docNo(b))return false;if(invPrefix(n))return sameAmount(a,b);return sameAmount(a,b)&&normVendor(a.vendor)===normVendor(b.vendor)&&String(a.date||"")===String(b.date||"")}
 function vendorByPrefix(no){let px=invPrefix(no);if(!px)return null;return Object.values(data.vendors||{}).find(v=>!v.deleted&&(v.prefixes||[]).includes(px))||null}
 function formStatusLabel(st){return {open:"Açık",created:"Form Oluşturuldu",submitted:"Finansta",paid:"Yattı",reopened:"Geri Açıldı"}[st]||st}
 function statusBadge(st){return '<span class="badge b-'+(st||"open")+'">'+esc(formStatusLabel(st||"open"))+'</span>'}
@@ -903,7 +909,7 @@ function fieldsHtml(p,e){
   '<div class="frow"><label>Nereden</label><div class="chipbar" id="'+p+'VendorChips">'+vendorChips+'</div><div class="autobox" style="max-width:320px;margin-top:6px"><input id="'+p+'Vendor" class="input-sm" placeholder="Satıcı adı yaz ya da listeden seç" value="'+esc(e.vendor||"")+'" autocomplete="off" oninput="onVendorTyped(\''+p+'\')" onfocus="showVendorList(\''+p+'\')"><div id="'+p+'Vendor_suggest" class="suggestions"></div></div></div>'+
   '<div class="frow"><label>Ne aldın</label><div class="chipbar" id="'+p+'ItemChips"></div><input id="'+p+'Item" class="input-sm" style="max-width:320px;margin-top:6px" placeholder="Örn. Kefir, Toys, Energy drinks (İngilizce)" value="'+esc(e.item||"")+'" oninput="refreshPreview(\''+p+'\')"></div>'+
   '<div class="frow"><label>Kime</label><div class="chipbar" id="'+p+'GuestChips">'+guestChips+'</div><div class="autobox" style="max-width:320px;margin-top:6px"><input id="'+p+'Guest" class="input-sm" placeholder="Oda ve isim, örn. 1904 Ghada Alrajhi" value="'+esc(e.guest||"")+'" autocomplete="off" oninput="onGuestInput(\''+p+'\')"><div id="'+p+'Guest_suggest" class="suggestions"></div></div><div id="'+p+'GuestHint" class="tiny" style="margin-top:3px"></div></div>'+
-  '<div class="frow"><label>Kaç para</label><div class="row"><input id="'+p+'Total" class="input-sm" type="number" step="0.01" style="max-width:140px" placeholder="0.00" value="'+(e.totalAmount||"")+'" oninput="refreshPreview(\''+p+'\')"><input type="hidden" id="'+p+'Pay" value="'+(e.payType||"E")+'"><div class="chipbar" id="'+p+'PayChips">'+chip("Kasadan ödendi",(e.payType||"E")==="E","pickPay('"+p+"','E')")+chip("Cebimden ödedim",e.payType==="C","pickPay('"+p+"','C')")+chip("Ekstra",e.payType==="X","pickPay('"+p+"','X')")+'</div><span class="tiny" id="'+p+'ExtraWrap" style="white-space:nowrap;display:'+(e.payType==="X"?"none":"inline-flex")+';align-items:center;gap:4px">ekstra kısmı <input id="'+p+'Extra" class="input-sm" type="number" step="0.01" style="width:90px" placeholder="0" value="'+(e.extraAmount||"")+'" title="Belgenin ne kadarı ekstra (kasadan çıkmadı)? Tamamı harcamaysa boş bırak."></span></div><div class="tiny" id="'+p+'PayHint" style="margin-top:2px">'+payHint(e.payType||"E")+'</div></div>'+
+  '<div class="frow"><label>Kaç para</label><div class="row"><input id="'+p+'Total" class="input-sm" type="number" step="0.01" style="max-width:140px" placeholder="0.00" value="'+(e.totalAmount||"")+'" oninput="refreshPreview(\''+p+'\');docChecks(\''+p+'\')"><input type="hidden" id="'+p+'Pay" value="'+(e.payType||"E")+'"><div class="chipbar" id="'+p+'PayChips">'+chip("Kasadan ödendi",(e.payType||"E")==="E","pickPay('"+p+"','E')")+chip("Cebimden ödedim",e.payType==="C","pickPay('"+p+"','C')")+chip("Ekstra",e.payType==="X","pickPay('"+p+"','X')")+'</div><span class="tiny" id="'+p+'ExtraWrap" style="white-space:nowrap;display:'+(e.payType==="X"?"none":"inline-flex")+';align-items:center;gap:4px">ekstra kısmı <input id="'+p+'Extra" class="input-sm" type="number" step="0.01" style="width:90px" placeholder="0" value="'+(e.extraAmount||"")+'" title="Belgenin ne kadarı ekstra (kasadan çıkmadı)? Tamamı harcamaysa boş bırak."></span></div><div class="tiny" id="'+p+'PayHint" style="margin-top:2px">'+payHint(e.payType||"E")+'</div></div>'+
   '<div class="frow"><label>Belge</label><div class="row"><div class="chipbar" id="'+p+'TypeChips">'+chip("Fiş",type==="receipt","pickType('"+p+"','receipt')")+chip("Fatura",type==="invoice","pickType('"+p+"','invoice')")+'</div><div id="'+p+'DocFields" class="row"></div></div><div id="'+p+'Warn" class="hint" style="color:#b45309;min-height:0"></div></div>'+
   '<div class="frow"><label>Amaç</label><div class="chipbar" id="'+p+'TplChips">'+tplChips+'</div></div>'+
   '<div class="frow"><label>Cümle</label><div id="'+p+'Preview" class="hint" style="font-style:italic;min-height:18px">'+esc(e.description||"")+'</div><input type="hidden" id="'+p+'DescTouched" value="'+(e.description?"1":"")+'"><input type="hidden" id="'+p+'Desc" value="'+esc(e.description||"")+'"></div>';
@@ -927,12 +933,16 @@ function onInvoiceNoTyped(p){docChecks(p);if(($(p+"Vendor").value||"").trim())re
 // Girerken uyari, kaydetmeyi engellemez: ayni numara daha once girilmis mi, seri secili saticiya mi ait, tarih makul mu
 function docWarnings(e){
   let w=[];let no=String(e.invoiceNo||"").trim().toLocaleUpperCase("en-US");
-  if(no){let d=activeEntries().find(x=>x.id!==e.id&&String(x.invoiceNo||"").trim().toLocaleUpperCase("en-US")===no);if(d){let f=d.formId?getForm(d.formId):null;w.push("Bu numara zaten girildi: "+isoToDisplay(d.date)+" · "+d.vendor+" · "+money(d.totalAmount)+" TL"+(f?" · "+f.name:""))}
+  if(no){let efat=!!invPrefix(no),d=activeEntries().find(x=>x.id!==e.id&&docNo(x)===no&&(efat||(normVendor(x.vendor)===normVendor(e.vendor)&&String(x.date||"")===String(e.date||""))));
+    if(d){let f=d.formId?getForm(d.formId):null,info=isoToDisplay(d.date)+" · "+d.vendor+" · "+money(d.totalAmount)+" TL"+(f?" · "+f.name:"");
+      if(efat)w.push("Bu fatura numarası zaten girildi: "+info);
+      else if(e.totalAmount&&sameAmount(d,e))w.push("Bu fiş zaten girilmiş görünüyor (aynı gün, aynı satıcı, aynı numara, aynı tutar): "+info);
+      else w.push("Aynı gün aynı satıcıda bu numarada başka bir fiş var ("+money(d.totalAmount)+" TL). Fiş numarası her gün ve her kasada sıfırlanır; tutar farklıysa sorun yok.")}
     let px=invPrefix(no);if(px&&e.vendor){let own=vendorByPrefix(no);if(own&&normVendor(own.name)!==normVendor(e.vendor))w.push("Bu fatura serisi ("+px+") "+own.name+" satıcısına ait; satıcı doğru mu?")}}
   if(e.date){let ds=daysSince(e.date);if(ds<0)w.push("Tarih ileride: "+isoToDisplay(e.date));else if(ds>60)w.push("Tarih "+ds+" gün önce; yıl doğru mu?")}
   return w;
 }
-function docChecks(p){let box=$(p+"Warn");if(!box)return;let e={id:$(p+"EntryId").value,invoiceNo:$(p+"InvoiceNo").value,vendor:$(p+"Vendor").value,date:$(p+"Date").value};box.innerHTML=docWarnings(e).map(x=>"⚠ "+esc(x)).join("<br>")}
+function docChecks(p){let box=$(p+"Warn");if(!box)return;let e={id:$(p+"EntryId").value,invoiceNo:$(p+"InvoiceNo").value,vendor:$(p+"Vendor").value,date:$(p+"Date").value,totalAmount:parseMoney(($(p+"Total")||{}).value||0)};box.innerHTML=docWarnings(e).map(x=>"⚠ "+esc(x)).join("<br>")}
 function pickVendor(p,name){$(p+"Vendor").value=name;onVendorTyped(p);hideVendorList(p);let s=vendorStat(name);if(s&&$(p+"Type").value!==s.type)pickType(p,s.type);if(s&&s.tpl!=="")pickTpl(p,+s.tpl);docChecks(p);$(p+"Item").focus()}
 function onVendorTyped(p){let v=$(p+"Vendor").value;qsa("#"+p+"VendorChips .chip").forEach(c=>c.classList.toggle("on",normVendor(c.textContent)===normVendor(v)));refreshItemChips(p);refreshPreview(p);showVendorList(p)}
 // Kendi acilir listemiz: yazarken suzer, bos odakta en cok kullanilanlari gosterir
@@ -961,8 +971,8 @@ function validateFields(e){
   if(e.extraAmount<0){alert("Ekstra kısmı eksi olamaz.");return false}
   if(e.extraAmount>=e.totalAmount&&e.totalAmount>0){alert("Ekstra kısmı belgenin tamamı kadar veya daha büyük olamaz. Belgenin tamamı ekstraysa kanal olarak Ekstra seç.");return false}
   let no=String(e.invoiceNo||"").trim().toLocaleUpperCase("en-US"),efat=!!invPrefix(no);
-  let dup=activeEntries().find(x=>x.id!==e.id&&no&&String(x.invoiceNo||"").trim().toLocaleUpperCase("en-US")===no&&(efat||(normVendor(x.vendor)===normVendor(e.vendor)&&Math.abs((+x.totalAmount||0)-e.totalAmount)<0.01)));
-  if(dup)return confirm("Bu belge numarası zaten girildi ("+isoToDisplay(dup.date)+", "+dup.vendor+", "+money(dup.totalAmount)+" TL). Finansa iki kez gitmesin. Yine de eklensin mi?");
+  let dup=no?activeEntries().find(x=>x.id!==e.id&&(efat?docNo(x)===no:sameDoc(x,e))):null;
+  if(dup)return confirm((efat?"Bu fatura numarası zaten girildi":"Bu fiş zaten girilmiş görünüyor (aynı gün, aynı satıcı, aynı numara, aynı tutar)")+": "+isoToDisplay(dup.date)+", "+dup.vendor+", "+money(dup.totalAmount)+" TL. Finansa iki kez gitmesin. Yine de eklensin mi?");
   return true;
 }
 
@@ -1339,11 +1349,12 @@ function exportReportExcel(){
   let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Rapor");
   let r=state.report;XLSX.writeFile(wb,"Expense_Rapor_"+(r.dateFrom||"baslangic")+"_"+(r.dateTo||localISO())+".xlsx");
 }
-// Mukerrer kayitlar: ayni belge no + ayni satici + ayni toplam. Forma bagli olmayan kopyalar silinir, en eski (veya formdaki) kalir.
+// Mukerrer kayitlar: ayni belge (sameDoc: e-faturada numara + tutar, fiste numara + satici + gun + tutar). Forma bagli
+// olmayan kopyalar silinir, en eski (veya formdaki) kalir. 2026-11-05: fiste gun anahtarda; farkli gunun ayni numarali fisi silinmez.
 function dedupeEntries(){
-  let groups={};activeEntries().forEach(e=>{let no=String(e.invoiceNo||"").trim().toLocaleUpperCase("en-US");if(!no)return;let k=no+"|"+normVendor(e.vendor)+"|"+round2(+e.totalAmount||0);(groups[k]=groups[k]||[]).push(e)});
+  let groups={};activeEntries().forEach(e=>{let no=docNo(e);if(!no)return;let k=no+"|"+round2(+e.totalAmount||0)+(invPrefix(no)?"":"|"+normVendor(e.vendor)+"|"+String(e.date||""));(groups[k]=groups[k]||[]).push(e)});
   let victims=[];Object.values(groups).forEach(g=>{if(g.length<2)return;g.sort((a,b)=>(b.formId?1:0)-(a.formId?1:0)||String(a.createdAt||"").localeCompare(String(b.createdAt||"")));g.slice(1).forEach(e=>{if(!e.formId)victims.push(e)})});
-  if(!victims.length)return notice("Mükerrer kayıt bulunamadı (aynı belge no + satıcı + tutar).","ok");
+  if(!victims.length)return notice("Mükerrer kayıt bulunamadı (fişte aynı numara + satıcı + gün + tutar; e-faturada aynı numara + tutar).","ok");
   let sample=victims.slice(0,5).map(e=>isoToDisplay(e.date)+" "+e.vendor+" "+money(e.totalAmount)+" TL (No "+e.invoiceNo+")").join("\n");
   if(!confirm(victims.length+" mükerrer kayıt silinecek (forma bağlı olanlara dokunulmaz):\n\n"+sample+(victims.length>5?"\n…":"")+"\n\nDevam?"))return;
   victims.forEach(e=>{e.deleted=true;touch(e)});log("dedupe",{count:victims.length,ids:victims.map(e=>e.id)});saveData();renderAll();notice(victims.length+" mükerrer kayıt silindi.","ok");
@@ -1770,7 +1781,8 @@ function applyImportedWorkbook(parsed,status,pay){
     let attached=[],pending=[];
     sh.entries.forEach(x=>{
       let sameAmt=e=>Math.abs((+e.totalAmount||0)-x.totalAmount)<0.01;
-      let ex=x.invoiceNo?activeEntries().find(e=>String(e.invoiceNo).trim()===String(x.invoiceNo).trim()&&sameAmt(e)):activeEntries().find(e=>normVendor(e.vendor)===normVendor(x.vendor)&&e.date===x.date&&sameAmt(e));
+      let xd=x.date||sh.formDate||"",xn=docNo(x); // 2026-11-05: fis numarasi tek degil; satici + gun de ayni olmali
+      let ex=xn?activeEntries().find(e=>docNo(e)===xn&&sameAmt(e)&&(invPrefix(xn)||(normVendor(e.vendor)===normVendor(x.vendor)&&(!xd||e.date===xd)))):activeEntries().find(e=>normVendor(e.vendor)===normVendor(x.vendor)&&e.date===x.date&&sameAmt(e));
       let g=EXP.extractGuest(x.description),item=EXP.extractItem(x.description);
       if(ex){
         let ch=false;["vendor","description","date","vat1","vat10","vat20","incomeTax","netAmount"].forEach(k=>{if(x[k]!==undefined&&x[k]!==""&&ex[k]!==x[k]){ex[k]=x[k];ch=true}});
@@ -1856,7 +1868,7 @@ function legacyV2Data(){let raw=localStorage.getItem(V2_KEY);if(!raw)return null
 function legacyScan(){
   let ids={};data.entries.forEach(e=>ids[e.id]=1);data.forms.forEach(f=>ids[f.id]=1);
   let act=activeEntries().slice(),same=(e,x)=>Math.abs((+e.totalAmount||0)-(+x.totalAmount||0))<0.01;
-  let isDup=x=>x.invoiceNo?act.some(e=>String(e.invoiceNo||"").trim()===String(x.invoiceNo).trim()&&same(e,x)):act.some(e=>normVendor(e.vendor)===normVendor(x.vendor)&&e.date===x.date&&same(e,x));
+  let isDup=x=>docNo(x)?act.some(e=>sameDoc(e,x)):act.some(e=>normVendor(e.vendor)===normVendor(x.vendor)&&e.date===x.date&&same(e,x));
   let out=[],allForms=data.forms.slice();
   [["v2",legacyV2Data],["v1",legacyV1Data]].forEach(([src,fn])=>{
     let d;try{d=fn()}catch(e){console.warn("Eski veri okunamadı ("+src+")",e);return}if(!d)return;
