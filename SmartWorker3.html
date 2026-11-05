@@ -1746,7 +1746,7 @@ label{color:var(--sw-ink-2)}
 #page-didit .bd-fu-edg input,#page-didit .bd-fu-edg select{height:32px}
 #page-didit .bd-fu-links{display:flex;gap:14px;margin-top:4px}#page-didit .bd-fu-links .bd-link{margin-top:0}
 #page-didit .bd-fu-more{margin-top:8px;border-top:1px solid var(--sw-line);padding-top:8px}
-#page-didit .bd-fu-more>summary{cursor:pointer;font-size:12.5px;color:var(--sw-mut);padding:4px 0}
+#page-didit .bd-fu-more>summary{cursor:pointer;font-size:12.5px;color:var(--sw-mut);padding:4px 0}#page-didit .bd-fu-more .bd-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}#page-didit .bd-fu-more input[type=date]{width:auto;height:32px;font-size:12.5px}
 @media (max-width:900px){#page-didit .bd-fu-row{grid-template-columns:30px minmax(0,1fr) 60px}#page-didit .bd-fu-src{display:none}#page-didit .bd-fu-edg{grid-template-columns:1fr 1fr}#page-didit .bd-fu-g{max-width:30%}}
 #page-didit details.bd-fd-it>summary{list-style:none}#page-didit details.bd-fd-it>summary::-webkit-details-marker{display:none}
 #page-didit .bd-nat-ev.soon{border-color:#efd9b0;background:#fffdf8}
@@ -8656,7 +8656,7 @@ function bdiFuSweep(){
       o[id]={id:id,kind:"nt",iss:"",room:row.rooms[0]||"",guest:row.name,t:"Didn't Do It planı: "+plan,at:now,base:now,due:due,dueWhy:"Didn't Do It planı",dueManual:1,owner:(x.f||{}).who||"",st:"open",src:"nt",by:bdiMe()||"",u:now};ch=true})}catch(e){}
   // 4) Butler Alert "gidilmedi": tekrar denenecek; alert'e gidilince kapanir
   try{if(getAlertDate()===T)(alertList||[]).forEach(function(a){if(!a||a.manual&&!a.guest)return;var id="fu_al_"+T+"_"+a.roomNo,f=o[id];
-      if(a.visited===false&&!f){o[id]={id:id,kind:"alert",iss:"",room:String(a.roomNo),guest:String(a.guest||"").split(",").map(function(x){return x.trim()}).reverse().join(" ").trim(),t:"Butler Alert tekrar: "+(a.notVisitedReason||"gidilemedi"),at:now,base:now,due:bdiFuWorkHours(Math.ceil((now+2*36e5)/3e5)*3e5),dueWhy:"Butler Alert gidilmedi",dueManual:1,owner:"",st:"open",src:"alert",by:bdiMe()||"",u:now};ch=true}
+      if(a.visited===false&&!f){o[id]={id:id,kind:"alert",iss:"",room:("000"+a.roomNo).slice(-4),guest:String(a.guest||"").split(",").map(function(x){return x.trim()}).reverse().join(" ").trim(),t:"Butler Alert tekrar: "+(a.notVisitedReason||"gidilemedi"),at:now,base:now,due:bdiFuWorkHours(Math.ceil((now+2*36e5)/3e5)*3e5),dueWhy:"Butler Alert gidilmedi",dueManual:1,owner:"",st:"open",src:"alert",by:bdiMe()||"",u:now};ch=true}
       else if(f&&f.st==="open"&&a.visited===true)close(f,"done","alert",a.visitedBy||"","Butler Alert: gidildi",now)})}catch(e){}
   // Didn't Do It / Alert takibi: o misafire (oda ya da isim) sonradan touch girilince kendiliginden kapanir
   try{var LG=null;Object.keys(o).forEach(function(k){var f=o[k];if(!f||f.del||f.st!=="open"||(f.kind!=="nt"&&f.kind!=="alert"))return;
@@ -8770,7 +8770,7 @@ function bdiFuRowToggle(id){_bdiFuOpenRow=_bdiFuOpenRow===id?"":id;renderBdiFu()
 function bdiFuRowHtml(r){
   var f=r.f,x=r.x,s=x.s,id=f.id,q="'"+esc(id)+"'",open=/^(late|today|later)$/.test(s),own=bdiFuOwner(f),ex=_bdiFuOpenRow===id,src=BDI_FU_SRC[f.kind]||"";
   var txt=String(f.t||"").replace(/^Butler Alert tekrar: /,"tekrar git: ").replace(/^(Issue takibi|Memnuniyet teyidi|Didn't Do It planı): /,"");
-  var when=open?bdiFuDueLbl(f.due).replace(/^bugün /,""):s==="done"?bdiNowTime(new Date(f.doneAt||f.due)):bdiFmtD(bdiYmd(new Date(f.due))).slice(0,5);
+  var when=open?bdiFuDueLbl(f.due).replace(/^bugün /,""):s==="done"?bdiFuDueLbl(f.doneAt||f.due).replace(/^bugün /,""):bdiFmtD(bdiYmd(new Date(f.due))).slice(0,5);
   var dep=open&&x.S&&!x.S.gone&&x.S.n===0?'<span class="bd-fu-dep">bugün çıkıyor'+(x.S.time?' '+esc(x.S.time):'')+'</span>':'';
   var h='<div class="bd-fu-row s-'+s+(ex?' open':'')+'" id="bdiFu_'+esc(id)+'">';
   h+=open?'<button type="button" class="bd-fu-chk" onclick="bdiFuCheck('+q+')" title="Yapıldı" aria-label="Yapıldı: '+esc((f.room||"")+" "+txt)+'"></button>':'<span class="bd-fu-chk is-'+s+'" aria-hidden="true">'+(s==="done"?'&#10003;':s==="missed"?'!':'&ndash;')+'</span>';
@@ -8803,7 +8803,7 @@ function renderBdiFu(){
   var body=grp("late","Gecikti",c.late.sort(by))+grp("today","Bugün",c.today.sort(by))+grp("later","Yarın ve sonrası",c.later.sort(by));
   h+=body||'<p class="bd-empty">Açık takip yok. Yukarıya oda, saat ve ne yapılacağını yazman yeter. Didn\'t Do It planları, gidilemeyen Butler Alert\'ler ve takip isteyen issue\'lar da kendiliğinden buraya düşer.</p>';
   h+='<details class="bd-fu-more"'+(doneT.some(function(r){return r.f.id===_bdiFuOpenRow})?' open':'')+'><summary>Bugün yapılan <b>'+doneT.length+'</b></summary>'+(doneT.map(bdiFuRowHtml).join("")||'<p class="bd-sub">Henüz yok.</p>')+'</details>';
-  var past=m7.concat(x7).sort(function(a,b){return (b.f.u||0)-(a.f.u||0)}).slice(0,60);
+  var past=d7.filter(function(r){return (r.f.doneAt||0)<t0}).concat(m7,x7).sort(function(a,b){return (b.f.doneAt||b.f.u||0)-(a.f.doneAt||a.f.u||0)}).slice(0,60);
   h+='<details class="bd-fu-more"'+(past.some(function(r){return r.f.id===_bdiFuOpenRow})?' open':'')+'><summary>Son 7 gün: <b>'+d7.length+'</b> yapıldı'+(d7.length?' (%'+Math.round(on7/d7.length*100)+' zamanında)':'')+' · <b>'+m7.length+'</b> kaçtı · <b>'+x7.length+'</b> iptal · rapor</summary>'+past.map(bdiFuRowHtml).join("")+
     '<div class="bd-toolbar" style="margin-top:10px"><span class="bd-sub">Rapor</span><input type="date" id="bdiFuFrom" value="'+esc(_bdiFuFrom)+'" onchange="bdiFuSetRange(\'f\',this.value)" aria-label="Başlangıç"><input type="date" id="bdiFuTo" value="'+esc(_bdiFuTo)+'" onchange="bdiFuSetRange(\'t\',this.value)" aria-label="Bitiş"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="downloadFuReport()">PDF</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="downloadFuXlsx()">Excel</button></div></details>';
   el.innerHTML=h;
@@ -20442,10 +20442,17 @@ async function swDemoSeed(){
     [[SH.whit,"Bosphorus yacht booking for Thursday: confirm the time with the guest","17:00",0,"Elif Aydın"],[SH.qas,"Send the kids club programme to Mrs. Al Qasimi","12:00",0,"Can Demir"],
      [SH.mor,"Rose petals turndown and champagne for the honeymoon night","19:30",0,"Nazlı Erten"],[SH.ars,"Call back about the airport transfer time","10:00",1,"Kerem Şahin"],
      [SH.volk,"Check the room temperature again tonight and report to the guest","21:00",0,"Kerem Şahin"],[SH.ben,"Prepare the long-stay laundry plan for next week","15:00",-1,"Selin Kaya"]].forEach(function(x){var s=x[0].stays[0];bdiFuAdd({room:s.room,guest:s.gName,t:x[1],due:due(x[2],x[3]),owner:x[4]})});
-    try{bdiFuSweep()}catch(e){}return "6 madde + otomatik"});
+    // gecmis gunlerde yapilmis takipler ("Son 7 gun" ve rapor dolu gorunsun): dakika = son saate gore ne zaman yapildi (+ gec)
+    [[SH.whit,"Confirm the spa booking for 11:00","10:30",-1,"Elif Aydın",-20],[SH.qas,"Bring extra pillows for the children","21:00",-2,"Can Demir",-45],
+     [SH.volk,"Call to check the room temperature","09:30",-1,"Kerem Şahin",70],[SH.ben,"Deliver the pressed suits before dinner","18:00",-3,"Selin Kaya",-10],
+     [SH.mor,"Arrange a table with a view for the anniversary dinner","16:00",-2,"Nazlı Erten",-30]].forEach(function(x){var s=x[0].stays[0],du=due(x[2],x[3]),f=bdiFuAdd({room:s.room,guest:s.gName,t:x[1],due:du,owner:x[4]});
+       bdiFuSet(f.id,{at:du-3*36e5,base:du-3*36e5});bdiFuDone(f.id,{butler:x[4],text:"",via:"manual",ts:du+x[5]*6e4})});
+    try{bdiFuSweep()}catch(e){}return "6 açık + 5 yapılmış madde + otomatik"});
 
   // ---------- 11) Butler Alert isaretleri, devir notlari, PM oda, Radar havuzu, PY gecmisi ----------
-  await step("alert işaretleri",function(){var n=0,m=0;(alertList||[]).forEach(function(a){if(a.visited===true){n++;return}var s=arrOn(T).filter(function(z){return +z.room===+a.roomNo})[0];if(s&&s.inNow&&m<2){a.visited=false;a.notVisitedReason=m?"Misafir dışarıdaydı":"Misafir uyuyordu";m++}});try{saveAlertSnapshot()}catch(e){}return (alertList||[]).length+" alert, "+n+" otomatik gidildi, "+m+" gidilmedi"});
+  await step("alert işaretleri",function(){var n=0,m=0;(alertList||[]).forEach(function(a){if(a.visited===true){n++;return}var s=arrOn(T).filter(function(z){return +z.room===+a.roomNo})[0];if(s&&s.inNow&&m<2){a.visited=false;a.notVisitedReason=m?"Misafir dışarıdaydı":"Misafir uyuyordu";m++}});
+    (alertList||[]).forEach(function(a){if(m<2&&a.visited===null){a.visited=false;a.notVisitedReason="Misafir henüz gelmedi";m++}}); // 2026-11-05: Takip'te "Alert" kaynagi gorunsun
+    try{saveAlertSnapshot()}catch(e){}return (alertList||[]).length+" alert, "+n+" otomatik gidildi, "+m+" gidilmedi"});
   await step("check-in ETD",function(){var rs=[];try{rs=bdiIrciRows(T)}catch(e){}rs.slice(0,Math.max(0,rs.length-2)).forEach(function(r){bdiIrciSetEtd(T,r.key,r.sug||"12:00")});return rs.length+" satır"});
   await step("vardiya devri",function(){var o={};
     o[D(-1)+"|aksam"]={t:"1609 Volkov: oda sıcaklığı şikâyeti 23:10, Engineering bilgilendirildi, fan kondu. Sabah ilk iş tekrar kontrol. 1210 Koç: yarın doğum günü, pasta 16:00'da odada olsun.",by:"Burak Tan",u:TS(D(-1),"22:55")};
