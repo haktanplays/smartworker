@@ -8708,12 +8708,23 @@ function bdiFuDone(id,opt){
     if(!log)log=bdiFuTouch(f,butler,text,new Date(at)).id;
   }
   f.st="done";f.doneAt=at;f.doneBy=butler;f.doneText=text;f.doneVia=opt.via||"manual";if(log)f.doneLog=log;if(opt.ref)f.doneRef=opt.ref;f.u=now;
+  try{bdiFuAlertSync(f,true,butler,log)}catch(e){} // Butler Alert takibi: ilgilenilince alert de "gidildi"
   bdiFuSave(all);return f;
+}
+// 2026-11-05 (Haktan: "buradan verilen takipler ilgili yerleri tetikliyor mu"): Alert takibi ilgilenildi -> o gunun alert'i
+// "gidildi" (kim, hangi kayitla); geri al -> alert yine "gidilmedi" ve eski nedeni. Takibin kendi kapanisi zaten touch'la oluyor.
+function bdiFuAlertSync(f,on,butler,log){
+  var m=/^fu_al_(\d{4}-\d{2}-\d{2})_(\d+)$/.exec(f&&f.id||"");if(!m)return;
+  var o=bdiAlertListOn(m[1]),a=(o.list||[]).filter(function(x){return x&&+x.roomNo===+m[2]})[0];if(!a)return;
+  if(on){if(a.visited===true)return;a.visited=true;a.visitedBy=butler||"";a.notVisitedReason="";if(log)a.linkedTouch=log;a.visitedVia="Takip";}
+  else{if(a.visited!==true||(f.doneLog&&a.linkedTouch&&a.linkedTouch!==f.doneLog))return;a.visited=false;a.visitedBy="";delete a.linkedTouch;delete a.visitedVia;a.notVisitedReason=String(f.t||"").replace(/^Butler Alert tekrar: /,"")}
+  try{alertNormalizeEntry(a)}catch(e){}bdiAlertSaveOn(m[1],o);try{renderAlertTable()}catch(e){}try{bdiAlertTabBadge()}catch(e){}
 }
 function bdiFuReopen(id,keepLog){
   var all=bdiFuAll(),f=all[id];if(!f||f.st==="open")return;var now=Date.now();
   if(f.doneLog&&!keepLog){var d=bdiYmd(new Date(f.doneAt||now)),arr=loadBdiArrayForDate(d),n=arr.length;bdiAddTomb(f.doneLog);arr=arr.filter(function(l){return l.id!==f.doneLog});if(arr.length!==n){saveBdiArrayForDate(d,arr);refreshBdiIfSameDate(d,arr)}
     if(f.iss){var L=bdiGetIssues(),is=bdiIssueById(L,f.iss);if(is){var b=(is.events||[]).length;is.events=(is.events||[]).filter(function(e){return e.touchId!==f.doneLog});if(is.events.length!==b){is.u=now;bdiSaveIssues(L)}}}}
+  try{bdiFuAlertSync(f,false)}catch(e){} // geri alininca alert de eski "gidilmedi" haline doner
   ["doneAt","doneBy","doneText","doneVia","doneLog","doneRef"].forEach(function(k){delete f[k]});f.st="open";f.u=now;
   if(f.src==="auto")f.reopened=now; // otomatik kapanmaz: elle acildi
   bdiFuSave(all);
