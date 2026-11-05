@@ -1147,42 +1147,13 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid var(--sw-line-
 #page-didit .bd-pill-fu{background:#eef0fb;color:#3d4aa8}
 #page-didit .bd-pill-fuk{background:var(--soft);color:var(--mut);box-shadow:inset 0 0 0 1px var(--line);font-weight:500}
 #page-didit .bd-count.bd-count-red{background:var(--red-t);color:var(--red)}
-#page-didit .bd-fu-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-#page-didit .bd-fu-kpis{margin:12px 0 4px}
-#page-didit .bd-fu-bar{flex-wrap:wrap;gap:6px;align-items:center}
-#page-didit .bd-fu-bar input[type=date]{width:auto;height:32px;font-size:12.5px}
-#page-didit .bd-fu-new{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
-#page-didit .bd-fu-new-g{display:grid;grid-template-columns:110px minmax(0,1fr) minmax(0,1fr);gap:8px;margin-bottom:6px}
-#page-didit .bd-fu-quick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 #page-didit input[type=datetime-local]{height:36px;padding:0 10px;border:1px solid var(--sw-line-2);border-radius:8px;font:13px var(--sw-font);color:var(--ink);background:#fff}
-#page-didit .bd-fu-grp{margin-top:14px}
-#page-didit .bd-fu-grp>h4{margin:0 0 6px}
-#page-didit .bd-fu-grp.k-late>h4{color:var(--red)}
-#page-didit .bd-fu-row{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(260px,330px);gap:12px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-left:4px solid #c5cbe8;border-radius:10px;background:#fff;margin-bottom:8px}
-#page-didit .bd-fu-row.k-late{border-left-color:var(--red);background:#fffafa}
-#page-didit .bd-fu-row.k-today{border-left-color:var(--amber)}
-#page-didit .bd-fu-row.k-missed{border-left-color:#9aa3a0;background:var(--sw-surface-2)}
-#page-didit .bd-fu-row.k-done{border-left-color:var(--g);grid-template-columns:64px minmax(0,1fr)}
-#page-didit .bd-fu-row.k-cancel{border-left-color:var(--sw-line-2);grid-template-columns:64px minmax(0,1fr);opacity:.8}
-#page-didit .bd-fu-row.bd-flash{box-shadow:0 0 0 3px rgba(15,84,70,.25)}
-#page-didit .bd-fu-due b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
-#page-didit .bd-fu-due small{color:var(--mut);font-size:11.5px}
-#page-didit .bd-fu-row.k-late .bd-fu-due b{color:var(--red)}
-#page-didit .bd-fu-top{font-size:13.5px}
-#page-didit .bd-fu-room{font-size:14px;margin-right:2px}
-#page-didit .bd-fu-t{font-size:13px;margin:3px 0 2px;line-height:1.45}
-#page-didit .bd-fu-res{font-size:12.5px;margin-top:4px}
-#page-didit .bd-fu-act{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}
-#page-didit .bd-fu-act select{grid-column:1/-1}
-#page-didit .bd-fu-links{grid-column:1/-1;font-size:12px}
-#page-didit .bd-fu-edit{display:grid;grid-template-columns:minmax(0,1fr) 190px 160px auto;gap:6px;margin-top:6px}
 #page-didit .bd-isfu{font-size:12.5px;margin:12px 0 4px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff}
 #page-didit .bd-isfu-r{margin-top:3px}
 #page-didit .bd-isfu-s{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:8px;background:#eef0fb;color:#3d4aa8}
 #page-didit .bd-isfu-r.k-late .bd-isfu-s{background:var(--red-t);color:var(--red)}
 #page-didit .bd-isfu-r.k-done .bd-isfu-s{background:var(--gt);color:var(--g)}
 #page-didit .bd-isfu-r.k-missed .bd-isfu-s,#page-didit .bd-isfu-r.k-cancel .bd-isfu-s{background:#f1f1f1;color:#666}
-@media (max-width:900px){#page-didit .bd-fu-row{grid-template-columns:56px minmax(0,1fr)}#page-didit .bd-fu-act{grid-column:1/-1}#page-didit .bd-fu-new-g{grid-template-columns:1fr}}
 #page-didit .bd-ncclose{margin-top:12px;padding:8px 10px;border:1px dashed #d6dfdb;border-radius:8px;background:#fff}
 #page-didit .bd-ncclose-t{font-size:12.5px;font-weight:600;margin-bottom:6px}
 #page-didit .bd-ncclose-t .bd-sub{font-weight:400}
@@ -1750,6 +1721,33 @@ label{color:var(--sw-ink-2)}
 /* ---------- Butler Did It: ayni tokenlara baglanir ---------- */
 #page-didit{--g:var(--sw-brand);--g2:var(--sw-brand-2);--gt:var(--sw-brand-t);--ink:var(--sw-ink);--mut:var(--sw-mut);--line:var(--sw-line);--soft:var(--sw-surface-2);--brass:var(--sw-brass);--amber:var(--sw-warn);--amber-t:var(--sw-warn-t);--red:var(--sw-bad);--red-t:var(--sw-bad-t);max-width:var(--sw-w)}
 #page-didit .bd-head{margin:2px 2px 14px}
+#page-didit .bd-fu-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+#page-didit .bd-fu-q{margin-bottom:14px}
+#page-didit .bd-fu-grp{margin-bottom:12px}#page-didit .bd-fu-grp .bd-h4{margin:6px 0}
+#page-didit .bd-fu-grp.k-late .bd-h4{color:var(--sw-bad)}
+#page-didit .bd-fu-row{display:grid;grid-template-columns:30px minmax(0,1fr) 72px 86px;align-items:center;gap:8px;padding:2px 6px;border-bottom:1px solid var(--sw-line-soft);border-radius:8px}
+#page-didit .bd-fu-row:hover{background:var(--sw-surface-2)}#page-didit .bd-fu-row.open{background:var(--sw-surface-2)}#page-didit .bd-fu-row.bd-flash{box-shadow:0 0 0 3px rgba(15,84,70,.25)}
+#page-didit .bd-fu-chk{width:22px;height:22px;border-radius:7px;border:1.5px solid var(--sw-line-2);background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:var(--sw-ok);padding:0}
+#page-didit button.bd-fu-chk:hover{border-color:var(--sw-ok);background:var(--sw-ok-t)}
+#page-didit .bd-fu-chk.is-done{border-color:var(--sw-ok);background:var(--sw-ok-t)}#page-didit .bd-fu-chk.is-missed{border-color:#e7b4ad;color:var(--sw-bad)}#page-didit .bd-fu-chk.is-cancel{color:var(--sw-mut-2)}
+#page-didit .bd-fu-line{all:unset;box-sizing:border-box;display:flex;align-items:baseline;gap:8px;min-width:0;padding:8px 0;cursor:pointer;font-size:13px}
+#page-didit .bd-fu-line:focus-visible{outline:2px solid var(--sw-brand);outline-offset:2px;border-radius:6px}
+#page-didit .bd-fu-when{flex:none;min-width:58px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--sw-ink-2)}
+#page-didit .bd-fu-grp.k-late .bd-fu-when{color:var(--sw-bad)}
+#page-didit .bd-fu-room{flex:none;font-variant-numeric:tabular-nums}
+#page-didit .bd-fu-g{flex:none;max-width:24%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--sw-ink-2)}
+#page-didit .bd-fu-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--sw-ink)}
+#page-didit .bd-fu-dep{flex:none;font-size:11px;font-weight:700;color:var(--sw-bad);background:var(--sw-bad-t);border-radius:6px;padding:1px 6px}
+#page-didit .bd-fu-own{font-size:12px;font-weight:600;color:var(--sw-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#page-didit .bd-fu-src{font-size:11px;color:var(--sw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+#page-didit .bd-fu-row.s-done .bd-fu-t,#page-didit .bd-fu-row.s-cancel .bd-fu-t{color:var(--sw-mut);text-decoration:line-through;text-decoration-color:rgba(0,0,0,.25)}
+#page-didit .bd-fu-ed{margin:0 0 8px 38px;padding:8px 10px;border-left:2px solid var(--sw-line-2)}
+#page-didit .bd-fu-edg{display:grid;grid-template-columns:minmax(0,1fr) 190px 170px auto;gap:6px;margin-bottom:6px}
+#page-didit .bd-fu-edg input,#page-didit .bd-fu-edg select{height:32px}
+#page-didit .bd-fu-links{display:flex;gap:14px;margin-top:4px}#page-didit .bd-fu-links .bd-link{margin-top:0}
+#page-didit .bd-fu-more{margin-top:8px;border-top:1px solid var(--sw-line);padding-top:8px}
+#page-didit .bd-fu-more>summary{cursor:pointer;font-size:12.5px;color:var(--sw-mut);padding:4px 0}
+@media (max-width:900px){#page-didit .bd-fu-row{grid-template-columns:30px minmax(0,1fr) 60px}#page-didit .bd-fu-src{display:none}#page-didit .bd-fu-edg{grid-template-columns:1fr 1fr}#page-didit .bd-fu-g{max-width:30%}}
 #page-didit details.bd-fd-it>summary{list-style:none}#page-didit details.bd-fd-it>summary::-webkit-details-marker{display:none}
 #page-didit .bd-nat-ev.soon{border-color:#efd9b0;background:#fffdf8}
 #page-didit .bd-nat-ppl{list-style:none;margin:8px 0 0;padding:0;columns:2;column-gap:24px;font-size:12.5px;line-height:1.7}
@@ -2423,7 +2421,7 @@ label{color:var(--sw-ink-2)}
 
 <div class="section">
 <h3>Uyruklar: ulusal ve özel günler</h3>
-<p class="hint">OSR (Guest Profile Check) raporundaki uyruklara göre, bu günlerde o ülkeden otelde kaç misafir olacağı <b>Uyruklar</b> sekmesinde görünür; <b>3 gün</b> kala Brifing ve Uyarılar'a düşer. <b>Tarih</b>: her yıl için <b>gg.aa</b> (ör. 02.12), tarihi her yıl değişen günler için <b>yyyy-aa-gg</b>. <b>Uyruk</b>: ülke kodu, birden fazlaysa virgülle (SA, AE). Dini bayramlar KVKK gereği listede yok.</p>
+<p class="hint">OSR (Guest Profile Check) raporundaki uyruklara göre, bu günlerde o ülkeden otelde kaç misafir olacağı <b>Uyruklar</b> sekmesinde görünür; <b>3 gün</b> kala Brifing ve Uyarılar'a düşer. <b>Tarih</b>: her yıl aynı gün <b>gg.aa</b> (ör. 02.12); haftanın gününe bağlı günler <b>sıra.gün.ay</b> (ör. <b>2.Paz.05</b> = mayısın 2. pazarı, <b>son.Paz.11</b> = kasımın son pazarı; günler Pzt Sal Çar Per Cum Cmt Paz); tek seferlik <b>yyyy-aa-gg</b>. <b>Uyruk</b>: ülke kodu, birden fazlaysa virgülle (SA, AE); herkes için <b>*</b>. Dini bayramlar KVKK gereği listede yok.</p>
 <div id="bdiCfg_natd"></div>
 </div>
 
@@ -8443,8 +8441,8 @@ var BDI_CFG={
   bdi_occ_timing:{el:"bdiCfg_occt",title:"Zamanlama",add:"+ Zamanlama ekle",def:[
     {l:"prior to arrival"},{l:"during stay"},{l:"after guest request"},{l:"upon return to room"}],
     cols:[{f:"l",ph:"örn. during turndown",flex:1}]},
-  bdi_natdays:{el:"bdiCfg_natd",add:"+ Gün ekle",def:[{d:"26.01",c:"AU",l:"Avustralya Günü",g:""},{d:"11.02",c:"JP",l:"Japonya Ulusal Kuruluş Günü",g:""},{d:"25.02",c:"KW",l:"Kuveyt Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"25.03",c:"GR",l:"Yunanistan Bağımsızlık Günü",g:""},{d:"27.04",c:"NL",l:"Hollanda Kral Günü",g:""},{d:"27.04",c:"ZA",l:"Güney Afrika Özgürlük Günü",g:""},{d:"17.05",c:"NO",l:"Norveç Anayasa Günü",g:""},{d:"25.05",c:"JO",l:"Ürdün Bağımsızlık Günü",g:""},{d:"26.05",c:"GE",l:"Gürcistan Bağımsızlık Günü",g:""},{d:"28.05",c:"AZ",l:"Azerbaycan Bağımsızlık Günü",g:""},{d:"02.06",c:"IT",l:"İtalya Cumhuriyet Günü",g:""},{d:"06.06",c:"SE",l:"İsveç Ulusal Günü",g:""},{d:"12.06",c:"RU",l:"Rusya Günü",g:""},{d:"01.07",c:"CA",l:"Kanada Günü",g:""},{d:"04.07",c:"US",l:"ABD Bağımsızlık Günü",g:""},{d:"14.07",c:"FR",l:"Fransa Ulusal Günü",g:""},{d:"23.07",c:"EG",l:"Mısır Ulusal Günü",g:""},{d:"30.07",c:"MA",l:"Fas Taht Günü",g:""},{d:"01.08",c:"CH",l:"İsviçre Ulusal Günü",g:""},{d:"14.08",c:"PK",l:"Pakistan Bağımsızlık Günü",g:""},{d:"15.08",c:"IN",l:"Hindistan Bağımsızlık Günü",g:""},{d:"15.08",c:"KR",l:"Kore Kurtuluş Günü",g:""},{d:"24.08",c:"UA",l:"Ukrayna Bağımsızlık Günü",g:""},{d:"01.09",c:"UZ",l:"Özbekistan Bağımsızlık Günü",g:""},{d:"07.09",c:"BR",l:"Brezilya Bağımsızlık Günü",g:""},{d:"16.09",c:"MX",l:"Meksika Bağımsızlık Günü",g:""},{d:"23.09",c:"SA",l:"Suudi Arabistan Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"01.10",c:"CN",l:"Çin Ulusal Günü",g:""},{d:"01.10",c:"NG",l:"Nijerya Bağımsızlık Günü",g:""},{d:"03.10",c:"DE",l:"Almanya Birlik Günü",g:""},{d:"12.10",c:"ES",l:"İspanya Ulusal Günü",g:""},{d:"26.10",c:"AT",l:"Avusturya Ulusal Günü",g:""},{d:"29.10",c:"TR",l:"Cumhuriyet Bayramı",g:""},{d:"22.11",c:"LB",l:"Lübnan Bağımsızlık Günü",g:""},{d:"2026-11-26",c:"US",l:"Şükran Günü (Thanksgiving)",g:""},{d:"02.12",c:"AE",l:"BAE Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"06.12",c:"FI",l:"Finlandiya Bağımsızlık Günü",g:""},{d:"16.12",c:"BH",l:"Bahreyn Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"16.12",c:"KZ",l:"Kazakistan Bağımsızlık Günü",g:""},{d:"18.12",c:"QA",l:"Katar Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"2027-02-06",c:"CN, HK, TW, SG",l:"Ay Yeni Yılı (Lunar New Year)",g:""}],
-    cols:[{f:"d",ph:"gg.aa (her yıl) / yyyy-aa-gg",w:"150px"},{f:"c",ph:"Uyruk kodu (SA, AE)",w:"150px"},{f:"l",ph:"Günün adı",flex:1},{f:"g",ph:"Jest önerisi (opsiyonel)",flex:1}]},
+  bdi_natdays:{el:"bdiCfg_natd",add:"+ Gün ekle",def:[{d:"01.01",c:"*",l:"Yeni Yıl",g:"Misafirin dilinde yeni yıl kartı ve küçük tatlı ikramı",v:2},{d:"26.01",c:"AU",l:"Avustralya Günü",g:""},{d:"26.01",c:"IN",l:"Hindistan Cumhuriyet Günü",g:"",v:2},{d:"2028-01-26",c:"CN, HK, TW, SG, KR, VN, MY",l:"Ay Yeni Yılı (Lunar New Year)",g:"Kırmızı zarf içinde tebrik kartı, mandalina ikramı",v:2},{d:"04.02",c:"LK",l:"Sri Lanka Bağımsızlık Günü",g:"",v:2},{d:"06.02",c:"NZ",l:"Yeni Zelanda Ulusal Günü (Waitangi)",g:"",v:2},{d:"2027-02-06",c:"CN, HK, TW, SG, KR, VN, MY",l:"Ay Yeni Yılı (Lunar New Year)",g:"Kırmızı zarf içinde tebrik kartı, mandalina ikramı"},{d:"11.02",c:"JP",l:"Japonya Ulusal Kuruluş Günü",g:""},{d:"14.02",c:"*",l:"Sevgililer Günü",g:"Çift konaklayanlara romantik turndown: kart, gül yaprağı",v:2},{d:"15.02",c:"RS",l:"Sırbistan Devlet Günü",g:"",v:2},{d:"16.02",c:"LT",l:"Litvanya Devlet Günü",g:"",v:2},{d:"22.02",c:"SA",l:"Suudi Arabistan Kuruluş Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart",v:2},{d:"24.02",c:"EE",l:"Estonya Bağımsızlık Günü",g:"",v:2},{d:"25.02",c:"KW",l:"Kuveyt Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"26.02",c:"KW",l:"Kuveyt Kurtuluş Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart",v:2},{d:"01.03",c:"BA",l:"Bosna-Hersek Bağımsızlık Günü",g:"",v:2},{d:"03.03",c:"BG",l:"Bulgaristan Kurtuluş Günü",g:"",v:2},{d:"06.03",c:"GH",l:"Gana Bağımsızlık Günü",g:"",v:2},{d:"08.03",c:"*",l:"Dünya Kadınlar Günü",g:"Kadın misafirlere çiçek ve kart; RU, UA, KZ, AZ, UZ, GE misafirleri için çok önemli",v:2},{d:"15.03",c:"HU",l:"Macaristan Ulusal Günü",g:"",v:2},{d:"20.03",c:"TN",l:"Tunus Bağımsızlık Günü",g:"",v:2},{d:"21.03",c:"IR, AZ, AF, KZ, UZ, KG, TJ, TM",l:"Nevruz",g:"Nevruz tebrik kartı, kuru meyve ve tatlı ikramı",v:2},{d:"21.03",c:"EG, AE, QA, KW, BH, JO, LB, OM, IQ, SA",l:"Anneler Günü (Arap ülkeleri)",g:"Anne misafirlere çiçek ve kart",v:2},{d:"23.03",c:"PK",l:"Pakistan Günü",g:"",v:2},{d:"25.03",c:"GR",l:"Yunanistan Bağımsızlık Günü",g:""},{d:"26.03",c:"BD",l:"Bangladeş Bağımsızlık Günü",g:"",v:2},{d:"23.04",c:"TR",l:"Ulusal Egemenlik ve Çocuk Bayramı",g:"Çocuklu ailelere küçük hediye ve kart",v:2},{d:"27.04",c:"NL",l:"Hollanda Kral Günü",g:""},{d:"27.04",c:"ZA",l:"Güney Afrika Özgürlük Günü",g:""},{d:"03.05",c:"PL",l:"Polonya Anayasa Günü",g:"",v:2},{d:"05.05",c:"JP, KR",l:"Çocuk Günü (Japonya, Kore)",g:"Çocuklu ailelere küçük hediye ve kart",v:2},{d:"10.05",c:"MX",l:"Anneler Günü (Meksika)",g:"Anne misafirlere çiçek ve kart",v:2},{d:"2.Paz.05",c:"TR, US, CA, AU, NZ, DE, IT, NL, CH, AT, BE, DK, FI, GR, JP, CN, IN, BR, ZA, SG, MY, PH",l:"Anneler Günü",g:"Anne misafirlere çiçek ve kart",v:2},{d:"17.05",c:"NO",l:"Norveç Anayasa Günü",g:""},{d:"25.05",c:"JO",l:"Ürdün Bağımsızlık Günü",g:""},{d:"25.05",c:"AR",l:"Arjantin Mayıs Devrimi Günü",g:"",v:2},{d:"26.05",c:"GE",l:"Gürcistan Bağımsızlık Günü",g:""},{d:"28.05",c:"AZ",l:"Azerbaycan Bağımsızlık Günü",g:""},{d:"son.Paz.05",c:"FR, SE, MA, DZ, TN",l:"Anneler Günü (Fransa, İsveç, Kuzey Afrika)",g:"Anne misafirlere çiçek ve kart",v:2},{d:"30.05",c:"HR",l:"Hırvatistan Devlet Günü",g:"",v:2},{d:"01.06",c:"CN, RU, UA, BY, KZ, UZ, AZ, GE, AM, VN, PL, CZ, SK, RO, BG, PT",l:"Uluslararası Çocuk Günü",g:"Çocuklu ailelere küçük hediye ve kart",v:2},{d:"02.06",c:"IT",l:"İtalya Cumhuriyet Günü",g:""},{d:"05.06",c:"DK",l:"Danimarka Anayasa Günü",g:"",v:2},{d:"06.06",c:"SE",l:"İsveç Ulusal Günü",g:""},{d:"10.06",c:"PT",l:"Portekiz Günü",g:"",v:2},{d:"12.06",c:"RU",l:"Rusya Günü",g:""},{d:"12.06",c:"PH",l:"Filipinler Bağımsızlık Günü",g:"",v:2},{d:"17.06",c:"IS",l:"İzlanda Ulusal Günü",g:"",v:2},{d:"3.Paz.06",c:"TR, US, CA, GB, IE, FR, NL, GR, IN, JP, CN, ZA, MX, AR, SG, MY, PH",l:"Babalar Günü",g:"Baba misafirlere kart ve küçük ikram",v:2},{d:"21.06",c:"EG, JO, LB, AE",l:"Babalar Günü (Arap ülkeleri)",g:"Baba misafirlere kart ve küçük ikram",v:2},{d:"23.06",c:"LU",l:"Lüksemburg Ulusal Günü",g:"",v:2},{d:"25.06",c:"SI",l:"Slovenya Devlet Günü",g:"",v:2},{d:"01.07",c:"CA",l:"Kanada Günü",g:""},{d:"03.07",c:"BY",l:"Belarus Bağımsızlık Günü",g:"",v:2},{d:"04.07",c:"US",l:"ABD Bağımsızlık Günü",g:""},{d:"05.07",c:"DZ",l:"Cezayir Bağımsızlık Günü",g:"",v:2},{d:"05.07",c:"VE",l:"Venezuela Bağımsızlık Günü",g:"",v:2},{d:"09.07",c:"AR",l:"Arjantin Bağımsızlık Günü",g:"",v:2},{d:"14.07",c:"FR",l:"Fransa Ulusal Günü",g:""},{d:"20.07",c:"CO",l:"Kolombiya Bağımsızlık Günü",g:"",v:2},{d:"21.07",c:"BE",l:"Belçika Ulusal Günü",g:"",v:2},{d:"23.07",c:"EG",l:"Mısır Ulusal Günü",g:""},{d:"28.07",c:"PE",l:"Peru Bağımsızlık Günü",g:"",v:2},{d:"30.07",c:"MA",l:"Fas Taht Günü",g:""},{d:"01.08",c:"CH",l:"İsviçre Ulusal Günü",g:""},{d:"09.08",c:"SG",l:"Singapur Ulusal Günü",g:"",v:2},{d:"14.08",c:"PK",l:"Pakistan Bağımsızlık Günü",g:""},{d:"15.08",c:"IN",l:"Hindistan Bağımsızlık Günü",g:""},{d:"15.08",c:"KR",l:"Kore Kurtuluş Günü",g:""},{d:"17.08",c:"ID",l:"Endonezya Bağımsızlık Günü",g:"",v:2},{d:"24.08",c:"UA",l:"Ukrayna Bağımsızlık Günü",g:""},{d:"27.08",c:"MD",l:"Moldova Bağımsızlık Günü",g:"",v:2},{d:"31.08",c:"KG",l:"Kırgızistan Bağımsızlık Günü",g:"",v:2},{d:"31.08",c:"MY",l:"Malezya Ulusal Günü",g:"",v:2},{d:"01.09",c:"UZ",l:"Özbekistan Bağımsızlık Günü",g:""},{d:"01.09",c:"SK",l:"Slovakya Anayasa Günü",g:"",v:2},{d:"02.09",c:"VN",l:"Vietnam Ulusal Günü",g:"",v:2},{d:"07.09",c:"BR",l:"Brezilya Bağımsızlık Günü",g:""},{d:"08.09",c:"MK",l:"Kuzey Makedonya Bağımsızlık Günü",g:"",v:2},{d:"09.09",c:"TJ",l:"Tacikistan Bağımsızlık Günü",g:"",v:2},{d:"16.09",c:"MX",l:"Meksika Bağımsızlık Günü",g:""},{d:"18.09",c:"CL",l:"Şili Ulusal Günü",g:"",v:2},{d:"21.09",c:"AM",l:"Ermenistan Bağımsızlık Günü",g:"",v:2},{d:"21.09",c:"MT",l:"Malta Bağımsızlık Günü",g:"",v:2},{d:"23.09",c:"SA",l:"Suudi Arabistan Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"27.09",c:"TM",l:"Türkmenistan Bağımsızlık Günü",g:"",v:2},{d:"01.10",c:"CN",l:"Çin Ulusal Günü",g:""},{d:"01.10",c:"NG",l:"Nijerya Bağımsızlık Günü",g:""},{d:"03.10",c:"DE",l:"Almanya Birlik Günü",g:""},{d:"03.10",c:"IQ",l:"Irak Ulusal Günü",g:"",v:2},{d:"03.10",c:"KR",l:"Kore Kuruluş Günü",g:"",v:2},{d:"2.Pzt.10",c:"CA",l:"Kanada Şükran Günü (Thanksgiving)",g:"",v:2},{d:"12.10",c:"ES",l:"İspanya Ulusal Günü",g:""},{d:"26.10",c:"AT",l:"Avusturya Ulusal Günü",g:""},{d:"28.10",c:"CZ",l:"Çekya Devlet Günü",g:"",v:2},{d:"29.10",c:"TR",l:"Cumhuriyet Bayramı",g:""},{d:"11.11",c:"PL",l:"Polonya Bağımsızlık Günü",g:"",v:2},{d:"18.11",c:"LV",l:"Letonya Bağımsızlık Günü",g:"",v:2},{d:"19.11",c:"MC",l:"Monako Ulusal Günü",g:"",v:2},{d:"20.11",c:"OM",l:"Umman Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart",v:2},{d:"22.11",c:"LB",l:"Lübnan Bağımsızlık Günü",g:""},{d:"4.Per.11",c:"US",l:"Şükran Günü (Thanksgiving)",g:"",v:2},{d:"son.Paz.11",c:"RU",l:"Anneler Günü (Rusya)",g:"Anne misafirlere çiçek ve kart",v:2},{d:"28.11",c:"AL",l:"Arnavutluk Bağımsızlık Günü",g:"",v:2},{d:"01.12",c:"RO",l:"Romanya Ulusal Günü",g:"",v:2},{d:"02.12",c:"AE",l:"BAE Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"05.12",c:"TH",l:"Tayland Ulusal Günü",g:"",v:2},{d:"06.12",c:"FI",l:"Finlandiya Bağımsızlık Günü",g:""},{d:"12.12",c:"KE",l:"Kenya Jamhuri Günü",g:"",v:2},{d:"16.12",c:"BH",l:"Bahreyn Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"16.12",c:"KZ",l:"Kazakistan Bağımsızlık Günü",g:""},{d:"18.12",c:"QA",l:"Katar Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"24.12",c:"LY",l:"Libya Bağımsızlık Günü",g:"",v:2}],
+    cols:[{f:"d",ph:"gg.aa · 2.Paz.05 · yyyy-aa-gg",w:"150px"},{f:"c",ph:"Uyruk (SA, AE) · herkes: *",w:"150px"},{f:"l",ph:"Günün adı",flex:1},{f:"g",ph:"Jest önerisi (opsiyonel)",flex:1}]},
   bdi_nt_fields:{el:"bdiCfg_ntf",add:"+ Alan ekle",idPrefix:"f",def:[
     {id:"reason",l:"Why not touched",t:"reason",o:"Ayarlar'daki dokunulamama sebepleri",fixed:1},
     {id:"plan",l:"Plan",t:"select",o:"Courtesy call, Turndown note, Welcome amenity, Visit during turndown, Note left in room, Guest Relations call"},
@@ -8474,7 +8472,7 @@ var BDI_CFG={
     cols:[{f:"l",ph:"Sebep (rapora yazılır)",w:"170px"},{f:"ex",ph:"Kısa açıklama: ne zaman seçilir",flex:1}]}
 };
 function bdiCfgDef(key){return BDI_CFG[key].def.map(function(x){var o={};for(var k in x)o[k]=x[k];return o})}
-function bdiCfgRaw(key){var a=null;try{a=JSON.parse(localStorage.getItem(key)||"null")}catch(e){}return Array.isArray(a)?a:bdiCfgDef(key)}
+function bdiCfgRaw(key){if(key==="bdi_natdays")bdiNatDaysUp();var a=null;try{a=JSON.parse(localStorage.getItem(key)||"null")}catch(e){}return Array.isArray(a)?a:bdiCfgDef(key)}
 function bdiCfg(key){
   var a=bdiCfgRaw(key).filter(function(x){return x&&String(x.l||"").trim()});
   if(key==="bdi_pref_cats"&&!a.some(function(x){return x.l==="Sensitivity"}))a.push(bdiCfgDef(key).filter(function(x){return x.fixed})[0]);
@@ -8568,7 +8566,7 @@ function bdiGoIssue(){
 // Kayit: bdi_fu_v1 {id -> madde}, ortak klasorle madde bazinda yeni-u kazanir (silinen de del ile esitlenir).
 // Mobil temel: her maddenin sabit id'si, sahibi ve son saati var; sabah rehberine girer, iPad'den "Yaptım" ile kapanir
 // (olay id'siyle idempotent). Yapildi + butler secildiyse Butler Did It'e touch yazilir (issue'luysa issue gecmisine).
-var BDI_FU_KEY="bdi_fu_v1",_bdiFuFilter="open",_bdiFuDraft={};
+var BDI_FU_KEY="bdi_fu_v1";
 var BDI_FU_KIND={issue:"issue metni",confirm:"memnuniyet teyidi",manual:"elle"};
 function bdiFuAll(){try{var o=JSON.parse(BdiKV.get(BDI_FU_KEY)||"{}");return o&&typeof o==="object"&&!Array.isArray(o)?o:{}}catch(e){return {}}}
 function bdiFuSave(o){
@@ -8629,18 +8627,17 @@ function bdiFuSweep(){
     var tReq=is.createdAt||0;(is.events||[]).forEach(function(e){if(e&&!e.del&&e.type==="update"&&(e.ts||0)>tReq)tReq=e.ts});
     // 1) metin "follow-up required": yalniz ACIK issue, son 7 gunde acilmis, metinden sonra butler temasi yoksa
     if(ts==="req"&&!nc&&st.status==="open"&&(is.createdAt||0)>=now-7*864e5&&!bEv(is,tReq))mk("fu_is_"+is.id,"issue",is.createdAt||now,"Issue takibi: "+bdiFuShort(bdiIssueSplitText(is.concern).base||is.concern,120));
-    // 2) kaynak kapatti, butler temasi yok, misafir hala otelde: memnuniyet teyidi (son 48 saatte kapanan)
-    if(st.status==="closed"&&ts!=="no"&&!nc&&!st.closedBy&&!Object.keys(st.handlers).length&&!/^satisf/i.test(is.sat||"")&&(st.closedAt||0)>=now-48*36e5){
-      var sx=getS();if(sx&&!sx.gone&&sx.n>=0)mk("fu_cf_"+is.id,"confirm",st.closedAt,"Memnuniyet teyidi: "+bdiFuShort(bdiIssueSplitText(is.concern).base||is.concern,100));
-    }
+    // 2) 2026-11-05 sadelestirme (Haktan: "kapanan issue'larin takibi durabiliyor"): kapanan issue icin ayrica "memnuniyet teyidi" takibi ACILMAZ
     ["fu_is_"+is.id,"fu_cf_"+is.id].forEach(function(id){var f=o[id];if(!f||f.del)return;
       if(f.room!==String(is.room||"")||f.guest!==(is.guest||"")){f.room=String(is.room||"");f.guest=is.guest||"";f.u=now;ch=true}
       if(f.st!=="open")return;
+      if(f.kind==="confirm"&&!f.reopened){close(f,"cancel","simple","","Kapanan issue: ayrıca teyit takibi açılmıyor");return}
       if(nc){if(nc.by!=="guest")close(f,"cancel","nc","",bdiNcByLbl(nc.by)+" (temas yok)",nc.ts);return}
       var e=bEv(is,Math.max(f.kind==="confirm"?(st.closedAt||tReq):tReq,f.reopened||0));
       if(e&&!f.reopened&&e.ts<(f.at||0)){f.st="cancel";f.del=now;f.doneVia="pre";f.doneText="Takip açılmadan önce yapılmıştı";f.u=now;ch=true;return} // gereksiz acilmis: kaldir (raporu bozmasin)
       if(e){close(f,"done","issue",e.butler,e.text||"",e.ts,e.id);return}
       if(f.reopened)return; // elle yeniden acildi: metin / memnuniyet kendiliginden kapatmaz
+      if(st.status==="closed"){close(f,"cancel","closed","","Issue kapandı",st.closedAt||now);return} // issue kapandi: takibi de kapanir
       if(f.kind==="issue"&&ts==="no"){close(f,"done","text","","Kaynak metin güncellendi: takip gerekmiyor");return}
       if(f.kind==="confirm"&&/^satisf/i.test(is.sat||"")){close(f,"done","sat","","Kaynakta misafir memnun ("+is.sat+")");return}
       if(!f.dueManual){var D=bdiFuAutoDue(f.kind,f.base||f.at,is.concern,is);if(Math.abs(D.due-f.due)>6e4){f.due=D.due;f.dueWhy=D.why;f.u=now;ch=true}}
@@ -8648,6 +8645,24 @@ function bdiFuSweep(){
   });
   Object.keys(o).forEach(function(k){var f=o[k];if(!f||f.del||f.st!=="open"||!f.iss||ours[f.iss])return;
     var all=bdiGetIssues(),is=bdiIssueById(all,f.iss);close(f,"cancel","issue","",is&&is.out?"Outside guest olarak işaretlendi":"Issue silindi")});
+  // elle eklenip issue'ya baglanan takip: issue SONRADAN kapanirsa o da kapanir (kapali issue'ya bilerek eklenen kalir)
+  Object.keys(o).forEach(function(k){var f=o[k];if(!f||f.del||f.st!=="open"||f.kind!=="manual"||!f.iss||f.reopened||!ours[f.iss])return;
+    var st=bdiIssueState(ours[f.iss]);if(st.status==="closed"&&(st.closedAt||0)>=(f.at||0))close(f,"cancel","closed","","Issue kapandı",st.closedAt||now)});
+  // 3) Didn't Do It: bugun dokunulamayan misafire PLAN secildiyse takip olur ("Kimde" = Who will see)
+  var T=getToday();
+  try{var NT=bdiNtGet()[T]||{},NL=null;Object.keys(NT).forEach(function(gk){var x=NT[gk]||{},plan=(x.f||{}).plan,id="fu_nt_"+T+"_"+gk;if(!plan||o[id])return;
+      if(!NL)NL=bdiNtList(T);var row=NL&&NL.rows.filter(function(r){return r.gk===gk})[0];if(!row)return;
+      var due=Date.parse(T+"T20:00:00");if(due<now+30*6e4)due=Math.ceil((now+36e5)/3e5)*3e5;
+      o[id]={id:id,kind:"nt",iss:"",room:row.rooms[0]||"",guest:row.name,t:"Didn't Do It planı: "+plan,at:now,base:now,due:due,dueWhy:"Didn't Do It planı",dueManual:1,owner:(x.f||{}).who||"",st:"open",src:"nt",by:bdiMe()||"",u:now};ch=true})}catch(e){}
+  // 4) Butler Alert "gidilmedi": tekrar denenecek; alert'e gidilince kapanir
+  try{if(getAlertDate()===T)(alertList||[]).forEach(function(a){if(!a||a.manual&&!a.guest)return;var id="fu_al_"+T+"_"+a.roomNo,f=o[id];
+      if(a.visited===false&&!f){o[id]={id:id,kind:"alert",iss:"",room:String(a.roomNo),guest:String(a.guest||"").split(",").map(function(x){return x.trim()}).reverse().join(" ").trim(),t:"Butler Alert tekrar: "+(a.notVisitedReason||"gidilemedi"),at:now,base:now,due:bdiFuWorkHours(Math.ceil((now+2*36e5)/3e5)*3e5),dueWhy:"Butler Alert gidilmedi",dueManual:1,owner:"",st:"open",src:"alert",by:bdiMe()||"",u:now};ch=true}
+      else if(f&&f.st==="open"&&a.visited===true)close(f,"done","alert",a.visitedBy||"","Butler Alert: gidildi",now)})}catch(e){}
+  // Didn't Do It / Alert takibi: o misafire (oda ya da isim) sonradan touch girilince kendiliginden kapanir
+  try{var LG=null;Object.keys(o).forEach(function(k){var f=o[k];if(!f||f.del||f.st!=="open"||(f.kind!=="nt"&&f.kind!=="alert"))return;
+      if(!LG)LG=(loadBdiArrayForDate(T)||[]).filter(function(l){return l&&!l.deleted&&bdiIsTouch(l)});var rm=String(f.room||"").replace(/^0+/,"");
+      var l=LG.filter(function(l){return (l.ts||0)>(f.at||0)&&(String(l.room||"").replace(/^0+/,"")===rm||(f.guest&&!bdiGuestBad(l.guest)&&bdiNameNear(l.guest,f.guest)))}).sort(function(a,b){return a.ts-b.ts})[0];
+      if(l)close(f,"done","touch",l.butler||"",(l.action||"")+(l.note?": "+l.note:""),l.ts,l.id)})}catch(e){}
   if(ch)bdiFuSave(o);
   return ch;
 }
@@ -8701,114 +8716,102 @@ function bdiFuRows(){var now=Date.now();return bdiFuList().map(function(f){retur
 function bdiFuOpenRows(){return bdiFuRows().filter(function(r){return /^(late|today|later)$/.test(r.x.s)})}
 function bdiFuTabBadge(){var c=document.getElementById("bdiFuTabCount");if(!c)return;var n=0,late=0;try{bdiFuSweep();bdiFuOpenRows().forEach(function(r){if(r.x.s!=="later")n++;if(r.x.s==="late")late++})}catch(e){}c.textContent=n?String(n):"";c.classList.toggle("bd-count-red",!!late)}
 // ---- Takip sekmesi ----
-var _bdiFuNew=null,_bdiFuEdit={},_bdiFuFrom="",_bdiFuTo="";
+var _bdiFuFrom="",_bdiFuTo="";
 function bdiFuLocalInput(ts){var d=new Date(ts);return bdiYmd(d)+"T"+bdiNowTime(d)}
-function bdiFuViaLbl(f){return {issue:"issue kaydından",text:"kaynak metinden",sat:"kaynakta memnun",ipad:"iPad",nc:"temas olmadan kapandı",manual:"elle",cancel:"iptal"}[f.doneVia]||""}
-function bdiFuSetFilter(v){_bdiFuFilter=v;renderBdiFu()}
+function bdiFuViaLbl(f){return {issue:"issue kaydından",text:"kaynak metinden",sat:"kaynakta memnun",ipad:"iPad",nc:"temas olmadan kapandı",manual:"elle",cancel:"iptal",closed:"issue kapandı",simple:"kendiliğinden",touch:"touch girildi",alert:"alert'e gidildi"}[f.doneVia]||""}
 function bdiFuSetRange(k,v){if(!/^\d{4}-\d{2}-\d{2}$/.test(v||""))return;if(k==="f")_bdiFuFrom=v;else _bdiFuTo=v}
-function bdiFuDraftSet(id,k,v){(_bdiFuDraft[id]=_bdiFuDraft[id]||{})[k]=v}
-function bdiFuToggleNew(){_bdiFuNew=_bdiFuNew?null:{};renderBdiFu();if(_bdiFuNew)setTimeout(function(){var r=document.getElementById("bdiFuNRoom");if(r)r.focus()},40)}
-function bdiFuNewKeep(){if(!_bdiFuNew)return;["Room","Guest","T","Due","Owner"].forEach(function(k){var el=document.getElementById("bdiFuN"+k);if(el)_bdiFuNew[k.toLowerCase()]=el.value})}
-function bdiFuNewRoomHint(){var r=(document.getElementById("bdiFuNRoom").value||"").trim(),g=document.getElementById("bdiFuNGuest");if(g&&r&&vacRooms[r]||g&&r&&vacRooms[("000"+r).slice(-4)])g.placeholder=vacNameFmt(vacRooms[r]?r:("000"+r).slice(-4));bdiFuNewKeep()}
-function bdiFuQuick(k){
-  var el=document.getElementById("bdiFuNDue");if(!el)return;var now=Date.now(),t=getToday(),ts=0;
-  if(k==="1h")ts=Math.ceil((now+36e5)/3e5)*3e5;
-  else if(k==="18"){ts=Date.parse(t+"T18:00:00");if(ts<now+6e5)ts=Date.parse(bdiAddDays(t,1)+"T18:00:00")}
-  else if(k==="t10")ts=Date.parse(bdiAddDays(t,1)+"T10:00:00");
-  else if(k==="dep"){var room=(document.getElementById("bdiFuNRoom").value||"").trim(),g=(document.getElementById("bdiFuNGuest").value||"").trim()||(vacRooms[room]?vacNameFmt(room):"");
-    var S=bdiFuStay({guest:g,room:room,at:now}),dl=bdiFuDepDeadline(S);if(!dl){alert("Bu misafirin çıkış tarihi raporlarda bulunamadı. Son saati elle gir.");return}ts=Math.max(dl,now+6e5)}
-  el.value=bdiFuLocalInput(ts);bdiFuNewKeep();
-}
-function bdiFuFormHtml(){
-  var d=_bdiFuNew;if(!d)return "";
-  var q=function(k,l){return '<button type="button" class="bd-chip" onclick="bdiFuQuick(\''+k+'\')">'+l+'</button>'};
-  return '<div class="bd-fu-new"><div class="bd-fu-new-g"><div><label class="bd-lbl" for="bdiFuNRoom">Oda</label><input type="text" id="bdiFuNRoom" value="'+esc(d.room||"")+'" oninput="bdiFuNewRoomHint()" placeholder="1203"></div>'+
-    '<div><label class="bd-lbl" for="bdiFuNGuest">Misafir</label><input type="text" id="bdiFuNGuest" value="'+esc(d.guest||"")+'" oninput="bdiFuNewKeep()" placeholder="odadan gelir"></div>'+
-    '<div><label class="bd-lbl" for="bdiFuNOwner">Kimde</label><select id="bdiFuNOwner" onchange="bdiFuNewKeep()">'+bdiButlerOptions(d.owner||"","Kat sorumlusu (otomatik)")+'</select></div></div>'+
-    '<label class="bd-lbl" for="bdiFuNT">Ne yapılacak?</label><input type="text" id="bdiFuNT" value="'+esc(d.t||"")+'" oninput="bdiFuNewKeep()" placeholder="örn. Menteşe değişince misafire haber ver · yarın 10:00 taksiyi teyit et">'+
-    '<label class="bd-lbl" for="bdiFuNDue">Son saat</label><div class="bd-fu-quick"><input type="datetime-local" id="bdiFuNDue" value="'+esc(d.due||"")+'" onchange="bdiFuNewKeep()">'+q("1h","1 saat sonra")+q("18","Bu akşam 18:00")+q("t10","Yarın 10:00")+q("dep","Çıkıştan önce")+'</div>'+
-    (d.iss?'<div class="bd-sub" style="margin-top:6px">Issue\'ya bağlı: '+esc(d.issTxt||"")+'</div>':'')+
-    '<div style="margin-top:10px;display:flex;gap:8px"><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiFuAddFromForm()">Takibi ekle</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiFuToggleNew()">Vazgeç</button></div></div>';
-}
-function bdiFuAddFromForm(){
-  bdiFuNewKeep();var d=_bdiFuNew||{},room=String(d.room||"").trim().replace(/\D/g,""),guest=String(d.guest||"").trim(),t=String(d.t||"").trim(),due=d.due?Date.parse(d.due+":00"):0;
-  if(!guest&&room)guest=vacRooms[room]?vacNameFmt(room):vacRooms[("000"+room).slice(-4)]?vacNameFmt(("000"+room).slice(-4)):"";
-  if(!t){alert("Ne yapılacağını yaz.");return}if(!room&&!guest){alert("Oda ya da misafir gerekli.");return}
-  if(!due||isNaN(due)){alert("Son saati seç (hızlı düğmeler de var).");return}
-  if(!bdiKvkkOk(t))return;
-  bdiFuAdd({room:room,guest:guest,t:t,due:due,owner:d.owner||"",iss:d.iss||""});_bdiFuNew=null;_bdiFuFilter="open";renderBdiFu();bdiFuTabBadge();try{swWarnRefresh()}catch(e){}
-  bdiToast("Takip eklendi: "+(room?room+" ":"")+guest+" · son saat "+bdiFuDueLbl(due));
-}
 function bdiFuFromIssue(issId){
   var is=bdiIssueById(bdiGetIssues(),issId);if(!is)return;
-  _bdiFuNew={room:String(is.room||""),guest:is.guest||"",iss:is.id,issTxt:bdiFuShort(is.concern,90),t:"",due:""};
-  switchBdiTab("fu");setTimeout(function(){var el=document.getElementById("bdiFuNT");if(el){el.scrollIntoView({block:"center"});el.focus()}},60);
+  _bdiFuIss=is.id;switchBdiTab("fu");setTimeout(function(){var el=document.getElementById("bdiFuQ");if(el){el.value=(is.room?String(is.room)+" ":"");el.scrollIntoView({block:"center"});el.focus()}},60);
 }
 function bdiFuGoIssue(issId){try{bdiAwayOpen(issId)}catch(e){switchBdiTab("issues")}}
-function bdiFuDoneFrom(id){
-  var b=(document.getElementById("bdiFuB_"+id)||{}).value||"",n=((document.getElementById("bdiFuN_"+id)||{}).value||"").trim();
-  if(n&&!bdiKvkkOk(n))return;
-  if(!b&&!confirm("Kim yaptı seçilmedi. Butler Did It'e touch yazılmadan \"yapıldı\" sayılsın mı?"))return;
-  var f=bdiFuDone(id,{butler:b,text:n,via:"manual"});delete _bdiFuDraft[id];
-  renderBdiFu();bdiFuTabBadge();try{renderBdiIssues()}catch(e){}bdiRefreshDerived();try{swWarnRefresh()}catch(e){}
-  if(f)bdiToast("Takip yapıldı"+(b?" · "+b+": Butler Did It'e touch yazıldı":"")+".");
-}
 function bdiFuCancelFrom(id){var why=prompt("Neden iptal? (ör. misafir istemedi, başka departman halletti)","Gerek kalmadı");if(why===null)return;
-  bdiFuSet(id,{st:"cancel",doneAt:Date.now(),doneText:String(why).trim()||"Gerek kalmadı",doneVia:"cancel"});renderBdiFu();bdiFuTabBadge();try{swWarnRefresh()}catch(e){}}
+  bdiFuSet(id,{st:"cancel",doneAt:Date.now(),doneText:String(why).trim()||"Gerek kalmadı",doneVia:"cancel"});_bdiFuOpenRow="";renderBdiFu();bdiFuTabBadge();try{swWarnRefresh()}catch(e){}}
 function bdiFuReopenFrom(id){var f=bdiFuAll()[id];if(!f)return;if(!confirm("Bu takip yeniden açılsın mı?"+(f.doneLog?"\n\nBu takip için Butler Did It'e yazılan touch da silinir.":"")))return;
-  bdiFuReopen(id);renderBdiFu();bdiFuTabBadge();try{renderBdiIssues()}catch(e){}bdiRefreshDerived();try{swWarnRefresh()}catch(e){}}
-function bdiFuEditToggle(id){_bdiFuEdit[id]=!_bdiFuEdit[id];renderBdiFu()}
+  bdiFuReopen(id);_bdiFuOpenRow="";renderBdiFu();bdiFuTabBadge();try{renderBdiIssues()}catch(e){}bdiRefreshDerived();try{swWarnRefresh()}catch(e){}}
 function bdiFuEditSave(id){
   var t=((document.getElementById("bdiFuEt_"+id)||{}).value||"").trim(),dv=(document.getElementById("bdiFuEd_"+id)||{}).value||"",o=(document.getElementById("bdiFuEo_"+id)||{}).value||"";
   var due=dv?Date.parse(dv+":00"):0;if(!t||!due||isNaN(due)){alert("Ne yapılacak ve son saat gerekli.");return}if(!bdiKvkkOk(t))return;
   var f=bdiFuAll()[id],p={t:t,owner:o};if(f&&Math.abs(f.due-due)>=6e4){p.due=due;p.dueManual=1;p.dueWhy="elle"}
-  bdiFuSet(id,p);_bdiFuEdit[id]=false;renderBdiFu();bdiFuTabBadge();try{swWarnRefresh()}catch(e){}
+  bdiFuSet(id,p);_bdiFuOpenRow="";renderBdiFu();bdiFuTabBadge();try{swWarnRefresh()}catch(e){}
 }
+// 2026-11-05 yeniden tasarim (Haktan: "takip sadece issue'lara veriliyor, zor; kalabalik, zor okunuyor; daha basit ve faydali"):
+// tek kutu ile ekle (oda saat is), tek satirlik liste (gecikti / bugun / yarin), kutucuga dokun = yapildi (kimde ise onun adina touch yazilir).
+var _bdiFuOpenRow="",_bdiFuIss="";
+var BDI_FU_SRC={issue:"Issue",confirm:"Issue",nt:"Didn't Do It",alert:"Alert"};
+function bdiFuParseQuick(s){
+  s=String(s||"").trim();var m=/^(\d{3,4})\b[\s,]*/.exec(s);if(!m)return {err:"Önce oda numarasını yaz: ör. 1802 17:00 tekne saatini teyit et"};
+  var room=m[1],rest=s.slice(m[0].length),day=getToday(),now=Date.now(),tm="",dm=/^(yarın|yarin|tomorrow)\b[\s,]*/i.exec(rest);
+  if(dm){day=bdiAddDays(day,1);rest=rest.slice(dm[0].length)}
+  var hm=/^(\d{1,2})[:.](\d{2})\b[\s,]*/.exec(rest);if(hm&&+hm[1]<24&&+hm[2]<60){tm=("0"+hm[1]).slice(-2)+":"+hm[2];rest=rest.slice(hm[0].length)}
+  if(!dm){var dm2=/^(yarın|yarin|tomorrow)\b[\s,]*/i.exec(rest);if(dm2){day=bdiAddDays(day,1);rest=rest.slice(dm2[0].length);dm=dm2}}
+  var t=rest.replace(/^[-–:·,\s]+/,"").trim();if(!t)return {err:"Ne yapılacağını da yaz: ör. "+room+" 17:00 tekne saatini teyit et"};
+  var due=tm?Date.parse(day+"T"+tm+":00"):(dm?Date.parse(day+"T10:00:00"):Math.round((now+36e5)/3e5)*3e5);
+  if(tm&&!dm&&due<now-5*6e4)due=Date.parse(bdiAddDays(day,1)+"T"+tm+":00"); // gecmis saat yazildiysa yarin
+  return {room:room,t:t,due:due};
+}
+function bdiFuQuickAdd(){
+  var el=document.getElementById("bdiFuQ");if(!el)return;var P=bdiFuParseQuick(el.value);if(P.err){bdiToast(P.err);el.focus();return}
+  if(!bdiKvkkOk(P.t))return;var r4=("000"+P.room).slice(-4),guest=vacRooms[P.room]?vacNameFmt(P.room):vacRooms[r4]?vacNameFmt(r4):"",iss=_bdiFuIss;
+  if(iss){var is=bdiIssueById(bdiGetIssues(),iss);if(is&&!guest)guest=is.guest||""}
+  var owner="";try{owner=bdiFloorOwner(bdiYmd(new Date(P.due)),P.room,bdiNowTime(new Date(P.due)))||""}catch(e){}
+  bdiFuAdd({room:P.room,guest:guest,t:P.t,due:P.due,owner:owner,iss:iss||""});_bdiFuIss="";el.value="";
+  renderBdiFu();bdiFuTabBadge();try{swWarnRefresh()}catch(e){}
+  bdiToast("Takip eklendi: "+P.room+(guest?" "+guest:"")+" · "+bdiFuDueLbl(P.due)+(owner?" · "+owner:""));
+  setTimeout(function(){var q=document.getElementById("bdiFuQ");if(q)q.focus()},30);
+}
+function bdiFuCheck(id){
+  var f=bdiFuAll()[id];if(!f)return;var b=bdiFuOwner(f)||bdiMe()||"";
+  var r=bdiFuDone(id,{butler:b,text:"",via:"manual"});_bdiFuOpenRow="";
+  renderBdiFu();bdiFuTabBadge();try{renderBdiIssues()}catch(e){}try{bdiRefreshDerived()}catch(e){}try{swWarnRefresh()}catch(e){}
+  if(r)bdiToast("Yapıldı"+(b?" · "+b+" (Butler Did It'e yazıldı)":"")+". Yanlışsa “Bugün yapılan” altında geri al.");
+}
+function bdiFuRowToggle(id){_bdiFuOpenRow=_bdiFuOpenRow===id?"":id;renderBdiFu()}
 function bdiFuRowHtml(r){
-  var f=r.f,x=r.x,s=x.s,id=f.id,open=/^(late|today|later)$/.test(s),own=bdiFuOwner(f),dr=_bdiFuDraft[id]||{},q="'"+id+"'";
-  var stP=s==="late"?'<span class="bd-pill bd-pill-due0">Gecikti</span>':s==="missed"?'<span class="bd-pill bd-pill-dep">Kaçtı</span>':s==="done"?(x.late?'<span class="bd-pill bd-pill-due1">Geç yapıldı</span>':'<span class="bd-pill bd-pill-closed">Yapıldı</span>'):s==="cancel"?'<span class="bd-pill bd-pill-dep">İptal</span>':'';
-  var dep="";if(open&&x.S&&!x.S.gone){dep=x.S.n===0?'<span class="bd-pill bd-pill-due0" title="Çıkış">Bugün çıkıyor'+(x.S.time?' '+esc(x.S.time):'')+'</span>':x.S.n===1?'<span class="bd-pill bd-pill-due1">Yarın çıkıyor</span>':'<span class="bd-pill bd-pill-due">Çıkış '+esc(bdiFmtD(x.S.dep).slice(0,5))+'</span>'}
-  var d=new Date(f.due),dy=bdiYmd(d),t0=getToday();
-  var h='<div class="bd-fu-row k-'+s+'" id="bdiFu_'+esc(id)+'"><div class="bd-fu-due"><b>'+esc(bdiNowTime(d))+'</b><small>'+esc(dy===t0?"bugün":dy===bdiAddDays(t0,1)?"yarın":dy===bdiAddDays(t0,-1)?"dün":bdiFmtD(dy).slice(0,5))+'</small></div>';
-  h+='<div class="bd-fu-main"><div class="bd-fu-top"><b class="bd-fu-room">'+esc(f.room||"oda yok")+'</b> '+esc(f.guest||"")+(!f.room&&x.S&&x.S.room?' <span class="bd-sub">(raporda '+esc(x.S.room)+')</span>':'')+' <span class="bd-pill bd-pill-fuk">'+esc(BDI_FU_KIND[f.kind]||f.kind)+'</span>'+stP+dep+'</div>';
-  h+='<div class="bd-fu-t">'+esc(f.t)+'</div>';
-  h+='<div class="bd-sub">son saat '+esc(bdiFuDueLbl(f.due))+(f.dueWhy?' ('+esc(f.dueWhy)+')':'')+(own?' · '+(f.owner?'kimde':'kat sorumlusu')+': '+esc(own):'')+(f.iss?' · <button type="button" class="bd-link" onclick="bdiFuGoIssue(\''+esc(f.iss)+'\')">issue\'ya git</button>':'')+'</div>';
-  if(s==="done")h+='<div class="bd-fu-res">&#10003; '+esc(bdiFmtShort(f.doneAt))+(f.doneBy?' · '+esc(f.doneBy):'')+(bdiFuViaLbl(f)?' · '+esc(bdiFuViaLbl(f)):'')+(f.doneText?' · '+esc(f.doneText):'')+' <button type="button" class="bd-link" onclick="bdiFuReopenFrom('+q+')">geri al</button></div>';
-  if(s==="cancel")h+='<div class="bd-fu-res">İptal · '+esc(f.doneText||"")+' <button type="button" class="bd-link" onclick="bdiFuReopenFrom('+q+')">geri al</button></div>';
-  if(s==="missed")h+='<div class="bd-fu-res bd-warn-text">Misafir takip yapılmadan çıktı'+(x.S&&x.S.out?' ('+esc(bdiFmtShort(x.S.out))+')':x.S?' (çıkış '+esc(bdiFmtD(x.S.dep).slice(0,5))+')':'')+'. Yapıldıysa aşağıdan işaretle.</div>';
-  if(_bdiFuEdit[id])h+='<div class="bd-fu-edit"><input type="text" id="bdiFuEt_'+esc(id)+'" value="'+esc(f.t)+'" aria-label="Ne yapılacak"><input type="datetime-local" id="bdiFuEd_'+esc(id)+'" value="'+esc(bdiFuLocalInput(f.due))+'" aria-label="Son saat"><select id="bdiFuEo_'+esc(id)+'" aria-label="Kimde">'+bdiButlerOptions(f.owner||"","Kat sorumlusu")+'</select><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiFuEditSave('+q+')">Kaydet</button></div>';
-  h+='</div>';
-  if(open||s==="missed")h+='<div class="bd-fu-act"><select id="bdiFuB_'+esc(id)+'" aria-label="Kim yaptı" onchange="bdiFuDraftSet('+q+',\'b\',this.value)">'+bdiButlerOptions(dr.b||f.owner||bdiMe()||own,"Kim yaptı?")+'</select>'+
-    '<input type="text" id="bdiFuN_'+esc(id)+'" placeholder="Ne yapıldı? (opsiyonel)" value="'+esc(dr.n||"")+'" oninput="bdiFuDraftSet('+q+',\'n\',this.value)" aria-label="Ne yapıldı">'+
-    '<button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiFuDoneFrom('+q+')">Yapıldı</button>'+
-    '<div class="bd-fu-links"><button type="button" class="bd-link" onclick="bdiFuEditToggle('+q+')">düzenle</button> · <button type="button" class="bd-link" onclick="bdiFuCancelFrom('+q+')">iptal (gerek kalmadı)</button></div></div>';
-  return h+'</div>';
+  var f=r.f,x=r.x,s=x.s,id=f.id,q="'"+esc(id)+"'",open=/^(late|today|later)$/.test(s),own=bdiFuOwner(f),ex=_bdiFuOpenRow===id,src=BDI_FU_SRC[f.kind]||"";
+  var txt=String(f.t||"").replace(/^Butler Alert tekrar: /,"tekrar git: ").replace(/^(Issue takibi|Memnuniyet teyidi|Didn't Do It planı): /,"");
+  var when=open?bdiFuDueLbl(f.due).replace(/^bugün /,""):s==="done"?bdiNowTime(new Date(f.doneAt||f.due)):bdiFmtD(bdiYmd(new Date(f.due))).slice(0,5);
+  var dep=open&&x.S&&!x.S.gone&&x.S.n===0?'<span class="bd-fu-dep">bugün çıkıyor'+(x.S.time?' '+esc(x.S.time):'')+'</span>':'';
+  var h='<div class="bd-fu-row s-'+s+(ex?' open':'')+'" id="bdiFu_'+esc(id)+'">';
+  h+=open?'<button type="button" class="bd-fu-chk" onclick="bdiFuCheck('+q+')" title="Yapıldı" aria-label="Yapıldı: '+esc((f.room||"")+" "+txt)+'"></button>':'<span class="bd-fu-chk is-'+s+'" aria-hidden="true">'+(s==="done"?'&#10003;':s==="missed"?'!':'&ndash;')+'</span>';
+  h+='<button type="button" class="bd-fu-line" onclick="bdiFuRowToggle('+q+')" aria-expanded="'+ex+'"><span class="bd-fu-when">'+esc(when)+'</span><b class="bd-fu-room">'+esc(f.room||"—")+'</b><span class="bd-fu-g">'+esc(f.guest||"")+'</span><span class="bd-fu-t">'+esc(txt)+'</span>'+dep+'</button>';
+  h+='<span class="bd-fu-own" title="'+esc(own||"Kimde: kat sorumlusu yok")+'">'+esc(own?own.split(" ")[0]:"")+'</span><span class="bd-fu-src">'+esc(src)+'</span></div>';
+  if(!ex)return h;
+  h+='<div class="bd-fu-ed">';
+  if(open)h+='<div class="bd-fu-edg"><input type="text" id="bdiFuEt_'+esc(id)+'" value="'+esc(f.t)+'" aria-label="Ne yapılacak"><input type="datetime-local" id="bdiFuEd_'+esc(id)+'" value="'+esc(bdiFuLocalInput(f.due))+'" aria-label="Son saat"><select id="bdiFuEo_'+esc(id)+'" aria-label="Kimde">'+bdiButlerOptions(f.owner||"","Kat sorumlusu")+'</select>'+
+    '<button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiFuEditSave('+q+')">Kaydet</button></div>';
+  h+='<div class="bd-sub">'+(open?'Son saat '+esc(bdiFuDueLbl(f.due))+(f.dueWhy?' ('+esc(f.dueWhy)+')':'')+' · ':'')+'açıldı '+esc(bdiFmtShort(f.at||f.u))+
+    (s==="done"?' · yapıldı '+esc(bdiFmtShort(f.doneAt))+(f.doneBy?' · '+esc(f.doneBy):'')+(bdiFuViaLbl(f)?' · '+esc(bdiFuViaLbl(f)):'')+(f.doneText?' · '+esc(f.doneText):''):'')+
+    (s==="cancel"?' · iptal: '+esc(f.doneText||""):'')+(s==="missed"?' · misafir takip yapılmadan çıktı':'')+'</div>';
+  h+='<div class="bd-fu-links">'+(f.iss?'<button type="button" class="bd-link" onclick="bdiFuGoIssue(\''+esc(f.iss)+'\')">issue\'ya git</button>':'')+
+    (open?'<button type="button" class="bd-link" onclick="bdiFuCancelFrom('+q+')">gerek kalmadı</button>':'<button type="button" class="bd-link" onclick="bdiFuReopenFrom('+q+')">geri al</button>')+
+    (s==="missed"?'<button type="button" class="bd-link" onclick="bdiFuCheck('+q+')">yapılmıştı, işaretle</button>':'')+'</div></div>';
+  return h;
 }
 function renderBdiFu(){
   var el=document.getElementById("bdiFuPanel");if(!el)return;
   try{bdiFuSweep()}catch(e){console.warn("Takip:",e)}
-  var R=bdiFuRows(),t=getToday(),wk=Date.parse(bdiAddDays(t,-6)+"T00:00:00");
+  var R=bdiFuRows(),t=getToday(),wk=Date.parse(bdiAddDays(t,-6)+"T00:00:00"),t0=Date.parse(t+"T00:00:00");
   if(!_bdiFuFrom)_bdiFuFrom=bdiAddDays(t,-6);if(!_bdiFuTo)_bdiFuTo=t;
   var c={late:[],today:[],later:[],missed:[],done:[],cancel:[]};R.forEach(function(r){(c[r.x.s]||[]).push(r)});
-  var by=function(a,b){return a.f.due-b.f.due},d7=c.done.filter(function(r){return (r.f.doneAt||0)>=wk}),on7=d7.filter(function(r){return !r.x.late}).length,m7=c.missed.filter(function(r){return (r.f.due||0)>=wk});
-  var openN=c.late.length+c.today.length+c.later.length;
-  var kpi=function(n,l,k,ttl){return '<div class="bd-kpi'+(k?' bd-kpi-'+k:'')+'"'+(ttl?' title="'+esc(ttl)+'"':'')+'><b>'+n+'</b><span>'+l+'</span></div>'};
-  var h='<div class="bd-fu-head"><div><h3 class="bd-h3">Takip Defteri</h3><p class="bd-sub" style="margin:2px 0 0;max-width:80ch">Söz verilen ve takip gereken her şey: ne, kimin için, son saat, kimde. Issue metninin son hali <i>follow-up required</i> diyorsa kendiliğinden düşer, <i>no need to follow up</i> olunca kapanır; kaynak sistemin kapattığı issue\'da misafir hâlâ oteldeyse memnuniyet teyidi açılır. Sabah iPad rehberine de girer.</p></div>'+
-    '<button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiFuToggleNew()">+ Takip ekle</button></div>';
-  h+=bdiFuFormHtml();
-  h+='<div class="bd-kpis bd-kpis-inline bd-fu-kpis">'+kpi(openN,"açık")+kpi(c.late.length,"gecikti",c.late.length?"due":"")+kpi(c.today.length,"bugün")+kpi(d7.length?Math.round(on7/d7.length*100)+"%":"–","zamanında (7 gün)","",d7.length?on7+" / "+d7.length+" takip son saatinden önce yapıldı":"")+kpi(m7.length,"kaçtı (7 gün)","","Misafir takip yapılmadan çıktı")+'</div>';
-  h+='<div class="bd-toolbar bd-fu-bar"><div class="bd-seg" role="group" aria-label="Durum">'+[["open","Açık"],["done","Yapılan"],["cancel","İptal"],["all","Tümü"]].map(function(o){return '<button type="button" class="'+(_bdiFuFilter===o[0]?'active':'')+'" onclick="bdiFuSetFilter(\''+o[0]+'\')">'+o[1]+'</button>'}).join("")+'</div>'+
-    '<span style="flex:1"></span><span class="bd-sub">Rapor</span><input type="date" id="bdiFuFrom" value="'+esc(_bdiFuFrom)+'" onchange="bdiFuSetRange(\'f\',this.value)" aria-label="Başlangıç"><input type="date" id="bdiFuTo" value="'+esc(_bdiFuTo)+'" onchange="bdiFuSetRange(\'t\',this.value)" aria-label="Bitiş"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="downloadFuReport()">PDF</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="downloadFuXlsx()">Excel</button></div>';
-  var G=[];
-  if(_bdiFuFilter==="open"||_bdiFuFilter==="all")G.push(["late","Gecikti",c.late.sort(by)],["today","Bugün",c.today.sort(by)],["later","Yarın ve sonrası",c.later.sort(by)],["missed","Kaçtı: misafir takip yapılmadan çıktı (son 7 gün)",m7.sort(by)]);
-  if(_bdiFuFilter==="done"||_bdiFuFilter==="all")G.push(["done","Yapılan",c.done.sort(function(a,b){return (b.f.doneAt||0)-(a.f.doneAt||0)}).slice(0,150)]);
-  if(_bdiFuFilter==="cancel"||_bdiFuFilter==="all")G.push(["cancel","İptal",c.cancel.sort(function(a,b){return (b.f.u||0)-(a.f.u||0)}).slice(0,100)]);
-  var body=G.filter(function(g){return g[2].length}).map(function(g){return '<div class="bd-fu-grp k-'+g[0]+'"><h4 class="bd-h4">'+esc(g[1])+' <span class="bd-sub">'+g[2].length+'</span></h4>'+g[2].map(bdiFuRowHtml).join("")+'</div>'}).join("");
-  h+=body||'<p class="bd-empty">'+(_bdiFuFilter==="open"?'Açık takip yok. Issue metninde "follow-up required" yazan issue gelince ya da "+ Takip ekle" ile burada görünür.':'Bu filtrede takip yok.')+'</p>';
+  var by=function(a,b){return a.f.due-b.f.due},doneT=c.done.filter(function(r){return (r.f.doneAt||0)>=t0}).sort(function(a,b){return (b.f.doneAt||0)-(a.f.doneAt||0)});
+  var d7=c.done.filter(function(r){return (r.f.doneAt||0)>=wk}),on7=d7.filter(function(r){return !r.x.late}).length,m7=c.missed.filter(function(r){return (r.f.due||0)>=wk}),x7=c.cancel.filter(function(r){return (r.f.u||0)>=wk});
+  var h='<div class="bd-fu-head"><h3 class="bd-h3">Takip</h3><span class="bd-sub">Sonra yapılacak her şey. Yapınca kutucuğa dokun.</span></div>';
+  if(_bdiFuIss){var is0=bdiIssueById(bdiGetIssues(),_bdiFuIss);h+='<div class="bd-note">Issue\'ya bağlanacak: '+esc(is0?(is0.room||"")+" "+(is0.guest||""):"")+' <button type="button" class="bd-link" onclick="_bdiFuIssClear()">bağlama</button></div>'}
+  h+='<div class="bd-power bd-fu-q"><span class="bd-power-ic" aria-hidden="true">+</span><input type="text" id="bdiFuQ" placeholder="Oda, saat, ne yapılacak: 1802 17:00 tekne saatini teyit et · 1406 yarın 10:00 transferi ara" onkeydown="if(event.key===\'Enter\')bdiFuQuickAdd()" aria-label="Takip ekle"><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiFuQuickAdd()">Ekle</button></div>';
+  var grp=function(k,ttl,rows){return rows.length?'<div class="bd-fu-grp k-'+k+'"><h4 class="bd-h4">'+ttl+' <span class="bd-sub">'+rows.length+'</span></h4>'+rows.map(bdiFuRowHtml).join("")+'</div>':''};
+  var body=grp("late","Gecikti",c.late.sort(by))+grp("today","Bugün",c.today.sort(by))+grp("later","Yarın ve sonrası",c.later.sort(by));
+  h+=body||'<p class="bd-empty">Açık takip yok. Yukarıya oda, saat ve ne yapılacağını yazman yeter. Didn\'t Do It planları, gidilemeyen Butler Alert\'ler ve takip isteyen issue\'lar da kendiliğinden buraya düşer.</p>';
+  h+='<details class="bd-fu-more"'+(doneT.some(function(r){return r.f.id===_bdiFuOpenRow})?' open':'')+'><summary>Bugün yapılan <b>'+doneT.length+'</b></summary>'+(doneT.map(bdiFuRowHtml).join("")||'<p class="bd-sub">Henüz yok.</p>')+'</details>';
+  var past=m7.concat(x7).sort(function(a,b){return (b.f.u||0)-(a.f.u||0)}).slice(0,60);
+  h+='<details class="bd-fu-more"'+(past.some(function(r){return r.f.id===_bdiFuOpenRow})?' open':'')+'><summary>Son 7 gün: <b>'+d7.length+'</b> yapıldı'+(d7.length?' (%'+Math.round(on7/d7.length*100)+' zamanında)':'')+' · <b>'+m7.length+'</b> kaçtı · <b>'+x7.length+'</b> iptal · rapor</summary>'+past.map(bdiFuRowHtml).join("")+
+    '<div class="bd-toolbar" style="margin-top:10px"><span class="bd-sub">Rapor</span><input type="date" id="bdiFuFrom" value="'+esc(_bdiFuFrom)+'" onchange="bdiFuSetRange(\'f\',this.value)" aria-label="Başlangıç"><input type="date" id="bdiFuTo" value="'+esc(_bdiFuTo)+'" onchange="bdiFuSetRange(\'t\',this.value)" aria-label="Bitiş"><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="downloadFuReport()">PDF</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="downloadFuXlsx()">Excel</button></div></details>';
   el.innerHTML=h;
 }
+function _bdiFuIssClear(){_bdiFuIss="";renderBdiFu()}
+window.bdiFuQuickAdd=bdiFuQuickAdd;window.bdiFuCheck=bdiFuCheck;window.bdiFuRowToggle=bdiFuRowToggle;window._bdiFuIssClear=_bdiFuIssClear;
 // ---- Rapor (Butler Did It raporuyla ayni tasarim) ----
-function bdiFuTitleEn(f){var t=String(f.t||"");return t.replace(/^Issue takibi: /,"Issue follow-up: ").replace(/^Memnuniyet teyidi: /,"Satisfaction check: ")}
+function bdiFuTitleEn(f){var t=String(f.t||"");return t.replace(/^Issue takibi: /,"Issue follow-up: ").replace(/^Memnuniyet teyidi: /,"Satisfaction check: ").replace(/^Didn't Do It planı: /,"Didn't Do It plan: ").replace(/^Butler Alert tekrar: /,"Butler Alert retry: ")}
 function bdiFuReportData(from,to){
   var s0=Date.parse(from+"T00:00:00"),e0=Date.parse(to+"T23:59:59.999");
   var rows=bdiFuRows().filter(function(r){var f=r.f;return (f.due>=s0&&f.due<=e0)||(f.st==="done"&&(f.doneAt||0)>=s0&&(f.doneAt||0)<=e0)});
@@ -9359,7 +9362,7 @@ function swWarnGo(where,d){
   else if(where==="nt"){switchBdiTab("nt");bdiNtDateSet(d)}
   else if(where==="nat"){switchBdiTab("nat")}
   else if(where==="irci"){_bdiIrciDate=d;switchBdiTab("irci")}
-  else if(where==="fu"){_bdiFuFilter="open";switchBdiTab("fu");if(d)setTimeout(function(){var el=document.getElementById("bdiFu_"+d);if(el){el.scrollIntoView({block:"center"});el.classList.add("bd-flash")}},80)}
+  else if(where==="fu"){if(d)_bdiFuOpenRow=d;switchBdiTab("fu");if(d)setTimeout(function(){var el=document.getElementById("bdiFu_"+d);if(el){el.scrollIntoView({block:"center"});el.classList.add("bd-flash")}},80)}
 }
 function swWarnHtml(items,title,foot){
   var G={};items.forEach(function(x){(G[x.g]=G[x.g]||[]).push(x)});
@@ -14848,7 +14851,7 @@ function bdiFeedHtml0(){
   // Specials'taki "Birthday" konaklama boyunca gecerli (tarihsiz); hafizadaki anlar "(bugun)/(yarin)" tasir
   try{var _nev=bdiNatEvents(today,bdiAddDays(today,BDI_NAT_WARN)).filter(function(e){return e.inh.length});
     if(_nev.length)h+=grp('Ulusal ve özel günler',_nev.length,BDI_NAT_WARN+' gün içinde',_nev.map(function(e){var P=bdiNatPeople(e.inh);
-      return item("nat:"+e.d+e.name,"Özel gün","t-cel",'<b>'+esc(bdiFmtD(e.d).slice(0,5))+'</b> '+esc(e.name),esc(bdiNatWhen(e.days))+' · '+bdiNatN(e)+' misafir otelde'+(P.rooms?' · '+P.rooms+' oda':''),'<span class="bd-fd-st">'+esc(e.cs.join(", "))+'</span>',
+      return item("nat:"+e.d+e.name,"Özel gün","t-cel",'<b>'+esc(bdiFmtD(e.d).slice(0,5))+'</b> '+esc(e.name),esc(bdiNatWhen(e.days))+' · '+bdiNatN(e)+' misafir otelde'+(P.rooms?' · '+P.rooms+' oda':''),'<span class="bd-fd-st">'+esc(e.all?"tüm uyruklar":e.cs.join(", "))+'</span>',
         '<div class="bd-fd-concern">'+P.h+'<p class="bd-nat-g">Jest: '+esc(e.g||"Misafirin dilinde el yazısı tebrik kartı")+'</p><button type="button" class="bd-link" onclick="switchBdiTab(\'nat\')">Uyruklar\'da aç</button></div>')}).join(""))}catch(e){}
   if(cel.length)h+=grp('Kutlamalar',cel.length,'',cel.map(function(x){var k=K[x.room],ot=k.occ.map(function(o){return /\((bugün|yarın)\)/.test(o)?o:o+" (konaklamada, tarih yok)"});
     return item("c:"+x.room,"Kutlama","t-cel",'<b>'+esc(x.room)+'</b> '+esc(nm(x)),esc(cut(ot.join(" · "),90)),x.arriving?'<span class="bd-fd-st">bugün geliyor</span>':'',card(x,x.arriving?"arr":x.departing?"dep":"insp"))}).join(""));
@@ -19977,7 +19980,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueRestoreSkipped, alertNvPick, swSetIndexRender, swSetGo, swSetQKey, swBulkOpen, swCfgPvSet, _swAlertPv, bdiCfgEditDeb, bdiCfgAddFrom, bdiNtSel, bdiNtSelCount, bdiNtQuick, bdiBulkToggle, bdiBulkFloor, bdiBulkMine, bdiBulkTg, bdiBulkPick, bdiBulkSave, bdiRetroDay, bdiRetroAdd, bdiEntryGuestSet, renderBdiFu, bdiFuSetFilter, bdiFuSetRange, bdiFuToggleNew, bdiFuNewKeep, bdiFuNewRoomHint, bdiFuQuick, bdiFuAddFromForm, bdiFuFromIssue, bdiFuGoIssue, bdiFuDoneFrom, bdiFuCancelFrom, bdiFuReopenFrom, bdiFuEditToggle, bdiFuEditSave, bdiFuDraftSet, downloadFuReport, downloadFuXlsx, bdiNcPick, bdiNcSettings, bdiAwayToggle, bdiIssueSetOut, bdiIssueSetSort, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, swWarnOpen, swWarnGo, bdiReportGate, swGateRun, bdiAlertManualLink, bdiAlertActFix, alertReasonsSettings, setAlertNotReason, bdiNtChkAll, bdiNtBulkCtl, bdiNtBulkApply, bdiNtCopyAllPrev, bdiNtDateSet, bdiNtSettings, downloadDidntDoIt, downloadDidntDoItXlsx, bdiDateToday, bdiDateWarn, bdiIrciToggle, renderIrciActs, bdiIrciDateSet, bdiIrciEtdEl, bdiIrciEtdSet, bdiIrciApplyAll, bdiIrciXlsx, bdiIrciPrint, bdiIrciSettings, bdiAlertAutoSettings, renderBdiAlertAuto, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueRestoreSkipped, alertNvPick, swSetIndexRender, swSetGo, swSetQKey, swBulkOpen, swCfgPvSet, _swAlertPv, bdiCfgEditDeb, bdiCfgAddFrom, bdiNtSel, bdiNtSelCount, bdiNtQuick, bdiBulkToggle, bdiBulkFloor, bdiBulkMine, bdiBulkTg, bdiBulkPick, bdiBulkSave, bdiRetroDay, bdiRetroAdd, bdiEntryGuestSet, renderBdiFu, bdiFuSetRange, bdiFuFromIssue, bdiFuGoIssue, bdiFuCancelFrom, bdiFuReopenFrom, bdiFuEditSave, downloadFuReport, downloadFuXlsx, bdiNcPick, bdiNcSettings, bdiAwayToggle, bdiIssueSetOut, bdiIssueSetSort, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, swWarnOpen, swWarnGo, bdiReportGate, swGateRun, bdiAlertManualLink, bdiAlertActFix, alertReasonsSettings, setAlertNotReason, bdiNtChkAll, bdiNtBulkCtl, bdiNtBulkApply, bdiNtCopyAllPrev, bdiNtDateSet, bdiNtSettings, downloadDidntDoIt, downloadDidntDoItXlsx, bdiDateToday, bdiDateWarn, bdiIrciToggle, renderIrciActs, bdiIrciDateSet, bdiIrciEtdEl, bdiIrciEtdSet, bdiIrciApplyAll, bdiIrciXlsx, bdiIrciPrint, bdiIrciSettings, bdiAlertAutoSettings, renderBdiAlertAuto, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
@@ -20013,7 +20016,13 @@ var BDI_NAT=[["TR","TUR","Türkiye","TURKEY|TURKIYE|TURKISH"],["SA","SAU","Suudi
  ["KR","KOR","Güney Kore","KOREA|SOUTH KOREA|REPUBLIC OF KOREA|KOREAN"],["IN","IND","Hindistan","INDIA|INDIAN"],["PK","PAK","Pakistan","PAKISTAN|PAKISTANI"],["SG","SGP","Singapur","SINGAPORE|SINGAPOREAN"],
  ["MY","MYS","Malezya","MALAYSIA|MALAYSIAN"],["ID","IDN","Endonezya","INDONESIA|INDONESIAN"],["TH","THA","Tayland","THAILAND|THAI"],["AU","AUS","Avustralya","AUSTRALIA|AUSTRALIAN"],
  ["NZ","NZL","Yeni Zelanda","NEW ZEALAND"],["ZA","ZAF","Güney Afrika","SOUTH AFRICA|SOUTH AFRICAN"],["NG","NGA","Nijerya","NIGERIA|NIGERIAN"],["IL","ISR","İsrail","ISRAEL|ISRAELI"],
- ["BA","BIH","Bosna-Hersek","BOSNIA|BOSNIA AND HERZEGOVINA|BOSNIAN"],["PH","PHL","Filipinler","PHILIPPINES|FILIPINO"],["SZ","SWZ","Esvatini","ESWATINI|SWAZILAND"],["UN","UNK","Bilinmiyor","UNKNOWN"]];
+ ["BA","BIH","Bosna-Hersek","BOSNIA|BOSNIA AND HERZEGOVINA|BOSNIAN"],["PH","PHL","Filipinler","PHILIPPINES|FILIPINO"],["SZ","SWZ","Esvatini","ESWATINI|SWAZILAND"],["AF","AFG","Afganistan","AFGHANISTAN|AFGHAN"],["TJ","TJK","Tacikistan","TAJIKISTAN|TAJIK"],["AM","ARM","Ermenistan","ARMENIA|ARMENIAN"],["MD","MDA","Moldova","MOLDOVA|MOLDOVAN|REPUBLIC OF MOLDOVA"],
+ ["LU","LUX","Lüksemburg","LUXEMBOURG|LUXEMBOURGISH"],["CZ","CZE","Çekya","CZECH REPUBLIC|CZECHIA|CZECH"],["SK","SVK","Slovakya","SLOVAKIA|SLOVAK"],["HU","HUN","Macaristan","HUNGARY|HUNGARIAN"],
+ ["HR","HRV","Hırvatistan","CROATIA|CROATIAN"],["SI","SVN","Slovenya","SLOVENIA|SLOVENIAN"],["AL","ALB","Arnavutluk","ALBANIA|ALBANIAN"],["MK","MKD","Kuzey Makedonya","NORTH MACEDONIA|MACEDONIA|MACEDONIAN"],
+ ["MT","MLT","Malta","MALTA|MALTESE"],["IS","ISL","İzlanda","ICELAND|ICELANDIC"],["EE","EST","Estonya","ESTONIA|ESTONIAN"],["LV","LVA","Letonya","LATVIA|LATVIAN"],["LT","LTU","Litvanya","LITHUANIA|LITHUANIAN"],
+ ["MC","MCO","Monako","MONACO|MONEGASQUE"],["CL","CHL","Şili","CHILE|CHILEAN"],["CO","COL","Kolombiya","COLOMBIA|COLOMBIAN"],["PE","PER","Peru","PERU|PERUVIAN"],["VE","VEN","Venezuela","VENEZUELA|VENEZUELAN"],
+ ["BD","BGD","Bangladeş","BANGLADESH|BANGLADESHI"],["VN","VNM","Vietnam","VIETNAM|VIET NAM|VIETNAMESE"],["LK","LKA","Sri Lanka","SRI LANKA|SRI LANKAN"],["KE","KEN","Kenya","KENYA|KENYAN"],["GH","GHA","Gana","GHANA|GHANAIAN"],
+ ["UN","UNK","Bilinmiyor","UNKNOWN"]];
 function bdiNatIndex(){if(_bdiNatIx)return _bdiNatIx;var ix={};BDI_NAT.forEach(function(n){var o={c:n[0],l:n[2]};ix[n[0]]=o;ix[n[1]]=o;n[3].split("|").forEach(function(w){ix[w]=o})});return _bdiNatIx=ix}
 function bdiNatNorm(raw){
   var s=String(raw||"").toUpperCase().replace(/[^A-Z' ]/g," ").replace(/'/g,"").replace(/\s+/g," ").trim();if(!s)return null;
@@ -20087,17 +20096,28 @@ function bdiNatSetupDrop(){var z=document.getElementById("bdiNatDrop");if(!z||z.
   z.addEventListener("dragover",function(e){e.preventDefault();z.classList.add("drag")});z.addEventListener("dragleave",function(){z.classList.remove("drag")});
   z.addEventListener("drop",function(e){e.preventDefault();e.stopPropagation();z.classList.remove("drag");var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)bdiNatImportFile(f)})}
 // ozel gunler (Ayarlar > Uyruklar: ulusal ve ozel gunler). "gg.aa" her yil, "yyyy-aa-gg" tek sefer.
+// 2026-11-05 (Haktan: "ozel gunleri cogalt"): "sira.gun.ay" kurali (2.Paz.05 = mayisin 2. pazari, son.Paz.11 = kasimin son pazari);
+// uyruk "*" = tum misafirler (Yeni Yil, Sevgililer Gunu, Kadinlar Gunu)
+var BDI_NAT_WD={paz:0,pzt:1,pts:1,sal:2,"çar":3,car:3,per:4,cum:5,cmt:6,cts:6};
+function bdiNatRuleHit(dd,d){var m=/^(\d|son)\.([^.]+)\.(\d{1,2})$/i.exec(dd);if(!m)return null;var wd=BDI_NAT_WD[m[2].toLowerCase().slice(0,3)];if(wd===undefined||+m[3]!==+d.slice(5,7))return false;
+  var dt=new Date(d+"T12:00:00"),dm=+d.slice(8,10),last=new Date(+d.slice(0,4),+d.slice(5,7),0).getDate();return dt.getDay()===wd&&(m[1].toLowerCase()==="son"?dm+7>last:Math.ceil(dm/7)===+m[1])}
+function bdiNatDaysUp(){try{if(localStorage.getItem("bdi_natdays_up")==="2")return;var raw=localStorage.getItem("bdi_natdays");
+  if(raw){var a=JSON.parse(raw);if(Array.isArray(a)){var has={};a.forEach(function(x){if(x)has[String(x.l||"").toLowerCase()+"|"+String(x.d||"")]=1});
+    var add=bdiCfgDef("bdi_natdays").filter(function(x){return x.v===2&&!has[x.l.toLowerCase()+"|"+x.d]});if(add.length)localStorage.setItem("bdi_natdays",JSON.stringify(a.concat(add)))}}
+  localStorage.setItem("bdi_natdays_up","2")}catch(e){}}
 function bdiNatDays(from,to){
-  var L=bdiCfg("bdi_natdays")||[],out=[];
+  var L=bdiCfg("bdi_natdays")||[],out=[],seen={};
   for(var d=from,i=0;d<=to&&i<400;i++,d=bdiAddDays(d,1)){var md=d.slice(8,10)+"."+d.slice(5,7);
     L.forEach(function(x){var dd=String(x.d||"").trim().replace(/\//g,".");if(!dd)return;
-      var hit=/^\d{4}-\d{2}-\d{2}$/.test(dd)?dd===d:(function(){var m=/^(\d{1,2})\.(\d{1,2})$/.exec(dd);return m&&("0"+m[1]).slice(-2)+"."+("0"+m[2]).slice(-2)===md})();
-      if(hit)out.push({d:d,x:x,cs:String(x.c||"").toUpperCase().split(/[\s,;\/]+/).filter(Boolean).map(function(c){var n=bdiNatNorm(c);return n?n.c:c})})})}
+      var hit=/^\d{4}-\d{2}-\d{2}$/.test(dd)?dd===d:(function(){var m=/^(\d{1,2})\.(\d{1,2})$/.exec(dd);return m?("0"+m[1]).slice(-2)+"."+("0"+m[2]).slice(-2)===md:bdiNatRuleHit(dd,d)})();
+      var k=d+"|"+String(x.l||"").toLowerCase();if(!hit||seen[k])return;seen[k]=1;
+      out.push({d:d,x:x,cs:String(x.c||"").toUpperCase().split(/[\s,;\/]+/).filter(Boolean).map(function(c){if(c==="*")return c;var n=bdiNatNorm(c);return n?n.c:c})})})}
   return out;
 }
+function bdiNatC(r){return (r.nat&&(bdiNatNorm(r.nat)||{}).c)||r.c||"?"}
 function bdiNatOn(D){var inh=[],out=[];bdiOsrStore().rows.forEach(function(r){if(r.arr<=D&&r.dep>D)inh.push(r);else if(r.dep===D)out.push(r)});return {inh:inh,out:out}}
-function bdiNatEvents(from,to){var t=getToday();return bdiNatDays(from,to).map(function(e){var on=bdiNatOn(e.d),m=function(r){return e.cs.indexOf(r.c||(bdiNatNorm(r.nat)||{}).c)>=0};
-  var aT=bdiOsrStore().arrTo||"";return {d:e.d,name:e.x.l||"Özel gün",g:e.x.g||"",cs:e.cs,inh:on.inh.filter(m),out:on.out.filter(m),days:Math.round((Date.parse(e.d)-Date.parse(t))/864e5),partial:!!(aT&&e.d>aT)}})}
+function bdiNatEvents(from,to){var t=getToday();return bdiNatDays(from,to).map(function(e){var on=bdiNatOn(e.d),all=e.cs.indexOf("*")>=0,m=function(r){return all||e.cs.indexOf(bdiNatC(r))>=0};
+  var aT=bdiOsrStore().arrTo||"";return {d:e.d,name:e.x.l||"Özel gün",g:e.x.g||"",cs:e.cs,all:all,inh:on.inh.filter(m),out:on.out.filter(m),days:Math.round((Date.parse(e.d)-Date.parse(t))/864e5),partial:!!(aT&&e.d>aT)}})}
 function bdiNatN(e){return (e.partial?"en az ":"")+e.inh.length}
 function bdiNatWhen(n){return n===0?"bugün":n===1?"yarın":n+" gün sonra"}
 function bdiNatRoom(r){var nm=bdiGihPerson(r.name),rm="";
@@ -20106,7 +20126,7 @@ function bdiNatRoom(r){var nm=bdiGihPerson(r.name),rm="";
   if(!rm)try{(swArrFor(r.arr)||[]).forEach(function(g){if(!rm&&g.roomNo&&bdiNameNear((g.firstName||"")+" "+(g.lastName||""),nm))rm=("000"+g.roomNo).slice(-4)})}catch(e){}
   return rm}
 function bdiNatPeople(list){var rooms={},h=list.map(function(r){var rm=bdiNatRoom(r);if(rm)rooms[rm]=1;return '<li>'+(rm?'<b>'+esc(rm)+'</b> ':'')+esc(bdiGihPerson(r.name))+' <span class="bd-sub">'+esc(bdiFmtD(r.arr).slice(0,5))+' – '+esc(bdiFmtD(r.dep).slice(0,5))+'</span></li>'}).join("");return {h:'<ul class="bd-nat-ppl">'+h+'</ul>',rooms:Object.keys(rooms).length}}
-function bdiNatCodes(cs){return cs.map(function(c){return '<span class="bd-fd-p" title="'+esc(bdiNatLabel(c))+'">'+esc(c)+'</span>'}).join("")}
+function bdiNatCodes(cs){if(cs.indexOf("*")>=0)return '<span class="bd-fd-p">tüm uyruklar</span>';return cs.map(function(c){return '<span class="bd-fd-p" title="'+esc(bdiNatLabel(c))+'">'+esc(c)+'</span>'}).join("")}
 function bdiNatTabBadge(){var c=document.getElementById("bdiNatTabCount");if(!c)return;var n=0;try{var t=getToday();n=bdiNatEvents(t,bdiAddDays(t,BDI_NAT_WARN)).filter(function(e){return e.inh.length}).length}catch(e){}c.textContent=n?String(n):""}
 function bdiNatSetDate(v){_bdiNatDate=/^\d{4}-\d{2}-\d{2}$/.test(v||"")?v:"";renderBdiNat()}
 function bdiNatSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("bdiCfg_natd");if(!el)return;try{swSetOpen(el)}catch(e){}el.parentNode.scrollIntoView({behavior:"smooth",block:"start"})},150)}
@@ -20120,7 +20140,7 @@ function renderBdiNat(){
   h+='<h4 class="bd-h4">Yaklaşan özel günler <span class="bd-opt">önümüzdeki 30 gün · '+BDI_NAT_WARN+' gün kala Brifing ve Uyarılar\'a düşer</span></h4>';
   if(!st.rows.length)h+='<p class="bd-empty">OSR yüklenince her özel günde o uyruktan kaç misafirin otelde olacağı burada görünür.</p>';
   withG.forEach(function(e){var P=bdiNatPeople(e.inh),cov=e.partial,soon=e.days<=BDI_NAT_WARN;
-    h+='<details class="bd-fd-it bd-nat-ev'+(soon?' soon':'')+'"'+(soon?' open':'')+'><summary class="bd-fd-row"><span class="bd-fd-tag '+(soon?'t-warn':'t-mut')+'">'+esc(bdiFmtD(e.d).slice(0,5))+'</span>'+
+    h+='<details class="bd-fd-it bd-nat-ev'+(soon?' soon':'')+'"'+(soon&&!e.all?' open':'')+'><summary class="bd-fd-row"><span class="bd-fd-tag '+(soon?'t-warn':'t-mut')+'">'+esc(bdiFmtD(e.d).slice(0,5))+'</span>'+
       '<span class="bd-fd-main"><b>'+esc(e.name)+'</b>'+bdiNatCodes(e.cs)+'</span><span class="bd-fd-sub">'+esc(bdiNatWhen(e.days))+' · '+new Date(e.d+"T12:00:00").toLocaleDateString("tr-TR",{weekday:"long"})+'</span>'+
       '<span class="bd-fd-r"><b>'+bdiNatN(e)+' kişi</b> otelde'+(P.rooms?' · '+P.rooms+' oda':'')+(e.out.length?' <span class="bd-sub">(+'+e.out.length+' o sabah çıkıyor)</span>':'')+'</span></summary>'+
       '<div class="bd-fd-det">'+(e.inh.length?P.h:'<p class="bd-sub">O gece kalan yok.</p>')+(e.out.length?'<p class="bd-sub" style="margin-top:6px">O sabah çıkanlar: '+e.out.map(function(r){return esc(bdiGihPerson(r.name))}).join(", ")+'</p>':'')+
@@ -20129,7 +20149,7 @@ function renderBdiNat(){
   if(none.length)h+='<p class="bd-sub" style="margin:8px 0 0">O uyruktan otelde kimse yok: '+none.map(function(e){return esc(bdiFmtD(e.d).slice(0,5))+' '+esc(e.name)}).join(" · ")+'</p>';
   // 2) secilen gun uyruk dagilimi
   if(st.rows.length){var on=bdiNatOn(D),arr=st.rows.filter(function(r){return r.arr===D}),G={};
-    var add=function(r,k){var c=r.c||"?";var g=G[c]||(G[c]={c:c,inh:0,arr:0,out:0});g[k]++};on.inh.forEach(function(r){add(r,"inh")});arr.forEach(function(r){add(r,"arr")});on.out.forEach(function(r){add(r,"out")});
+    var add=function(r,k){var c=bdiNatC(r);var g=G[c]||(G[c]={c:c,inh:0,arr:0,out:0});g[k]++};on.inh.forEach(function(r){add(r,"inh")});arr.forEach(function(r){add(r,"arr")});on.out.forEach(function(r){add(r,"out")});
     var L=Object.keys(G).map(function(k){return G[k]}).sort(function(a,b){return b.inh-a.inh||b.arr-a.arr}),mx=Math.max.apply(null,L.map(function(g){return g.inh}).concat([1]));
     h+='<h4 class="bd-h4" style="margin-top:18px">Uyruk dağılımı · '+esc(bdiFmtD(D))+' <span class="bd-opt">'+on.inh.length+' kişi o gece otelde · '+arr.length+' gelen · '+on.out.length+' çıkan</span></h4>';
     h+='<table class="bd-btable bd-nat-t"><thead><tr><th>Uyruk</th><th class="bd-num">Otelde</th><th></th><th class="bd-num">Gelen</th><th class="bd-num">Çıkan</th></tr></thead><tbody>'+L.map(function(g){
