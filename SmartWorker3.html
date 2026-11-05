@@ -1750,6 +1750,12 @@ label{color:var(--sw-ink-2)}
 /* ---------- Butler Did It: ayni tokenlara baglanir ---------- */
 #page-didit{--g:var(--sw-brand);--g2:var(--sw-brand-2);--gt:var(--sw-brand-t);--ink:var(--sw-ink);--mut:var(--sw-mut);--line:var(--sw-line);--soft:var(--sw-surface-2);--brass:var(--sw-brass);--amber:var(--sw-warn);--amber-t:var(--sw-warn-t);--red:var(--sw-bad);--red-t:var(--sw-bad-t);max-width:var(--sw-w)}
 #page-didit .bd-head{margin:2px 2px 14px}
+#page-didit details.bd-fd-it>summary{list-style:none}#page-didit details.bd-fd-it>summary::-webkit-details-marker{display:none}
+#page-didit .bd-nat-ev.soon{border-color:#efd9b0;background:#fffdf8}
+#page-didit .bd-nat-ppl{list-style:none;margin:8px 0 0;padding:0;columns:2;column-gap:24px;font-size:12.5px;line-height:1.7}
+#page-didit .bd-nat-g{margin-top:8px;font-size:12.5px;color:var(--sw-brass)}
+#page-didit .bd-nat-bar{height:8px;border-radius:4px;background:var(--sw-surface-3);overflow:hidden}#page-didit .bd-nat-bar i{display:block;height:100%;background:var(--sw-brand);border-radius:4px}
+@media (max-width:760px){#page-didit .bd-nat-ppl{columns:1}}
 .sw-today{display:inline-flex;align-items:center;gap:10px;padding:6px 6px 6px 12px;border:1px solid var(--sw-line);background:var(--sw-surface);border-radius:999px;box-shadow:var(--sw-sh-1);font-size:12.5px;white-space:nowrap}
 .sw-today:empty{display:none}
 .sw-today-d{font-weight:600;color:var(--sw-ink)}
@@ -1821,6 +1827,7 @@ label{color:var(--sw-ink-2)}
   <button type="button" class="bd-tab" data-tab="nt" onclick="switchBdiTab('nt')">Didn't Do It <span id="bdiNtTabCount" class="bd-count"></span></button>
   <span class="bd-tab-sep" aria-hidden="true"></span>
   <button type="button" class="bd-tab" data-tab="guests" onclick="switchBdiTab('guests')">Misafirler</button>
+  <button type="button" class="bd-tab" data-tab="nat" onclick="switchBdiTab('nat')" title="Uyruklar ve ulusal / özel günler (OSR raporundan)">Uyruklar <span id="bdiNatTabCount" class="bd-count"></span></button>
   <button type="button" class="bd-tab" data-tab="atelier" onclick="switchBdiTab('atelier')">Atölye</button>
   <button type="button" class="bd-tab" data-tab="alice" onclick="switchBdiTab('alice')">Alice</button>
   <button type="button" class="bd-tab" data-tab="dept" onclick="switchBdiTab('dept')">Departman</button>
@@ -2146,6 +2153,22 @@ label{color:var(--sw-ink-2)}
 </section>
 
 <!-- TAB: Kapsam -->
+<section id="bdiTab_nat" class="bd-pane" style="display:none">
+<div class="bd-panel">
+  <div class="bd-panel-head">
+    <div><h2>Uyruklar ve özel günler</h2><div class="bd-sub">Ülkelerin ulusal ve özel günlerinde o uyruktan otelde kaç misafir olacak; 3 gün kala Brifing ve Uyarılar'a düşer.</div></div>
+    <div class="bd-toolbar"><label class="bd-inline">Gün <input type="date" id="bdiNatDate" onchange="bdiNatSetDate(this.value)" aria-label="Uyruk dağılımı günü"></label><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiNatSettings()">Özel günleri düzenle</button></div>
+  </div>
+  <div id="bdiNatDrop" class="bd-drop bd-drop-sm" onclick="document.getElementById('bdiNatFile').click()" role="button" tabindex="0">
+    <b>OSR (Guest Profile Check) raporunu bırak ya da seç</b>
+    <span>Opera'dan içerideki ve gelecek misafirler için OSR'yi PDF al (varış aralığını geniş seç). Yalnız isim, uyruk ve tarihler okunur; e-posta ve telefon alınmaz.</span>
+    <input type="file" id="bdiNatFile" accept=".pdf" style="display:none" onchange="bdiNatImportFile(this.files[0]);this.value=''">
+  </div>
+  <div id="bdiNatStatus" class="bd-status"></div>
+  <div id="bdiNatBody" style="margin-top:14px"></div>
+</div>
+</section>
+
 <section id="bdiTab_coverage" class="bd-pane" style="display:none">
 <div class="bd-panel">
   <div class="bd-coverage-head">
@@ -2399,6 +2422,12 @@ label{color:var(--sw-ink-2)}
 </div>
 
 <div class="section">
+<h3>Uyruklar: ulusal ve özel günler</h3>
+<p class="hint">OSR (Guest Profile Check) raporundaki uyruklara göre, bu günlerde o ülkeden otelde kaç misafir olacağı <b>Uyruklar</b> sekmesinde görünür; <b>3 gün</b> kala Brifing ve Uyarılar'a düşer. <b>Tarih</b>: her yıl için <b>gg.aa</b> (ör. 02.12), tarihi her yıl değişen günler için <b>yyyy-aa-gg</b>. <b>Uyruk</b>: ülke kodu, birden fazlaysa virgülle (SA, AE). Dini bayramlar KVKK gereği listede yok.</p>
+<div id="bdiCfg_natd"></div>
+</div>
+
+<div class="section">
 <h3>Butler Didn't Do It: dokunulamama sebepleri</h3>
 <p class="hint">Otelde olup konaklaması boyunca hiç dokunulmamış misafir için seçilen sebepler (Kapsam sekmesi, Günün akışı › Dikkat, Butler Did It raporu). <b>Ad</b> rapora birebir yazılır; <b>açıklama</b> ekibe hangi durumda seçileceğini anlatır ve seçim kutusunun altında görünür.</p>
 <div id="bdiCfg_nt"></div>
@@ -2568,7 +2597,7 @@ var SW_IC=(function(){var o='<svg viewBox="0 0 24 24" fill="none" stroke="curren
 // SmartWorker kopyasi localStorage'a sonradan kayit yazarsa bir sonraki acilista id bazli birlestirilir. Ayni anda acik iki
 // sekme degisiklikleri BroadcastChannel ile paylasir. IndexedDB acilamazsa her sey eskisi gibi localStorage'da calisir.
 var BDI_KV_LS={bdi_chip_counts:1,bdi_chip_hidden:1,bdi_staff_roles:1,bdi_xf_local:1,bdi_guest_merges:1,bdi_guest_notes:1,bdi_me:1,bdi_log_sort:1,
-  bdi_action_cat:1,bdi_pref_cats:1,bdi_occ_types:1,bdi_occ_timing:1,bdi_nt_reasons:1,bdi_irci_acts:1,bdi_nt_fields:1,bdi_nc_by:1,bdi_depts:1}; // 2026-11-02: ayar senkronuyla giden BDI ayarlari localStorage'da kalir (IndexedDB'ye tasininca ayar ekrani onlari bulamiyordu) // bdi_me / bdi_log_sort: bu bilgisayarin kucuk tercihleri (IndexedDB'ye tasinirsa yenilemede kayboluyordu)
+  bdi_action_cat:1,bdi_pref_cats:1,bdi_occ_types:1,bdi_occ_timing:1,bdi_nt_reasons:1,bdi_irci_acts:1,bdi_nt_fields:1,bdi_nc_by:1,bdi_depts:1,bdi_natdays:1}; // 2026-11-02: ayar senkronuyla giden BDI ayarlari localStorage'da kalir (IndexedDB'ye tasininca ayar ekrani onlari bulamiyordu) // bdi_me / bdi_log_sort: bu bilgisayarin kucuk tercihleri (IndexedDB'ye tasinirsa yenilemede kayboluyordu)
 var BdiKV=(function(){
   var map={},ready=false,mode="idb",dbP=null,dirty={},flushQ=false,pending={},hooks=[],extHooks=[],chan=null,info={migrated:0,error:""};
   var own=function(o,k){return Object.prototype.hasOwnProperty.call(o,k)};
@@ -3891,7 +3920,7 @@ var SETTINGS_SYNC_JSON="smartworker_settings_sync.json";
 var SETTINGS_SYNC_KEYS=[
   "kw_equip","kw_amenity","kw_action","kw_deco","kw_butler","kw_bdiaction",   // chip/keyword listeleri + BDI action sablonlari + butler isimleri
   "bdi_action_cat",                                                           // islem -> touch tipi (Butler Did It / Preference / Occasion)
-  "bdi_pref_cats","bdi_occ_types","bdi_occ_timing","bdi_nt_reasons","bdi_irci_acts","bdi_nt_fields","bdi_nc_by","bdi_depts", // + temassiz kapanis nedenleri, departmanlar // + In Room Check In islemleri, Didn't Do It alanlari         // tercih / ozel gun alanlari, Butler Didn't Do It sebepleri (2026-11-02)
+  "bdi_pref_cats","bdi_occ_types","bdi_occ_timing","bdi_nt_reasons","bdi_irci_acts","bdi_nt_fields","bdi_nc_by","bdi_depts","bdi_natdays", // + temassiz kapanis nedenleri, departmanlar // + In Room Check In islemleri, Didn't Do It alanlari         // tercih / ozel gun alanlari, Butler Didn't Do It sebepleri (2026-11-02)
   "bdi_chip_hidden",                                                          // hizli balon gizleme
   "bdi_staff_roles",                                                          // Alice personel grup/departman tablosu (2026-10-28)
   "sw_admin_pin",                                                             // yonetici sifresi (ozet; 2026-11-01) - butun bilgisayarlarda ayni
@@ -7330,7 +7359,8 @@ var SW_REP_TYPES={
   issue:["Issue Excel'i","BDI Issues · kat turu · Protel Issues"],
   pref:["Tercih formu (PDF)","Atölye → misafir hafızası"],
   ipad:["iPad rehberi dönüşü","BDI kayıtları · issue'lar · DNA önerileri"],
-  oalert:["Opera Alerts (RES01166)","Butler Alert: CALBUTIN kodlu, o gün gelenler (oteldekiler atlanır)"]
+  oalert:["Opera Alerts (RES01166)","Butler Alert: CALBUTIN kodlu, o gün gelenler (oteldekiler atlanır)"],
+  osr:["Uyruk raporu (OSR · Guest Profile Check)","Uyruklar · özel gün uyarıları (Brifing, Uyarılar)"]
 };
 var SW_REP_DAILY=["arr","vac"],SW_REP_EOD=["gih","dep"],SW_REP_DIR="Raporlar",SW_REP_KEEP=7,_swRepBusy=false,_swRepLast=[];
 function swRepAll(){try{var o=JSON.parse(localStorage.getItem("sw_reports_v1")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return {}}}
@@ -7410,6 +7440,7 @@ async function swRepDetect(file){
   }
   if(/\.pdf$/.test(n)){
     var pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise,L=await bdiPdfLines(pdf,1),txt=L.map(function(l){return l.map(function(x){return x.t}).join(" ")}).join("\n");
+    if(/Guest Profile Check|\bOSR\b/i.test(txt)&&L.some(function(l){return bdiOsrIsHead(l.map(function(x){return x.t}).join(" "))}))return {type:"osr",pdf:pdf}; // OSR: uyruk (2026-11-05)
     if(/RES01166|Alert Code/i.test(txt)&&/Alert/i.test(txt))return {type:"oalert",pdf:pdf}; // Opera Alerts (CALBUTIN)
     if(/GIH01102|Guests in House/i.test(txt))return {type:"gih",pdf:pdf};
     if(/DEP0\d{4}|Departures all/i.test(txt))return {type:"dep",pdf:pdf}; // VAC'tan once: oda numarali her PDF'i VAC sanmasin
@@ -7459,6 +7490,7 @@ async function swRepIngest(files,src){
       else if(d.type==="issue"){var IR=await bdiIssueImportFile(file);r.ok=!!IR;r.msg=IR?IR.added+" yeni, "+IR.updated+" güncellendi"+((IR.closed||0)+(IR.gone||0)?", "+((IR.closed||0)+(IR.gone||0))+" kapandı":"")+(IR.tombIds&&IR.tombIds.length?" · "+IR.tombIds.length+" silinmiş satır alınmadı (Issues › Silinenler'den geri getirilebilir)":""):"Dosya okunamadı"}
       else if(d.type==="ipad"){var R=await bgdImportObj(d.obj,file.name);r.ok=true;r.msg=bgdSummary(R)}
       else if(d.type==="oalert"){var OA=await bdiOAlertLoad(d.pdf,file);r.ok=!!OA.arr;r.msg=OA.msg;if(OA.day&&OA.day<today)swRepHist("oalert",file.name,OA.day,OA.msg);else swRepLog("oalert",file.name,OA.arr,OA.msg)}
+      else if(d.type==="osr"){var OS=await bdiOsrLoad(d.pdf,file);r.ok=!!OS.n;r.msg=OS.msg}
       else if(d.type==="pref"){var pf=await bdiPrefFormLoad(d.pdf,file);r.ok=true;r.msg=pf.n+" tercih"+(pf.guess?" · "+pf.guess:" · misafir Atölye'de seçilecek")}
       else if(d.type==="backup")r.msg="Yedek dosyası: Kurulum › Geri yükle'den yükle (rapor değil)";
       else if(d.type==="bad")r.msg="Dosya okunamadı";
@@ -8189,7 +8221,7 @@ function getBdiActions(){
 function switchBdiTab(tab){
   setTimeout(function(){try{swWarnRefresh()}catch(e){}},400);
   if((tab==="entry"||tab==="brief")&&_bdiDateBrowse)bdiDateToday(true); // Log'da gecmise bakildiysa Kayit bugune doner
-  ["entry","brief","log","issues","fu","alert","irci","nt","guests","atelier","alice","dept","coverage"].forEach(function(t){
+  ["entry","brief","log","issues","fu","alert","irci","nt","guests","nat","atelier","alice","dept","coverage"].forEach(function(t){
     var el=document.getElementById("bdiTab_"+t);
     if(el)el.style.display=t===tab?"block":"none";
   });
@@ -8205,6 +8237,7 @@ function switchBdiTab(tab){
   if(tab==="irci"){if(!_bdiIrciDate)_bdiIrciDate=(document.getElementById("bdiDate")||{}).value||getToday();renderBdiIrci()}
   if(tab==="alert"){if(!alertList.length)loadAlertSnapshot();try{if(bdiAlertBackfill(getAlertDate(),alertList))saveAlertSnapshot()}catch(e){}loadAlertTarget();renderAlertTable();renderBdiAlertAuto()}
   if(tab==="guests"){scanBdiGuests()}
+  if(tab==="nat"){renderBdiNat()}
   if(tab==="alice"){bdiAliceSetupDrop();renderBdiAlice()}
   if(tab==="brief"){renderBdiBriefTab()}
   if(tab==="dept"){renderBdiDeptTab()}
@@ -8410,6 +8443,8 @@ var BDI_CFG={
   bdi_occ_timing:{el:"bdiCfg_occt",title:"Zamanlama",add:"+ Zamanlama ekle",def:[
     {l:"prior to arrival"},{l:"during stay"},{l:"after guest request"},{l:"upon return to room"}],
     cols:[{f:"l",ph:"örn. during turndown",flex:1}]},
+  bdi_natdays:{el:"bdiCfg_natd",add:"+ Gün ekle",def:[{d:"26.01",c:"AU",l:"Avustralya Günü",g:""},{d:"11.02",c:"JP",l:"Japonya Ulusal Kuruluş Günü",g:""},{d:"25.02",c:"KW",l:"Kuveyt Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"25.03",c:"GR",l:"Yunanistan Bağımsızlık Günü",g:""},{d:"27.04",c:"NL",l:"Hollanda Kral Günü",g:""},{d:"27.04",c:"ZA",l:"Güney Afrika Özgürlük Günü",g:""},{d:"17.05",c:"NO",l:"Norveç Anayasa Günü",g:""},{d:"25.05",c:"JO",l:"Ürdün Bağımsızlık Günü",g:""},{d:"26.05",c:"GE",l:"Gürcistan Bağımsızlık Günü",g:""},{d:"28.05",c:"AZ",l:"Azerbaycan Bağımsızlık Günü",g:""},{d:"02.06",c:"IT",l:"İtalya Cumhuriyet Günü",g:""},{d:"06.06",c:"SE",l:"İsveç Ulusal Günü",g:""},{d:"12.06",c:"RU",l:"Rusya Günü",g:""},{d:"01.07",c:"CA",l:"Kanada Günü",g:""},{d:"04.07",c:"US",l:"ABD Bağımsızlık Günü",g:""},{d:"14.07",c:"FR",l:"Fransa Ulusal Günü",g:""},{d:"23.07",c:"EG",l:"Mısır Ulusal Günü",g:""},{d:"30.07",c:"MA",l:"Fas Taht Günü",g:""},{d:"01.08",c:"CH",l:"İsviçre Ulusal Günü",g:""},{d:"14.08",c:"PK",l:"Pakistan Bağımsızlık Günü",g:""},{d:"15.08",c:"IN",l:"Hindistan Bağımsızlık Günü",g:""},{d:"15.08",c:"KR",l:"Kore Kurtuluş Günü",g:""},{d:"24.08",c:"UA",l:"Ukrayna Bağımsızlık Günü",g:""},{d:"01.09",c:"UZ",l:"Özbekistan Bağımsızlık Günü",g:""},{d:"07.09",c:"BR",l:"Brezilya Bağımsızlık Günü",g:""},{d:"16.09",c:"MX",l:"Meksika Bağımsızlık Günü",g:""},{d:"23.09",c:"SA",l:"Suudi Arabistan Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"01.10",c:"CN",l:"Çin Ulusal Günü",g:""},{d:"01.10",c:"NG",l:"Nijerya Bağımsızlık Günü",g:""},{d:"03.10",c:"DE",l:"Almanya Birlik Günü",g:""},{d:"12.10",c:"ES",l:"İspanya Ulusal Günü",g:""},{d:"26.10",c:"AT",l:"Avusturya Ulusal Günü",g:""},{d:"29.10",c:"TR",l:"Cumhuriyet Bayramı",g:""},{d:"22.11",c:"LB",l:"Lübnan Bağımsızlık Günü",g:""},{d:"2026-11-26",c:"US",l:"Şükran Günü (Thanksgiving)",g:""},{d:"02.12",c:"AE",l:"BAE Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"06.12",c:"FI",l:"Finlandiya Bağımsızlık Günü",g:""},{d:"16.12",c:"BH",l:"Bahreyn Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"16.12",c:"KZ",l:"Kazakistan Bağımsızlık Günü",g:""},{d:"18.12",c:"QA",l:"Katar Ulusal Günü",g:"Kahve ve hurma ikramı, ülke renklerinde kurdele, misafirin dilinde el yazısı kart"},{d:"2027-02-06",c:"CN, HK, TW, SG",l:"Ay Yeni Yılı (Lunar New Year)",g:""}],
+    cols:[{f:"d",ph:"gg.aa (her yıl) / yyyy-aa-gg",w:"150px"},{f:"c",ph:"Uyruk kodu (SA, AE)",w:"150px"},{f:"l",ph:"Günün adı",flex:1},{f:"g",ph:"Jest önerisi (opsiyonel)",flex:1}]},
   bdi_nt_fields:{el:"bdiCfg_ntf",add:"+ Alan ekle",idPrefix:"f",def:[
     {id:"reason",l:"Why not touched",t:"reason",o:"Ayarlar'daki dokunulamama sebepleri",fixed:1},
     {id:"plan",l:"Plan",t:"select",o:"Courtesy call, Turndown note, Welcome amenity, Visit during turndown, Note left in room, Guest Relations call"},
@@ -9313,12 +9348,16 @@ function swWarnCollect(start,end){
     if(N&&N.rows.length){var day=bdiNtGet()[d]||{},nn=N.rows.filter(function(g){return !(day[g.gk]||{}).r}).length;if(nn&&(d<t||hr>=17))add("Didn't Do It","mid",fd+": "+nn+" dokunulmamış misafirde sebep seçilmedi","swWarnGo('nt',"+q(d)+")")}
     var I=[];try{I=bdiIrciRows(d)}catch(e){}var im=I.filter(function(r){return !r.etd}).length;if(im)add("In-room","mid",fd+": "+im+" in-room check-in'de ETD eksik","swWarnGo('irci',"+q(d)+")");
   });
+  // 2026-11-05 ozel gunler: 3 gun kala o uyruktan otelde misafir varsa (yalniz bugunu iceren donemde)
+  try{if(start<=t&&end>=t)bdiNatEvents(t,bdiAddDays(t,BDI_NAT_WARN)).forEach(function(e){if(!e.inh.length)return;
+    add("Özel günler","mid",bdiFmtD(e.d).slice(0,5)+" "+e.name+" ("+bdiNatWhen(e.days)+"): "+bdiNatN(e)+" misafir otelde olacak — jesti hazırla","swWarnGo('nat')")})}catch(e){}
   return out.sort(function(a,b){return (a.sev==="high"?0:1)-(b.sev==="high"?0:1)});
 }
 function swWarnGo(where,d){
   var m=document.getElementById("swWarnModal");if(m)m.style.display="none";showPage("didit");
   if(where==="alert"){if(d&&d!==getAlertDate()){try{changeAlertDate(d)}catch(e){}}switchBdiTab("alert")}
   else if(where==="nt"){switchBdiTab("nt");bdiNtDateSet(d)}
+  else if(where==="nat"){switchBdiTab("nat")}
   else if(where==="irci"){_bdiIrciDate=d;switchBdiTab("irci")}
   else if(where==="fu"){_bdiFuFilter="open";switchBdiTab("fu");if(d)setTimeout(function(){var el=document.getElementById("bdiFu_"+d);if(el){el.scrollIntoView({block:"center"});el.classList.add("bd-flash")}},80)}
 }
@@ -12497,6 +12536,7 @@ function renderBdiTodayCard(){
 }
 function bdiRefreshDerived(){
   try{renderBdiTodayCard()}catch(e){}
+  try{bdiNatTabBadge()}catch(e){}
   try{bdiIssueBadge()}catch(e){}
   try{bdiFuTabBadge()}catch(e){}
   var fp=document.getElementById("bdiTab_fu");if(fp&&fp.style.display==="block"){try{renderBdiFu()}catch(e){}}
@@ -14806,6 +14846,10 @@ function bdiFeedHtml0(){
   if(!R.length&&!dRows.length)h+='<p class="bd-empty">Bugün için oda listesi yok. Rapor Merkezi\'ne günün <b>VAC</b>, <b>in-house (GIH01102)</b> ve <b>varış (ARR)</b> raporlarını bırak. Açık issue\'lar aşağıda.</p>'; // raporsuz da issue'lar gorunur
   // 1) Kutlamalar
   // Specials'taki "Birthday" konaklama boyunca gecerli (tarihsiz); hafizadaki anlar "(bugun)/(yarin)" tasir
+  try{var _nev=bdiNatEvents(today,bdiAddDays(today,BDI_NAT_WARN)).filter(function(e){return e.inh.length});
+    if(_nev.length)h+=grp('Ulusal ve özel günler',_nev.length,BDI_NAT_WARN+' gün içinde',_nev.map(function(e){var P=bdiNatPeople(e.inh);
+      return item("nat:"+e.d+e.name,"Özel gün","t-cel",'<b>'+esc(bdiFmtD(e.d).slice(0,5))+'</b> '+esc(e.name),esc(bdiNatWhen(e.days))+' · '+bdiNatN(e)+' misafir otelde'+(P.rooms?' · '+P.rooms+' oda':''),'<span class="bd-fd-st">'+esc(e.cs.join(", "))+'</span>',
+        '<div class="bd-fd-concern">'+P.h+'<p class="bd-nat-g">Jest: '+esc(e.g||"Misafirin dilinde el yazısı tebrik kartı")+'</p><button type="button" class="bd-link" onclick="switchBdiTab(\'nat\')">Uyruklar\'da aç</button></div>')}).join(""))}catch(e){}
   if(cel.length)h+=grp('Kutlamalar',cel.length,'',cel.map(function(x){var k=K[x.room],ot=k.occ.map(function(o){return /\((bugün|yarın)\)/.test(o)?o:o+" (konaklamada, tarih yok)"});
     return item("c:"+x.room,"Kutlama","t-cel",'<b>'+esc(x.room)+'</b> '+esc(nm(x)),esc(cut(ot.join(" · "),90)),x.arriving?'<span class="bd-fd-st">bugün geliyor</span>':'',card(x,x.arriving?"arr":x.departing?"dep":"insp"))}).join(""));
   // 2) Gelenler: soylenecek bir sey olanlar tek tek, digerleri tek satir
@@ -19947,6 +19991,155 @@ window.bdiLogs = bdiLogs;
 window.__bdiExtSyncFile = _bdiExtSyncFile; // test kancasi
 window.__bdiGuestMemSyncFile = _bdiGuestMemSyncFile; // test kancasi
 
+// ===== UYRUKLAR + OZEL GUNLER (2026-11-05, Haktan: "icerideki ve gelecek misafirlerin nationality bazinda raporu, ozel gun
+// takvimi, 2-3 gun once uyari; rapor ayri yerden beslensin: OSR") =====
+// Kaynak: Opera 5.6 "OSR - Guest Profile Check" PDF'i. Kendi yukleme alani (Uyruklar sekmesi) + Rapor Merkezi'nde kendi satiri.
+// KVKK: yalniz isim, uyruk, varis ve cikis tarihi saklanir; e-posta / telefon OKUNMAZ. Cikisi 3 gunden eski satirlar atilir.
+// Sayim: bir ozel gunde "otelde" = o gece kalan kisi (varis <= gun < cikis); o gun cikanlar ayrica yazilir. Her OSR satiri bir kisi.
+var BDI_OSR_KEY="bdi_osr_v1",BDI_NAT_WARN=3,_bdiNatDate="",_bdiNatIx=null;
+var BDI_NAT=[["TR","TUR","Türkiye","TURKEY|TURKIYE|TURKISH"],["SA","SAU","Suudi Arabistan","SAUDI ARABIA|SAUDI|KSA"],["AE","ARE","BAE","UNITED ARAB EMIRATES|UAE|EMIRATI|EMIRATES"],
+ ["QA","QAT","Katar","QATAR|QATARI"],["KW","KWT","Kuveyt","KUWAIT|KUWAITI"],["BH","BHR","Bahreyn","BAHRAIN|BAHRAINI"],["OM","OMN","Umman","OMAN|OMANI"],["JO","JOR","Ürdün","JORDAN|JORDANIAN"],
+ ["LB","LBN","Lübnan","LEBANON|LEBANESE"],["EG","EGY","Mısır","EGYPT|EGYPTIAN"],["IQ","IRQ","Irak","IRAQ|IRAQI"],["IR","IRN","İran","IRAN|IRANIAN"],["MA","MAR","Fas","MOROCCO|MOROCCAN"],
+ ["DZ","DZA","Cezayir","ALGERIA|ALGERIAN"],["TN","TUN","Tunus","TUNISIA|TUNISIAN"],["LY","LBY","Libya","LIBYA|LIBYAN"],["AZ","AZE","Azerbaycan","AZERBAIJAN|AZERBAIJANI"],
+ ["KZ","KAZ","Kazakistan","KAZAKHSTAN|KAZAKH"],["UZ","UZB","Özbekistan","UZBEKISTAN|UZBEK"],["TM","TKM","Türkmenistan","TURKMENISTAN|TURKMEN"],["KG","KGZ","Kırgızistan","KYRGYZSTAN|KYRGYZ"],
+ ["GE","GEO","Gürcistan","GEORGIA|GEORGIAN"],["UA","UKR","Ukrayna","UKRAINE|UKRAINIAN"],["RU","RUS","Rusya","RUSSIA|RUSSIAN FEDERATION|RUSSIAN"],["BY","BLR","Belarus","BELARUS|BELARUSIAN"],
+ ["GB","GBR","Birleşik Krallık","UNITED KINGDOM|UK|GREAT BRITAIN|BRITISH|ENGLAND"],["IE","IRL","İrlanda","IRELAND|IRISH"],["US","USA","ABD","UNITED STATES|UNITED STATES OF AMERICA|AMERICAN"],
+ ["CA","CAN","Kanada","CANADA|CANADIAN"],["MX","MEX","Meksika","MEXICO|MEXICAN"],["BR","BRA","Brezilya","BRAZIL|BRAZILIAN"],["AR","ARG","Arjantin","ARGENTINA|ARGENTINE|ARGENTINIAN"],
+ ["DE","DEU","Almanya","GERMANY|GERMAN"],["FR","FRA","Fransa","FRANCE|FRENCH"],["IT","ITA","İtalya","ITALY|ITALIAN"],["ES","ESP","İspanya","SPAIN|SPANISH"],["PT","PRT","Portekiz","PORTUGAL|PORTUGUESE"],
+ ["NL","NLD","Hollanda","NETHERLANDS|DUTCH|HOLLAND"],["BE","BEL","Belçika","BELGIUM|BELGIAN"],["CH","CHE","İsviçre","SWITZERLAND|SWISS"],["AT","AUT","Avusturya","AUSTRIA|AUSTRIAN"],
+ ["SE","SWE","İsveç","SWEDEN|SWEDISH"],["NO","NOR","Norveç","NORWAY|NORWEGIAN"],["DK","DNK","Danimarka","DENMARK|DANISH"],["FI","FIN","Finlandiya","FINLAND|FINNISH"],["PL","POL","Polonya","POLAND|POLISH"],
+ ["GR","GRC","Yunanistan","GREECE|GREEK"],["CY","CYP","Kıbrıs","CYPRUS|CYPRIOT"],["RO","ROU","Romanya","ROMANIA|ROMANIAN"],["BG","BGR","Bulgaristan","BULGARIA|BULGARIAN"],["RS","SRB","Sırbistan","SERBIA|SERBIAN"],
+ ["CN","CHN","Çin","CHINA|CHINESE|PEOPLES REPUBLIC OF CHINA"],["HK","HKG","Hong Kong","HONG KONG"],["TW","TWN","Tayvan","TAIWAN"],["JP","JPN","Japonya","JAPAN|JAPANESE"],
+ ["KR","KOR","Güney Kore","KOREA|SOUTH KOREA|REPUBLIC OF KOREA|KOREAN"],["IN","IND","Hindistan","INDIA|INDIAN"],["PK","PAK","Pakistan","PAKISTAN|PAKISTANI"],["SG","SGP","Singapur","SINGAPORE|SINGAPOREAN"],
+ ["MY","MYS","Malezya","MALAYSIA|MALAYSIAN"],["ID","IDN","Endonezya","INDONESIA|INDONESIAN"],["TH","THA","Tayland","THAILAND|THAI"],["AU","AUS","Avustralya","AUSTRALIA|AUSTRALIAN"],
+ ["NZ","NZL","Yeni Zelanda","NEW ZEALAND"],["ZA","ZAF","Güney Afrika","SOUTH AFRICA|SOUTH AFRICAN"],["NG","NGA","Nijerya","NIGERIA|NIGERIAN"],["IL","ISR","İsrail","ISRAEL|ISRAELI"],
+ ["BA","BIH","Bosna-Hersek","BOSNIA|BOSNIA AND HERZEGOVINA|BOSNIAN"],["PH","PHL","Filipinler","PHILIPPINES|FILIPINO"],["SZ","SWZ","Esvatini","ESWATINI|SWAZILAND"],["UN","UNK","Bilinmiyor","UNKNOWN"]];
+function bdiNatIndex(){if(_bdiNatIx)return _bdiNatIx;var ix={};BDI_NAT.forEach(function(n){var o={c:n[0],l:n[2]};ix[n[0]]=o;ix[n[1]]=o;n[3].split("|").forEach(function(w){ix[w]=o})});return _bdiNatIx=ix}
+function bdiNatNorm(raw){
+  var s=String(raw||"").toUpperCase().replace(/[^A-Z' ]/g," ").replace(/'/g,"").replace(/\s+/g," ").trim();if(!s)return null;
+  var ix=bdiNatIndex();if(ix[s])return ix[s];var w=s.split(" ");if(ix[w[0]])return ix[w[0]];
+  return {c:s.slice(0,3),l:s.charAt(0)+s.slice(1).toLowerCase()};
+}
+function bdiNatLabel(c){var o=bdiNatIndex()[c];return o?o.l:c}
+function bdiOsrStore(){try{var o=JSON.parse(BdiKV.get(BDI_OSR_KEY)||"null");return o&&Array.isArray(o.rows)?o:{rows:[]}}catch(e){return {rows:[]}}}
+function bdiOsrD(s){var m=/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/.exec(String(s||""));if(!m)return "";return bdiVacDate(("0"+m[1]).slice(-2)+"-"+("0"+m[2]).slice(-2)+"-"+m[3])}
+function bdiOsrIsHead(txt){return /(full name|guest name|\bname\b)/i.test(txt)&&/nationalit|\bnat\b/i.test(txt)&&/arriv/i.test(txt)}
+async function bdiOsrDetect(pdf){try{var L=await bdiPdfLines(pdf,1),txt=L.map(function(l){return l.map(function(x){return x.t}).join(" ")}).join("\n");return /Guest Profile Check|\bOSR\b/i.test(txt)&&L.some(function(l){return bdiOsrIsHead(l.map(function(x){return x.t}).join(" "))})}catch(e){return false}}
+// gercek OSR (05.11.2026) ile dogrulandi: "Full Name | Arrival | Departure | Country | Nationality | Email | Phone | Resv. Status",
+// sayfa altinda "From/To Arrival Date=gg-aa-yy" ve "Resv Status=..." suzgec satirlari. Virgulsuz isim = sirket / grup / PM profili (sayilmaz);
+// "Hold, Hold" gibi yer tutucular ve iptal / no-show sayilmaz.
+var BDI_OSR_GENERIC=/^(hold|house|use|guest|tba|tbn|tbc|dummy|test|pm|master|group|blok|block)$/i;
+async function bdiOsrParse(pdf){
+  var rows=[],cur=null,B=null,st={noNat:0,skip:0,held:0,cancel:0,co:0},arrFrom="",arrTo="";
+  var put=function(){if(!cur)return;var nm=String(cur.name||"").replace(/\s+/g," ").trim(),p=nm.split(","),sn=(p[0]||"").trim(),fn=p.slice(1).join(" ").trim();
+    if(sn&&fn&&!/^9\d{3}\b/.test(sn)&&!/^(PM|HOUSE|MASTER|GROUP)\b/i.test(sn)){
+      if(BDI_OSR_GENERIC.test(sn)||BDI_OSR_GENERIC.test(fn)||sn.toLowerCase()===fn.toLowerCase())st.held++;
+      else if(/CANCEL|NO.?SHOW|WAIT/i.test(cur.status||""))st.cancel++;
+      else{var a=bdiOsrD(cur.arr),d=bdiOsrD(cur.dep);if(a&&d&&d>=a){rows.push({name:sn+", "+fn,nat:String(cur.nat||"").trim(),arr:a,dep:d,s:/DUE IN|RESERV/i.test(cur.status||"")?"due":"in"});if(!cur.nat)st.noNat++}else st.skip++}}
+    else if(sn&&!fn)st.co++;
+    cur=null};
+  for(var pn=1;pn<=pdf.numPages;pn++){
+    var L=await bdiPdfLines(pdf,pn);
+    L.forEach(function(l){
+      var txt=l.map(function(x){return x.t}).join(" ");
+      if(bdiOsrIsHead(txt)){put();var C={};l.forEach(function(x){var t=x.t.toLowerCase();
+          if(!C.name&&/full name|guest name|^name$/.test(t))C.name=x.x;else if(/e-?mail/.test(t))C.email=x.x;else if(/phone|tel/.test(t))C.phone=x.x;
+          else if(/^country$/.test(t))C.country=x.x;else if(/nationalit|^nat\.?$/.test(t))C.nat=x.x;else if(/arriv/.test(t))C.arr=x.x;else if(/depart/.test(t))C.dep=x.x;else if(/^room/.test(t))C.room=x.x;else if(/status/.test(t))C.status=x.x});
+        var cols=Object.keys(C).map(function(k){return {k:k,x:C[k]}}).sort(function(a,b){return a.x-b.x});
+        B=cols.map(function(c,i){return {k:c.k,l:i?(cols[i-1].x+c.x)/2:-1e9,r:i<cols.length-1?(c.x+cols[i+1].x)/2:1e9}});return}
+      var fm=/From Arrival Date\s*=\s*(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/i.exec(txt);if(fm){arrFrom=bdiOsrD(fm[1])||arrFrom;return}
+      var tm=/To Arrival Date\s*=\s*(\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4})/i.exec(txt);if(tm){arrTo=bdiOsrD(tm[1])||arrTo;return}
+      if(!B||/^(page\b|total\b|filter)/i.test(txt)||/Guest Profile Check|\bOSR\b|=/i.test(txt))return;
+      var cell={};l.forEach(function(x){for(var i=0;i<B.length;i++)if(x.x>=B[i].l&&x.x<B[i].r){var k=B[i].k;cell[k]=(cell[k]?cell[k]+" ":"")+x.t;return}});
+      var nm=cell.name||"";
+      if(nm&&/,/.test(nm)){put();cur={name:nm,nat:"",arr:"",dep:""}}
+      else if(nm&&cell.arr&&/\d/.test(cell.arr)){put();st.co++;return} // virgulsuz isim + tarih: sirket / grup / PM profili
+      else if(nm&&cur&&!/\d/.test(nm)&&!cell.arr)cur.name+=" "+nm; // satir sonunda kirilan isim
+      if(!cur)return;
+      if(cell.nat&&!cur.nat)cur.nat=cell.nat;if(cell.arr&&!cur.arr)cur.arr=cell.arr;if(cell.dep&&!cur.dep)cur.dep=cell.dep;if(cell.status&&!cur.status)cur.status=cell.status;
+    });
+  }
+  put();if(!arrTo)rows.forEach(function(r){if(r.arr>arrTo)arrTo=r.arr});return {rows:rows,st:st,arrFrom:arrFrom,arrTo:arrTo};
+}
+async function bdiOsrLoad(pdf,file){
+  var res=await bdiOsrParse(pdf),old=bdiOsrStore(),keep=bdiAddDays(getToday(),-3);
+  res.rows.forEach(function(r){r.k=bdiGuestKey(bdiGihPerson(r.name));var n=bdiNatNorm(r.nat);r.c=n?n.c:""});
+  // ayni kisinin eski (cakisan) konaklamasi yeni raporla degisir; cikisi 3 gunden eski satirlar atilir
+  var rows=old.rows.filter(function(o){return o.dep>=keep&&!res.rows.some(function(r){return r.k&&r.k===o.k&&!(r.dep<=o.arr||r.arr>=o.dep)})}).concat(res.rows.filter(function(r){return r.k&&r.dep>=keep}));
+  var arrTo=res.arrTo>(old.arrTo||"")?res.arrTo:(old.arrTo||res.arrTo),arrFrom=res.arrFrom||old.arrFrom||"";
+  if(res.rows.length)BdiKV.set(BDI_OSR_KEY,JSON.stringify({at:Date.now(),file:file&&file.name||"",rows:rows,arrFrom:arrFrom,arrTo:arrTo}));
+  var nats={};res.rows.forEach(function(r){if(r.c)nats[r.c]=1});
+  var x=res.st,msg=res.rows.length?res.rows.length+" kişi · "+Object.keys(nats).length+" uyruk"+(res.arrTo?" · varışlar "+bdiFmtD(res.arrTo).slice(0,5)+"'e kadar":"")+
+    (x.held?" · "+x.held+" yer tutucu (Hold) sayılmadı":"")+(x.co?" · "+x.co+" şirket / PM profili sayılmadı":"")+(x.cancel?" · "+x.cancel+" iptal / no-show sayılmadı":"")+(x.noNat?" · "+x.noNat+" kişide uyruk boş":""):"OSR'de misafir satırı bulunamadı (başlıkta Name / Nationality / Arrival olmalı)";
+  if(res.rows.length)try{swRepLog("osr",file&&file.name||"OSR.pdf",res.rows.length,msg)}catch(e){}
+  try{renderBdiNat()}catch(e){}try{bdiNatTabBadge()}catch(e){}try{swWarnRefresh()}catch(e){}try{bdiFeedRefresh()}catch(e){}
+  return {n:res.rows.length,msg:msg};
+}
+async function bdiNatImportFile(file){
+  var el=document.getElementById("bdiNatStatus");if(!file)return;
+  try{if(el)el.innerHTML='<span class="bd-sub">Okunuyor...</span>';
+    var pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    if(!(await bdiOsrDetect(pdf))){if(el)el.innerHTML='<span class="bd-err">Bu dosya OSR (Guest Profile Check) değil. Opera\'dan OSR raporunu PDF olarak al.</span>';return}
+    var R=await bdiOsrLoad(pdf,file);if(el&&!R.n)el.innerHTML='<span class="bd-err">'+esc(R.msg)+'</span>';
+  }catch(e){if(el)el.innerHTML='<span class="bd-err">Okunamadı: '+esc(e.message||e)+'</span>';console.warn(e)}
+}
+function bdiNatSetupDrop(){var z=document.getElementById("bdiNatDrop");if(!z||z._dd)return;z._dd=1;
+  z.addEventListener("dragover",function(e){e.preventDefault();z.classList.add("drag")});z.addEventListener("dragleave",function(){z.classList.remove("drag")});
+  z.addEventListener("drop",function(e){e.preventDefault();e.stopPropagation();z.classList.remove("drag");var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)bdiNatImportFile(f)})}
+// ozel gunler (Ayarlar > Uyruklar: ulusal ve ozel gunler). "gg.aa" her yil, "yyyy-aa-gg" tek sefer.
+function bdiNatDays(from,to){
+  var L=bdiCfg("bdi_natdays")||[],out=[];
+  for(var d=from,i=0;d<=to&&i<400;i++,d=bdiAddDays(d,1)){var md=d.slice(8,10)+"."+d.slice(5,7);
+    L.forEach(function(x){var dd=String(x.d||"").trim().replace(/\//g,".");if(!dd)return;
+      var hit=/^\d{4}-\d{2}-\d{2}$/.test(dd)?dd===d:(function(){var m=/^(\d{1,2})\.(\d{1,2})$/.exec(dd);return m&&("0"+m[1]).slice(-2)+"."+("0"+m[2]).slice(-2)===md})();
+      if(hit)out.push({d:d,x:x,cs:String(x.c||"").toUpperCase().split(/[\s,;\/]+/).filter(Boolean).map(function(c){var n=bdiNatNorm(c);return n?n.c:c})})})}
+  return out;
+}
+function bdiNatOn(D){var inh=[],out=[];bdiOsrStore().rows.forEach(function(r){if(r.arr<=D&&r.dep>D)inh.push(r);else if(r.dep===D)out.push(r)});return {inh:inh,out:out}}
+function bdiNatEvents(from,to){var t=getToday();return bdiNatDays(from,to).map(function(e){var on=bdiNatOn(e.d),m=function(r){return e.cs.indexOf(r.c||(bdiNatNorm(r.nat)||{}).c)>=0};
+  var aT=bdiOsrStore().arrTo||"";return {d:e.d,name:e.x.l||"Özel gün",g:e.x.g||"",cs:e.cs,inh:on.inh.filter(m),out:on.out.filter(m),days:Math.round((Date.parse(e.d)-Date.parse(t))/864e5),partial:!!(aT&&e.d>aT)}})}
+function bdiNatN(e){return (e.partial?"en az ":"")+e.inh.length}
+function bdiNatWhen(n){return n===0?"bugün":n===1?"yarın":n+" gün sonra"}
+function bdiNatRoom(r){var nm=bdiGihPerson(r.name),rm="";
+  try{bdiGihRows().forEach(function(g){if(!rm&&bdiNameNear(bdiGihPerson(g.name),nm))rm=g.room})}catch(e){}
+  if(!rm)try{Object.keys(vacRooms||{}).forEach(function(k){if(!rm&&bdiNameNear(vacNameFmt(k),nm))rm=k})}catch(e){}
+  if(!rm)try{(swArrFor(r.arr)||[]).forEach(function(g){if(!rm&&g.roomNo&&bdiNameNear((g.firstName||"")+" "+(g.lastName||""),nm))rm=("000"+g.roomNo).slice(-4)})}catch(e){}
+  return rm}
+function bdiNatPeople(list){var rooms={},h=list.map(function(r){var rm=bdiNatRoom(r);if(rm)rooms[rm]=1;return '<li>'+(rm?'<b>'+esc(rm)+'</b> ':'')+esc(bdiGihPerson(r.name))+' <span class="bd-sub">'+esc(bdiFmtD(r.arr).slice(0,5))+' – '+esc(bdiFmtD(r.dep).slice(0,5))+'</span></li>'}).join("");return {h:'<ul class="bd-nat-ppl">'+h+'</ul>',rooms:Object.keys(rooms).length}}
+function bdiNatCodes(cs){return cs.map(function(c){return '<span class="bd-fd-p" title="'+esc(bdiNatLabel(c))+'">'+esc(c)+'</span>'}).join("")}
+function bdiNatTabBadge(){var c=document.getElementById("bdiNatTabCount");if(!c)return;var n=0;try{var t=getToday();n=bdiNatEvents(t,bdiAddDays(t,BDI_NAT_WARN)).filter(function(e){return e.inh.length}).length}catch(e){}c.textContent=n?String(n):""}
+function bdiNatSetDate(v){_bdiNatDate=/^\d{4}-\d{2}-\d{2}$/.test(v||"")?v:"";renderBdiNat()}
+function bdiNatSettings(){showPage("settings");setTimeout(function(){var el=document.getElementById("bdiCfg_natd");if(!el)return;try{swSetOpen(el)}catch(e){}el.parentNode.scrollIntoView({behavior:"smooth",block:"start"})},150)}
+function renderBdiNat(){
+  var el=document.getElementById("bdiNatBody");if(!el)return;bdiNatSetupDrop();
+  var t=getToday(),D=_bdiNatDate||t,st=bdiOsrStore(),di=document.getElementById("bdiNatDate");if(di&&di.value!==D)di.value=D;
+  var se=document.getElementById("bdiNatStatus");if(se&&st.at)se.innerHTML='<span class="bd-ok">&#10003; '+esc(st.file||"OSR")+' · '+esc(bdiFmtTs(st.at))+' · '+st.rows.length+' kişi'+(st.arrTo?' · '+(st.arrFrom?esc(bdiFmtD(st.arrFrom).slice(0,5))+' – ':'')+esc(bdiFmtD(st.arrTo).slice(0,5))+' varışları':'')+'</span>';
+  var h='';
+  // 1) yaklasan ozel gunler
+  var ev=bdiNatEvents(t,bdiAddDays(t,30)),withG=ev.filter(function(e){return e.inh.length||e.out.length}),none=ev.filter(function(e){return !e.inh.length&&!e.out.length});
+  h+='<h4 class="bd-h4">Yaklaşan özel günler <span class="bd-opt">önümüzdeki 30 gün · '+BDI_NAT_WARN+' gün kala Brifing ve Uyarılar\'a düşer</span></h4>';
+  if(!st.rows.length)h+='<p class="bd-empty">OSR yüklenince her özel günde o uyruktan kaç misafirin otelde olacağı burada görünür.</p>';
+  withG.forEach(function(e){var P=bdiNatPeople(e.inh),cov=e.partial,soon=e.days<=BDI_NAT_WARN;
+    h+='<details class="bd-fd-it bd-nat-ev'+(soon?' soon':'')+'"'+(soon?' open':'')+'><summary class="bd-fd-row"><span class="bd-fd-tag '+(soon?'t-warn':'t-mut')+'">'+esc(bdiFmtD(e.d).slice(0,5))+'</span>'+
+      '<span class="bd-fd-main"><b>'+esc(e.name)+'</b>'+bdiNatCodes(e.cs)+'</span><span class="bd-fd-sub">'+esc(bdiNatWhen(e.days))+' · '+new Date(e.d+"T12:00:00").toLocaleDateString("tr-TR",{weekday:"long"})+'</span>'+
+      '<span class="bd-fd-r"><b>'+bdiNatN(e)+' kişi</b> otelde'+(P.rooms?' · '+P.rooms+' oda':'')+(e.out.length?' <span class="bd-sub">(+'+e.out.length+' o sabah çıkıyor)</span>':'')+'</span></summary>'+
+      '<div class="bd-fd-det">'+(e.inh.length?P.h:'<p class="bd-sub">O gece kalan yok.</p>')+(e.out.length?'<p class="bd-sub" style="margin-top:6px">O sabah çıkanlar: '+e.out.map(function(r){return esc(bdiGihPerson(r.name))}).join(", ")+'</p>':'')+
+      '<p class="bd-nat-g">Jest: '+esc(e.g||"Misafirin dilinde el yazısı tebrik kartı")+'</p>'+(cov?'<p class="bd-note bd-note-warn">OSR\'de '+esc(bdiFmtD(st.arrTo).slice(0,5))+' sonrası varışlar yok; bu güne kadar gelecekler eklenince sayı artabilir. Opera\'da OSR\'yi varış tarihi ileri seçilmiş olarak yeniden al.</p>':'')+'</div></details>'});
+  if(st.rows.length&&!withG.length)h+='<p class="bd-empty">Önümüzdeki 30 günde özel günü olan uyruktan otelde misafir yok.</p>';
+  if(none.length)h+='<p class="bd-sub" style="margin:8px 0 0">O uyruktan otelde kimse yok: '+none.map(function(e){return esc(bdiFmtD(e.d).slice(0,5))+' '+esc(e.name)}).join(" · ")+'</p>';
+  // 2) secilen gun uyruk dagilimi
+  if(st.rows.length){var on=bdiNatOn(D),arr=st.rows.filter(function(r){return r.arr===D}),G={};
+    var add=function(r,k){var c=r.c||"?";var g=G[c]||(G[c]={c:c,inh:0,arr:0,out:0});g[k]++};on.inh.forEach(function(r){add(r,"inh")});arr.forEach(function(r){add(r,"arr")});on.out.forEach(function(r){add(r,"out")});
+    var L=Object.keys(G).map(function(k){return G[k]}).sort(function(a,b){return b.inh-a.inh||b.arr-a.arr}),mx=Math.max.apply(null,L.map(function(g){return g.inh}).concat([1]));
+    h+='<h4 class="bd-h4" style="margin-top:18px">Uyruk dağılımı · '+esc(bdiFmtD(D))+' <span class="bd-opt">'+on.inh.length+' kişi o gece otelde · '+arr.length+' gelen · '+on.out.length+' çıkan</span></h4>';
+    h+='<table class="bd-btable bd-nat-t"><thead><tr><th>Uyruk</th><th class="bd-num">Otelde</th><th></th><th class="bd-num">Gelen</th><th class="bd-num">Çıkan</th></tr></thead><tbody>'+L.map(function(g){
+      return '<tr><td><b>'+esc(bdiNatLabel(g.c))+'</b> <span class="bd-sub">'+esc(g.c)+'</span></td><td class="bd-num">'+g.inh+'</td><td style="width:40%"><div class="bd-nat-bar"><i style="width:'+Math.round(g.inh/mx*100)+'%"></i></div></td><td class="bd-num">'+(g.arr||"")+'</td><td class="bd-num">'+(g.out||"")+'</td></tr>'}).join("")+'</tbody></table>';
+    if(st.arrTo&&D>st.arrTo)h+='<p class="bd-note bd-note-warn">OSR\'de '+esc(bdiFmtD(st.arrTo))+' sonrası varışlar yok; bu gün için sayılar eksik olabilir.</p>';
+  }
+  el.innerHTML=h;bdiNatTabBadge();
+}
+window.bdiNatImportFile=bdiNatImportFile;window.bdiNatSetDate=bdiNatSetDate;window.bdiNatSettings=bdiNatSettings;
+
 // ===== DEMO MODU: kurgusal otel verisi (2026-11-04) =====
 // Butun misafirler, butlerlar, sirketler ve olaylar UYDURMADIR (KVKK: gercek kisi yok; saglik / inanc bilgisi yok).
 // Veri uygulamanin KENDI giris yollarindan gecer (rapor depolari, Excel ice alma, iPad donusu, alert, takip...),
@@ -20151,6 +20344,20 @@ async function swDemoSeed(){
         arrTime:s.arrTime,etd:pick(["11:00","12:00","12:00","14:00"]),prevStays:g.stays.length-1,prevNights:0,creditCard:"",resComments:"",webNotes:wn,specials:s.occ?s.occ.type:"",preferences:"",membershipType:"",membershipLevel:"",traces:[],accompany:(s.acc||[]).join(", "),
         routingInstr:"",blockCode:"",packages:"",vipCode:g.vip||"",companyRaw:g.company||"",tLine:"",sLine:"",nights:n,_rawLines:[],_rawLineMeta:[],_sec:{},_wl:[],wnGroups:wn?[[wn]]:[]}});
     feedAllModules(ag,"rapor");await swArrSave(ag,"ARR01102.pdf");swRepLog("arr","ARR01102.pdf",ag.length,ag.length+" misafir · varış "+bdiFmtD(T).slice(0,5),{arrDay:T});return ag.length+" varış"});
+
+  // ---------- 6b) OSR (Guest Profile Check): uyruklar + demo icin ornek ozel gun ----------
+  await step("OSR uyruklar",function(){
+    var NAT={EN:["GB","GB","US","US","CA","AU","IE"],TR:["TR"],AR:["AE","AE","SA","SA","QA","KW","BH"],RU:["RU","RU","KZ","AZ"],DE:["DE","DE","AT","CH"],FR:["FR","FR","BE"],IT:["IT"],ZH:["CN","CN","SG"]};
+    SH.qas.nat="AE";SH.whit.nat="GB";SH.mor.nat="IT";SH.koc.nat="TR";SH.ster.nat="US";SH.lind.nat="SE";SH.volk.nat="RU";SH.chen.nat="CN";SH.ash.nat="GB";SH.ars.nat="TR";SH.ben.nat="GB";SH.fair.nat="GB";
+    var rows=[],from="",to="";stays.filter(function(s){return s.dep>=D(-3)}).forEach(function(s){var g=s.g;if(!g.nat)g.nat=pick(NAT[g.lang]||["GB"]);
+      var add=function(nm){rows.push({name:nm,nat:g.nat,c:g.nat,arr:s.arr,dep:s.dep,k:bdiGuestKey(bdiGihPerson(nm))})};add(g.last+", "+g.first);
+      (s.acc||[]).forEach(function(a){var p=String(a).split(" ");add(p.slice(1).join(" ")+", "+p[0])});
+      if(!from||s.arr<from)from=s.arr;if(!to||s.dep>to)to=s.dep});
+    BdiKV.set(BDI_OSR_KEY,JSON.stringify({at:NOW-25*60000,file:"OSR_Guest_Profile_Check.pdf",rows:rows,from:from,to:to}));
+    var L=bdiCfg("bdi_natdays").slice();L.push({d:D(2),c:"AE, SA, QA, KW",l:"Demo: Körfez misafirleri kahve günü (örnek)",g:"Kahve ve hurma ikramı, misafirin dilinde el yazısı kart"});
+    localStorage.setItem("bdi_natdays",JSON.stringify(L));
+    var nats={};rows.forEach(function(r){nats[r.c]=1});swRepLog("osr","OSR_Guest_Profile_Check.pdf",rows.length,rows.length+" kişi · "+Object.keys(nats).length+" uyruk");
+    return rows.length+" kişi, "+Object.keys(nats).length+" uyruk"});
 
   // ---------- 7) issue Excel'i (ServiceRequests bicimi) + butler hareketleri ----------
   var ISS=[[SH.volk,-1,"23:10","Engineering","Maintenance","New","Guest called the Butler Office at 23:10 to report that the room was too warm and the thermostat did not respond. Engineering was informed and a portable fan was placed temporarily."],
