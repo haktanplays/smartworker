@@ -11326,7 +11326,7 @@ function bdiIsTouch(l){return l&&l.countsAsTouch!==false}
 function bdiGuestBad(n){return !n||!String(n).trim()||/^(our guest|butler team|—|-)$/i.test(String(n).trim())}
 
 // ---------- KAT DAGILIMI (oglen handover, 13:00-23:00) ----------
-var BDI_FLOOR_PRESETS={2:[[7,14],[15,99]],3:[[7,11],[12,16],[17,99]]};
+var BDI_FLOOR_PRESETS={2:[[7,14],[15,99]],3:[[7,11],[12,16],[17,99]],4:[[7,10],[11,14],[15,18],[19,99]]}; // 4: 2026-11-05 nadir gun (Haktan: "4 butler oldu bugun")
 var BDI_FLOOR_WIN={start:"13:00",end:"23:00"};
 function bdiGetFloors(){try{var o=JSON.parse(BdiKV.get("bdi_floors_v1")||"{}");return o&&typeof o==="object"&&!Array.isArray(o)?o:{}}catch(e){return {}}}
 function bdiSetFloorPlan(date,plan){
@@ -11417,7 +11417,7 @@ function renderBdiFloorPanel(){
   var el=document.getElementById("bdiFloorPanel");if(!el)return;
   var date=bdiFloorDate(),p=bdiFloorPlan(date);
   var h='<div class="bd-panel-head bd-tight"><div><h3>Kat dağılımı</h3><div class="bd-sub">Öğlen handover, '+BDI_FLOOR_WIN.start+'-'+BDI_FLOOR_WIN.end+' &nbsp;|&nbsp; '+esc(bdiFmtD(date))+'</div></div>';
-  h+='<div class="bd-seg"><button type="button" class="'+(p&&p.blocks.length===2?'active':'')+'" onclick="bdiFloorSetCount(2)">2 butler</button><button type="button" class="'+(p&&p.blocks.length===3?'active':'')+'" onclick="bdiFloorSetCount(3)">3 butler</button></div></div>';
+  h+='<div class="bd-seg"><button type="button" class="'+(p&&p.blocks.length===2?'active':'')+'" onclick="bdiFloorSetCount(2)">2 butler</button><button type="button" class="'+(p&&p.blocks.length===3?'active':'')+'" onclick="bdiFloorSetCount(3)">3 butler</button><button type="button" class="'+(p&&p.blocks.length===4?'active':'')+'" onclick="bdiFloorSetCount(4)">4 butler</button></div></div>';
   if(!p){
     var pr=bdiFloorPrevPlan(date);
     h+='<p class="bd-empty">Bu gün için dağılım girilmedi. Öğlen handover\'ında kaç butler varsa onu seç.</p>';
@@ -15756,8 +15756,9 @@ function bdiFloorSuggest(n){
   var fl={},top=bdiTopFloor();bdiFloorRoomLoads().forEach(function(o){fl[o.floor]=(fl[o.floor]||0)+o.w});
   var F=[];for(var f=7;f<=top;f++)F.push(f);
   var sum=function(a,b){var t=0;for(var f=a;f<=b;f++)t+=fl[f]||0;return Math.round(t*10)/10},best=null;
-  var cuts=n===2?F.slice(0,-1).map(function(c){return [c]}):[];
-  if(n===3)F.forEach(function(c1){F.forEach(function(c2){if(c2>c1&&c2<top)cuts.push([c1,c2])})});
+  // n-1 kesim noktasi (her blok en az bir kat); 2, 3, 4 butler ayni hesap
+  var cuts=[],pickC=function(i0,left,acc){if(!left){cuts.push(acc.slice());return}for(var i=i0;i<F.length-1;i++){acc.push(F[i]);pickC(i+1,left-1,acc);acc.pop()}};
+  if(n>=2&&n<=F.length)pickC(0,n-1,[]);
   cuts.forEach(function(c){
     var bl=[],from=7;c.forEach(function(x){bl.push([from,x]);from=x+1});bl.push([from,99]);
     var ld=bl.map(function(b){return sum(b[0],Math.min(b[1],top))}),mx=Math.max.apply(null,ld),mn=Math.min.apply(null,ld);
