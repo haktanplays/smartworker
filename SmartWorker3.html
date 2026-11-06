@@ -1105,9 +1105,9 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid var(--sw-line-
 #page-didit .bd-bulk-h{display:flex;gap:8px;align-items:baseline;font-size:13px;margin-bottom:6px}
 #page-didit .bd-bulk-f{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}#page-didit .bd-bulk-f .bd-chip{padding:3px 10px}#page-didit .bd-chip.on{background:var(--g);color:#fff;border-color:var(--g)}
 #page-didit .bd-bulk-tools{font-size:12px;margin-bottom:6px}
-#page-didit .bd-bulk-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:5px;max-height:260px;overflow:auto;padding:2px}
-#page-didit .bd-bulk-r{display:flex;flex-direction:column;align-items:flex-start;border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 7px;font:600 12.5px var(--sw-font);color:var(--ink);cursor:pointer;line-height:1.25;text-align:left;min-width:0}
-#page-didit .bd-bulk-r small{font-weight:400;font-size:10.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#page-didit .bd-bulk-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;max-height:380px;overflow:auto;padding:2px}
+#page-didit .bd-bulk-r{display:flex;flex-direction:column;align-items:flex-start;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font:700 15px var(--sw-font);color:var(--ink);cursor:pointer;line-height:1.3;text-align:left;min-width:0}
+#page-didit .bd-bulk-r small{font-weight:500;font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}#page-didit .bd-rg{border:1px solid var(--sw-line);border-radius:10px;padding:8px 12px;margin:10px 0;background:#fff}#page-didit .bd-rg>summary{cursor:pointer;font-size:13px}#page-didit .bd-rg-fl{display:flex;gap:8px;align-items:flex-start;margin-top:8px}#page-didit .bd-rg-fn{flex:none;width:52px;font-size:11.5px;color:var(--mut);padding-top:6px}#page-didit .bd-rg-g{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:5px}#page-didit .bd-rg-t{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:#fff;line-height:1.25;min-width:0}#page-didit .bd-rg-t b{font-size:14px}#page-didit .bd-rg-t small,#page-didit .bd-rg-t i{font-size:11.5px;color:var(--mut);font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#page-didit .bd-rg-t.ok{background:#e9f4ef;border-color:#9cc9b6}#page-didit .bd-rg-t.ok i{color:#1f6b4f}#page-didit .bd-rg-t.bad{background:#fdeceb;border-color:#efb1ab}#page-didit .bd-rg-t.bad i{color:#b0322a;font-weight:600}#page-didit .bd-rg-t.wn{background:#fff6e5;border-color:#ecc77d}#page-didit .bd-rg-t.wn i{color:#8a5a00}
 #page-didit .bd-bulk-r.on{border-color:var(--g);background:var(--g);color:#fff}#page-didit .bd-bulk-r.on small{color:#d7ebe4}
 #page-didit .bd-bulk-r.dn{opacity:.5}#page-didit .bd-bulk-r.due small{color:var(--amber)}
 #page-didit .bd-bulk-foot{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px}
@@ -1856,7 +1856,7 @@ label{color:var(--sw-ink-2)}
         <option value="occasion">Special Occasion</option>
       </select></div>
       <div><label class="bd-lbl" for="bdiButler">Butler</label><select id="bdiButler"></select></div>
-      <div><label class="bd-lbl" for="bdiRoom">Oda <button type="button" class="bd-link bd-bulk-tg" onclick="bdiBulkToggle()" title="Aynı işlemi birçok odaya tek seferde gir">toplu</button></label><input id="bdiRoom" type="text" placeholder="1903" oninput="showVacGuest()"></div>
+      <div><label class="bd-lbl" for="bdiRoom">Oda <button type="button" class="bd-link bd-bulk-tg" onclick="bdiBulkToggle()" title="Odaları isimleriyle gör; birden çok oda seçebilirsin. Aynı işlemi birçok odaya tek seferde gir">oda listesi</button></label><input id="bdiRoom" type="text" placeholder="1903" oninput="showVacGuest()"></div>
       <div id="bdiGuestHint" class="bd-guest-hint"></div>
     </div>
     <div id="bdiGuestPick" class="bd-rg-bar" style="display:none"></div>
@@ -8292,7 +8292,7 @@ function initDidIt(){
   asel.innerHTML+='<option value="custom">Diger (Serbest)</option>'; // Guest Issue / Recovery / Room Move 2026-11-02 kaldirildi: Issues sekmesinden girilir
   // Live preview for all simple touch fields
   sel.onchange=function(){updateBdiPreview()};
-  var liveIds=["bdiTouchType","bdiRoom","bdiAction","bdiNote","bdiCustomAction","bdiIssueText","bdiIssueAction","bdiSolutionType","bdiRecoveryDetail","bdiDepartmentDetail","bdiToRoom","bdiGuestResponse","bdiLuggageAssist","bdiPrefCategory","bdiPrefDetail","bdiOccasionType","bdiArrangement","bdiOccasionTiming"];
+  var liveIds=["bdiTouchType","bdiButler","bdiRoom","bdiAction","bdiNote","bdiCustomAction","bdiIssueText","bdiIssueAction","bdiSolutionType","bdiRecoveryDetail","bdiDepartmentDetail","bdiToRoom","bdiGuestResponse","bdiLuggageAssist","bdiPrefCategory","bdiPrefDetail","bdiOccasionType","bdiArrangement","bdiOccasionTiming"];
   // addEventListener: el.oninput/onchange atamak HTML'deki onchange="toggleBdiPattern()" vb. ve
   // bdiRoom'un oninput="showVacGuest()" baglantisini eziyordu (Touch Type alanlari acilmiyordu).
   // initDidIt birden cok kez cagrildigi icin dataset bayragi ile tek sefer baglanir.
@@ -9197,6 +9197,7 @@ function renderBdiNt(){
   if(cv.length)h+='<div class="bd-nt-conv">&#10003; <b>'+cv.length+'</b> misafir dünkü listeden bugün dokunuldu: '+esc(cv.slice(0,8).map(function(g){return g.rooms.join("/")+" "+g.name}).join(" · "))+(cv.length>8?' …':'')+'</div>';
   if(!L.rows.length){el.innerHTML=h+'<p class="bd-empty" style="color:#065f46">&#10003; Oteldeki '+L.total+' misafirin hepsine konaklamasında en az bir kez dokunuldu.</p>';bdiNtTabBadge();return}
   h+=bdiNtSumHtml(D,L);
+  try{h+=bdiRoomGridHtml(D,"nt")}catch(e){} // 2026-11-06: oda gorunumu (ekstra)
   var pvN=L.rows.filter(function(g){var x=(bdiNtGet()[D]||{})[g.gk]||{};return !x.r&&bdiNtPrev(D,g.gk)}).length;
   var nrN=L.rows.filter(function(g){return !((bdiNtGet()[D]||{})[g.gk]||{}).r}).length;
   h+='<div class="bd-nt-quick"><span class="bd-nt-quick-t">Toplu sebep</span><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiNtSel(\'all\')">Tümünü seç</button><button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" onclick="bdiNtSel(\'empty\')">Sebebi boş olanları seç ('+nrN+')</button><button type="button" class="bd-link" onclick="bdiNtSel(\'none\')">temizle</button><span id="bdiNtSelN" class="bd-sub">0 seçili</span><span class="bd-nt-quick-sep"></span>'+
@@ -9712,15 +9713,16 @@ function bdiGetServiceAction(){
 }
 
 function updateBdiPreview(){
+  bdiBulkAuto(); // butler secilince oda listesi kendiliginden acilir
   if(_bdiBulk&&_bdiBulk.on){try{renderBdiBulk()}catch(e){}} // toplu panel: secilen islem / butler basliga gelsin (onizlemeyi de o yazar)
   else bdiPreviewDraw();
 }
 // 2026-11-06: toplu touch'ta oda kutusu bos (odalar panelden secilir); ornek cumle secili ilk odayla (yoksa listedeki ilk odayla) kurulur
 function bdiPreviewDraw(){
   var preview=document.getElementById("bdiPreview");if(!preview)return;
-  var ri=document.getElementById("bdiRoom"),bulk=!!(_bdiBulk&&_bdiBulk.on),built=null,r0="",sel=[];
-  if(bulk&&ri&&!String(ri.value||"").trim()){
-    sel=Object.keys(_bdiBulk.sel).sort(function(a,b){return bdiRoomNum(a)-bdiRoomNum(b)});r0=sel[0]||((bdiBulkRooms()[0]||{}).room||"");
+  var ri=document.getElementById("bdiRoom"),bulk=!!(_bdiBulk&&_bdiBulk.on),built=null,r0="",sel=ri?bdiParseRooms(ri.value):[];
+  if(ri&&(sel.length>1||(bulk&&!sel.length))){ // birden cok oda ya da liste acik ve oda secilmemis: ilk odayla ornek
+    r0=sel[0]||((bdiBulkRooms()[0]||{}).room||"");
     if(r0){var old=ri.value;ri.value=r0;try{built=buildBdiTouchEntry(false)}finally{ri.value=old}}
   }else built=buildBdiTouchEntry(false);
   if(!built||!built.sentence){preview.textContent="";return}
@@ -10063,8 +10065,18 @@ function bdiamCancel(){
 // ===== Toplu touch (2026-11-03, Haktan: "butler did it ve butler didn't do it icinde bulk ekleme ozelligi lazim") =====
 // Kayit > Oda "toplu": oteldeki odalar kata gore; kat sec / butlerin kat plani / tek tek isaretle -> formdaki butler + islem +
 // detay her odaya ayri kayit olarak (misafir adiyla) yazilir. Bugun ayni islem girilmis oda isaretlenmez (tekrar olmasin).
+// 2026-11-06 (Haktan: "butler secince default olarak bunu acabiliriz; hem oda hem isim gorurum, biraz daha buyuk olmali"):
+// Oda listesi = Kayit'in oda secicisi. Secimin tek kaynagi Oda kutusudur: odaya dokun -> kutuya eklenir / cikar,
+// kutuya yazinca listede isaretlenir. Tek ana dugme alttaki Kaydet (birden cok odada her odaya ayri kayit).
+// Butler secilince kendiliginden acilir; "kapat" denirse bu bilgisayarda kapali kalir ("oda listesi" ile geri acilir).
+// Kat dugmeleri yalniz SUZER (eskiden "X'in katlari" butun odalari seciyordu); secim odaya dokunarak ya da "gorunenleri sec" ile.
 var _bdiBulk={on:false,sel:{},fl:""};
-function bdiBulkToggle(){_bdiBulk.on=!_bdiBulk.on;if(!_bdiBulk.on)_bdiBulk.sel={};renderBdiBulk()}
+function bdiRpOff(){try{return localStorage.getItem("bdi_roompick_off")==="1"}catch(e){return false}}
+function bdiBulkToggle(){_bdiBulk.on=!_bdiBulk.on;try{localStorage.setItem("bdi_roompick_off",_bdiBulk.on?"0":"1")}catch(e){}renderBdiBulk()}
+function bdiBulkAuto(){if(!_bdiBulk.on&&!bdiRpOff()&&(document.getElementById("bdiButler")||{}).value)_bdiBulk.on=true}
+function bdiBulkInRooms(){var ri=document.getElementById("bdiRoom");return bdiParseRooms(ri?ri.value:"").filter(function(r){return /^\d{3,4}$/.test(r)}).map(function(r){return ("000"+r).slice(-4)})}
+function bdiBulkSetRooms(list){var ri=document.getElementById("bdiRoom");if(!ri)return;var seen={},out=[];list.forEach(function(r){if(!seen[r]){seen[r]=1;out.push(r)}});
+  out.sort(function(x,y){return bdiRoomNum(x)-bdiRoomNum(y)});ri.value=out.join(", ");try{showVacGuest()}catch(e){}updateBdiPreview()}
 function bdiBulkRooms(){
   var t=(document.getElementById("bdiDate")||{}).value||getToday(),seen={},out=[];
   Object.keys(vacRooms||{}).forEach(function(r){var r4=("000"+String(r).replace(/\D/g,"")).slice(-4);if(seen[r4])return;seen[r4]=1;var vs=bdiVacSt[r4]||bdiVacSt[r]||{};
@@ -10072,39 +10084,53 @@ function bdiBulkRooms(){
   return out.sort(function(a,b){return bdiRoomNum(a.room)-bdiRoomNum(b.room)});
 }
 function bdiBulkAct(){var v=(document.getElementById("bdiAction")||{}).value||"",a=/^\d+$/.test(v)?getBdiActions()[+v]:null;return a?a.label:""}
+function bdiBulkDone(D,act){var done={};if(act)loadBdiArrayForDate(D).forEach(function(l){if(l&&l.action===act)done[("000"+String(l.room||"").replace(/\D/g,"")).slice(-4)]=1});return done}
+function bdiBulkMineFl(D,b){var plan=null,fl={};try{plan=bdiFloorPlan(D)}catch(e){}if(b&&plan&&plan.blocks)plan.blocks.forEach(function(k){if(k.butler===b)for(var f=k.from;f<=Math.min(k.to,40);f++)fl[f]=1});return fl}
+function bdiBulkVis(rooms,mine){return rooms.filter(function(x){return !_bdiBulk.fl||(_bdiBulk.fl==="mine"?!!mine[x.fl]:String(x.fl)===String(_bdiBulk.fl))})}
 function renderBdiBulk(){
   var el=document.getElementById("bdiBulkPanel"),btn=document.querySelector(".bd-bulk-tg");if(!el)return;if(btn)btn.classList.toggle("on",_bdiBulk.on);
   if(!_bdiBulk.on){el.style.display="none";el.innerHTML="";try{bdiPreviewDraw()}catch(e){}return}
-  var rooms=bdiBulkRooms(),act=bdiBulkAct(),D=(document.getElementById("bdiDate")||{}).value||getToday(),done={};
-  if(act)loadBdiArrayForDate(D).forEach(function(l){if(l&&l.action===act)done[("000"+String(l.room||"").replace(/\D/g,"")).slice(-4)]=1});
+  var rooms=bdiBulkRooms(),act=bdiBulkAct(),D=(document.getElementById("bdiDate")||{}).value||getToday(),done=bdiBulkDone(D,act);
+  _bdiBulk.sel={};bdiBulkInRooms().forEach(function(r){_bdiBulk.sel[r]=1});
   var fls={};rooms.forEach(function(x){if(x.fl)fls[x.fl]=1});var flk=Object.keys(fls).sort(function(a,b){return a-b});
-  var b=(document.getElementById("bdiButler")||{}).value||"",plan=null;try{plan=bdiFloorPlan(D)}catch(e){}var mine=[];
-  if(b&&plan&&plan.blocks)plan.blocks.forEach(function(k){if(k.butler===b)for(var f=k.from;f<=Math.min(k.to,40);f++)mine.push(f)});
+  var b=(document.getElementById("bdiButler")||{}).value||"",mine=bdiBulkMineFl(D,b),hasMine=Object.keys(mine).length;if(_bdiBulk.fl==="mine"&&!hasMine)_bdiBulk.fl="";
   var nSel=Object.keys(_bdiBulk.sel).length;
-  var h='<div class="bd-bulk-h"><b>Toplu touch</b><span class="bd-sub">'+(act?'İşlem: <b>'+esc(act)+'</b>':'Önce aşağıdan işlemi seç')+(b?' · '+esc(b):' · butler seç')+'</span><span style="flex:1"></span><button type="button" class="bd-link" onclick="bdiBulkToggle()">kapat</button></div>';
-  h+='<div class="bd-bulk-f"><button type="button" class="bd-chip'+(!_bdiBulk.fl?' on':'')+'" onclick="bdiBulkFloor(\'\')">Tüm katlar</button>'+(mine.length?'<button type="button" class="bd-chip" onclick="bdiBulkMine()">'+esc(b.split(" ")[0])+'\'nin katları</button>':'')+flk.map(function(f){return '<button type="button" class="bd-chip'+(String(_bdiBulk.fl)===String(f)?' on':'')+'" onclick="bdiBulkFloor(\''+f+'\')">Kat '+f+'</button>'}).join("")+'</div>';
-  var vis=rooms.filter(function(x){return !_bdiBulk.fl||String(x.fl)===String(_bdiBulk.fl)});
+  var h='<div class="bd-bulk-h"><b>Odalar</b><span class="bd-sub">'+(act?'İşlem: <b>'+esc(act)+'</b>':'işlemi aşağıdan seç')+(b?' · '+esc(b):' · butler seç')+' · odaya dokun, birden çok seçebilirsin</span><span style="flex:1"></span><button type="button" class="bd-link" onclick="bdiBulkToggle()">kapat</button></div>';
+  h+='<div class="bd-bulk-f"><button type="button" class="bd-chip'+(!_bdiBulk.fl?' on':'')+'" onclick="bdiBulkFloor(\'\')">Tüm katlar</button>'+(hasMine?'<button type="button" class="bd-chip'+(_bdiBulk.fl==="mine"?' on':'')+'" onclick="bdiBulkMine()">'+esc(b.split(" ")[0])+'\'nin katları</button>':'')+flk.map(function(f){return '<button type="button" class="bd-chip'+(String(_bdiBulk.fl)===String(f)?' on':'')+'" onclick="bdiBulkFloor(\''+f+'\')">Kat '+f+'</button>'}).join("")+'</div>';
+  var vis=bdiBulkVis(rooms,mine);
   h+='<div class="bd-bulk-tools"><button type="button" class="bd-link" onclick="bdiBulkPick(\'vis\')">görünenleri seç</button> · <button type="button" class="bd-link" onclick="bdiBulkPick(\'none\')">temizle</button><span class="bd-sub"> · bugün '+esc(act||"bu işlem")+' girilmiş odalar soluk</span></div><div class="bd-bulk-g">';
   vis.forEach(function(x){var on=!!_bdiBulk.sel[x.room],dn=!!done[x.room];
     h+='<button type="button" class="bd-bulk-r'+(on?' on':'')+(dn?' dn':'')+(x.due?' due':'')+'" onclick="bdiBulkTg(\''+x.room+'\')" title="'+esc((x.name||"")+(dn?" · bugün girildi":"")+(x.due?" · bugün gelecek":""))+'"><b>'+esc(x.room)+'</b><small>'+esc(x.name?x.name.split(" ").slice(-1)[0]:"—")+(dn?' ✓':'')+(x.due?' · gelecek':'')+'</small></button>'});
   if(!vis.length)h+='<p class="bd-sub">Oda listesi yok: Kayıt\'ta VAC ya da in-house raporu yüklü olmalı.</p>';
-  h+='</div><div class="bd-bulk-foot"><span><b>'+nSel+'</b> oda seçili</span><span style="flex:1"></span><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiBulkSave()"'+(nSel?'':' disabled')+'>'+nSel+' odaya kaydet</button></div>';
+  h+='</div>'+(nSel?'<div class="bd-bulk-foot"><span><b>'+nSel+'</b> oda seçili'+(nSel>1?' · alttaki <b>Kaydet</b> her odaya ayrı kayıt girer':'')+'</span></div>':'');
   el.innerHTML=h;el.style.display="block";
   try{bdiPreviewDraw()}catch(e){}
 }
 function bdiBulkFloor(f){_bdiBulk.fl=f;renderBdiBulk()}
-function bdiBulkMine(){var D=(document.getElementById("bdiDate")||{}).value||getToday(),b=(document.getElementById("bdiButler")||{}).value||"",plan=bdiFloorPlan(D),fl={};(plan&&plan.blocks||[]).forEach(function(k){if(k.butler===b)for(var f=k.from;f<=Math.min(k.to,40);f++)fl[f]=1});
-  var act=bdiBulkAct(),done={};if(act)loadBdiArrayForDate(D).forEach(function(l){if(l&&l.action===act)done[("000"+String(l.room||"").replace(/\D/g,"")).slice(-4)]=1});
-  _bdiBulk.fl="";bdiBulkRooms().forEach(function(x){if(fl[x.fl]&&!done[x.room]&&!x.due)_bdiBulk.sel[x.room]=1});renderBdiBulk()}
-function bdiBulkTg(r){if(_bdiBulk.sel[r])delete _bdiBulk.sel[r];else _bdiBulk.sel[r]=1;renderBdiBulk()}
-function bdiBulkPick(m){if(m==="none"){_bdiBulk.sel={};renderBdiBulk();return}
-  var D=(document.getElementById("bdiDate")||{}).value||getToday(),act=bdiBulkAct(),done={};if(act)loadBdiArrayForDate(D).forEach(function(l){if(l&&l.action===act)done[("000"+String(l.room||"").replace(/\D/g,"")).slice(-4)]=1});
-  bdiBulkRooms().forEach(function(x){if((!_bdiBulk.fl||String(x.fl)===String(_bdiBulk.fl))&&!done[x.room]&&!x.due)_bdiBulk.sel[x.room]=1});renderBdiBulk()}
-function bdiBulkSave(){
-  var rs=Object.keys(_bdiBulk.sel).sort(function(a,b){return bdiRoomNum(a)-bdiRoomNum(b)});if(!rs.length)return;
-  if(!(document.getElementById("bdiButler")||{}).value){alert("Butler seç.");return}if(!bdiBulkAct()&&getBdiTouchType()==="service"&&!((document.getElementById("bdiAction")||{}).value)){alert("İşlem seç.");return}
-  var n0=bdiLogs.length,ri=document.getElementById("bdiRoom");ri.value=rs.join(",");addDidIt();
-  var added=bdiLogs.length-n0;if(added>0){bdiToast(added+" odaya kaydedildi: "+(bdiBulkAct()||"touch")+".");_bdiBulk.sel={};_bdiBulk.on=false;renderBdiBulk()}
+function bdiBulkMine(){_bdiBulk.fl="mine";renderBdiBulk()} // yalniz suzer
+function bdiBulkTg(r){var a=bdiBulkInRooms(),i=a.indexOf(r);if(i>=0)a.splice(i,1);else a.push(r);bdiBulkSetRooms(a)}
+function bdiBulkPick(m){if(m==="none"){bdiBulkSetRooms([]);return}
+  var D=(document.getElementById("bdiDate")||{}).value||getToday(),done=bdiBulkDone(D,bdiBulkAct()),b=(document.getElementById("bdiButler")||{}).value||"";
+  bdiBulkSetRooms(bdiBulkInRooms().concat(bdiBulkVis(bdiBulkRooms(),bdiBulkMineFl(D,b)).filter(function(x){return !done[x.room]&&!x.due}).map(function(x){return x.room})))}
+// 2026-11-06 (Haktan: "butler did it ve didn't do it alanlarinda da boyle gormek isterim, ekstra alan olarak"): oda kutulari kat kat.
+// did: o gun touch alan oda yesil (kac touch); nt: konaklamasinda hic dokunulmayan kirmizi, sebebi girilmisse sari.
+var _bdiRgOpen={};
+function bdiRgTg(m,o){_bdiRgOpen[m]=!!o}
+function bdiRoomGridHtml(D,mode){
+  var rows=[],R=null;try{R=bdiInhFor(D)}catch(e){}
+  if(R&&R.rows)R.rows.forEach(function(r){if(r.dep&&r.dep<=D)return;if(r.arr&&r.arr>D)return;rows.push({room:("000"+r.room).slice(-4),name:bdiGihPerson(r.name)})});
+  else if(D===getToday())Object.keys(vacRooms||{}).forEach(function(r){rows.push({room:("000"+String(r).replace(/\D/g,"")).slice(-4),name:vacNameFmt(r)})});
+  if(!rows.length)return "";
+  var by={};rows.forEach(function(x){if(!by[x.room])by[x.room]=x});var list=Object.keys(by).sort(function(a,b){return bdiRoomNum(a)-bdiRoomNum(b)}).map(function(k){return by[k]});
+  var cnt={};loadBdiArrayForDate(D).forEach(function(l){if(!l||l.deleted||!bdiIsTouch(l))return;var r=("000"+String(l.room||"").replace(/\D/g,"")).slice(-4);cnt[r]=(cnt[r]||0)+1});
+  var nt={},rs={};if(mode==="nt"){var L=null;try{L=bdiNtList(D)}catch(e){}var day=bdiNtGet()[D]||{};((L&&L.rows)||[]).forEach(function(g){var x=day[g.gk]||{};g.rooms.forEach(function(r){nt[r]=g.nights||0;if(x.r)rs[r]=x.r})})}
+  var fl={},ord=[],nOk=0,nNo=0;list.forEach(function(x){var f=bdiRoomFloor(x.room);if(!fl[f]){fl[f]=[];ord.push(f)}fl[f].push(x)});
+  var h='';ord.forEach(function(f){h+='<div class="bd-rg-fl"><span class="bd-rg-fn">'+(f==null?"?":"Kat "+f)+'</span><div class="bd-rg-g">'+fl[f].map(function(x){var c=cnt[x.room]||0,cls,sub,isNt=mode==="nt"&&(x.room in nt);
+      if(mode==="nt"){cls=isNt?(rs[x.room]?" wn":" bad"):" ok";sub=isNt?(rs[x.room]||(nt[x.room]?nt[x.room]+" gecedir yok":"bugün geldi")):"dokunuldu"}
+      else{cls=c?" ok":"";sub=c?c+" touch":"—"}
+      if(cls===" ok")nOk++;else nNo++;
+      return '<span class="bd-rg-t'+cls+'" title="'+esc((x.name||"")+" · "+sub)+'"><b>'+esc(x.room)+'</b><small>'+esc(String(x.name||"").split(" ").slice(-1)[0]||"—")+'</small><i>'+esc(sub)+'</i></span>'}).join("")+'</div></div>'});
+  return '<details class="bd-rg"'+(_bdiRgOpen[mode]?' open':'')+' ontoggle="bdiRgTg(\''+mode+'\',this.open)"><summary><b>Oda görünümü</b> <span class="bd-sub">'+(mode==="nt"?nNo+' odada konaklamasında hiç dokunulmamış misafir · '+nOk+' oda dokunuldu':nOk+' / '+list.length+' odaya '+(D===getToday()?"bugün":esc(bdiFmtD(D).slice(0,5)))+' touch')+'</span></summary>'+h+'</details>';
 }
 // ===== Ayarlara toplu ekleme + ornek (2026-11-03, Haktan: "sadece butler did it didn't do it degil, ayar yapilan her alana;
 // musait alanlara tabii, her bos belas alana degil") =====
@@ -10226,6 +10252,7 @@ function addDidIt(){
   renderBdiTodayCard();bdiIssueBadge();
   bdiFlashConfirm();
   bdiAskReaction(_bdiJustAdded); // 2 saniyelik tepki (istege bagli, odagi calmaz)
+  try{if(_bdiBulk.on)renderBdiBulk()}catch(e){} // oda listesi: kaydedilen odalar soluk, secim temiz
   var rIn=document.getElementById("bdiRoom");if(rIn)rIn.focus(); // hiz dongusu: imlec odaya doner
 }
 // D: Power satiri - "1903 amenity cikolata" -> oda(lar) + islem eslesmesi + detay
@@ -12615,6 +12642,7 @@ function renderBdiButlerSummary(logs){
     if(single&&gn.length)h+='<div class="bd-bcard-guests">'+esc(gn.slice(0,4).join(", "))+(gn.length>4?' +'+(gn.length-4):'')+'</div>';
     h+='</div>';
   });
+  if(single){try{h+=bdiRoomGridHtml(range.start,"did")}catch(e){}} // 2026-11-06: oda gorunumu (ekstra)
   el.innerHTML=h;
 }
 function renderBdiTodayCard(){
@@ -20194,7 +20222,7 @@ window.bdiLogs = bdiLogs;
   bdiFloorSetCount, bdiFloorAssign, bdiFloorEditRange, bdiFloorCopyPrev, bdiFloorClear, bdiFloorApplySuggest, renderBdiFloorPanel, renderBdiTodayCard,
   bdiIssueImportFile, bdiIssueToggle, bdiIssueSetFilter, bdiIssueToggleNew, bdiIssueNewRoomHint, bdiIssueAddManual,
   bdiIssueAct, bdiIssueDelete, bdiIssueExportXlsx, renderBdiIssues, bdiIssueConfirm, bdiIssueImportUndo, bdiIssueUntomb, bdiSetLogSort,
-  bdiIssueRestore, bdiIssueRestoreSkipped, alertNvPick, swSetIndexRender, swSetGo, swSetQKey, swBulkOpen, swCfgPvSet, _swAlertPv, bdiCfgEditDeb, bdiCfgAddFrom, bdiNtSel, bdiNtSelCount, bdiNtQuick, bdiBulkToggle, bdiBulkFloor, bdiBulkMine, bdiBulkTg, bdiBulkPick, bdiBulkSave, bdiRetroDay, bdiRetroAdd, bdiEntryGuestSet, renderBdiFu, bdiFuSetRange, bdiFuFromIssue, bdiFuGoIssue, bdiFuCancelFrom, bdiFuReopenFrom, bdiFuEditSave, downloadFuReport, downloadFuXlsx, bdiNcPick, bdiNcSettings, bdiAwayToggle, bdiIssueSetOut, bdiIssueSetSort, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, swWarnOpen, swWarnGo, bdiReportGate, swGateRun, bdiAlertManualLink, bdiAlertActFix, alertReasonsSettings, setAlertNotReason, bdiNtChkAll, bdiNtBulkCtl, bdiNtBulkApply, bdiNtCopyAllPrev, bdiNtDateSet, bdiNtSettings, downloadDidntDoIt, downloadDidntDoItXlsx, bdiDateToday, bdiDateWarn, bdiIrciToggle, renderIrciActs, bdiIrciDateSet, bdiIrciEtdEl, bdiIrciEtdSet, bdiIrciApplyAll, bdiIrciXlsx, bdiIrciPrint, bdiIrciSettings, bdiAlertAutoSettings, renderBdiAlertAuto, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
+  bdiIssueRestore, bdiIssueRestoreSkipped, alertNvPick, swSetIndexRender, swSetGo, swSetQKey, swBulkOpen, swCfgPvSet, _swAlertPv, bdiCfgEditDeb, bdiCfgAddFrom, bdiNtSel, bdiNtSelCount, bdiNtQuick, bdiBulkToggle, bdiBulkFloor, bdiBulkMine, bdiBulkTg, bdiBulkPick, bdiRgTg, bdiRetroDay, bdiRetroAdd, bdiEntryGuestSet, renderBdiFu, bdiFuSetRange, bdiFuFromIssue, bdiFuGoIssue, bdiFuCancelFrom, bdiFuReopenFrom, bdiFuEditSave, downloadFuReport, downloadFuXlsx, bdiNcPick, bdiNcSettings, bdiAwayToggle, bdiIssueSetOut, bdiIssueSetSort, bdiIssueNoContact, bdiIssueCloseNC, bdiNcSave, swWarnOpen, swWarnGo, bdiReportGate, swGateRun, bdiAlertManualLink, bdiAlertActFix, alertReasonsSettings, setAlertNotReason, bdiNtChkAll, bdiNtBulkCtl, bdiNtBulkApply, bdiNtCopyAllPrev, bdiNtDateSet, bdiNtSettings, downloadDidntDoIt, downloadDidntDoItXlsx, bdiDateToday, bdiDateWarn, bdiIrciToggle, renderIrciActs, bdiIrciDateSet, bdiIrciEtdEl, bdiIrciEtdSet, bdiIrciApplyAll, bdiIrciXlsx, bdiIrciPrint, bdiIrciSettings, bdiAlertAutoSettings, renderBdiAlertAuto, bdiCfgEdit, bdiCfgDel, bdiCfgUp, bdiCfgAdd, bdiCfgReset, bdiPrefHint, bdiOccHint, bdiGoIssue, bdiNtSetEl, bdiNtCopyPrev, bdiNtDownload, renderBdiNt, bdiActionCatSet, bdiAlertLinkToggle, renderAlertLinkActs, bdiAutoType, bdiIssueEvEdit, bdiIssueEvText, bdiIssueConfirmFrom, bdiIssueEvDelete, bdiIssueEditFields, bdiIssueDraftSet, bdiIssueUseName, bdiGMForget, bdiGMSetName, swAdminSet, bdiAwaySetMe, bdiAwaySetRange, bdiAwayOpen, bdiAwayCopyGR,
   bdiCalToggle, bdiCalMove, bdiCalRangeMode, bdiCalClick, bdiBriefPrint,
   bdiGuestMode, toggleGuestDetail, scanBdiGuests, filterGuestLibrary, clearGuestSearch,
   exportGuestProfile, saveGuestNote, bdiToggleAllGuests, showBdiMergeMode,
