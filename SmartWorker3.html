@@ -9346,7 +9346,7 @@ function bdiDidntData(start,end){
   R.rows.forEach(function(r){if(r.left)return;var o=r.owner||"—",b=B[o]||(B[o]={name:o,inh:0,un:0});b.un++});
   var depC={},left=[],seen={}; // 2026-11-06: listeden cikarilan konaklama "Checked Out Without a Touch"a (Excel dahil) da girmez
   bdiDepAll().forEach(function(r){if(!r.dep||r.dep<start||r.dep>end)return;var sp=bdiStayTouchSplit(r,depC);if(sp.pre+sp.dep)return;
-    var nm=bdiDepName(r),k=bdiGuestKey(nm)||r.room;if(seen[k])return;var xo=(nt._out||{})[bdiGuestKey(nm)||"room:"+("000"+r.room).slice(-4)];if(xo&&!xo.off&&(r.arr===xo.from||(r.dep>=(xo.from||"")&&r.dep<=(xo.to||"9999"))))return;var own=bdiFloorOwner(r.dep,r.room)||"";if(fb&&own!==fb)return;if(fr&&r.room.indexOf(fr)<0&&String(+r.room).indexOf(fr)<0)return;
+    var nm=bdiDepName(r),gk=bdiGuestKey(nm),k=gk||r.room;if(seen[k])return;var xo=(nt._out||{})[gk||"room:"+("000"+r.room).slice(-4)];if(xo&&!xo.off&&(r.arr===xo.from||(r.dep>=(xo.from||"")&&r.dep<=(xo.to||"9999"))))return;var own=bdiFloorOwner(r.dep,r.room)||"";if(fb&&own!==fb)return;if(fr&&r.room.indexOf(fr)<0&&String(+r.room).indexOf(fr)<0)return;
     seen[k]=1;left.push({room:r.room,name:nm,arr:r.arr,dep:r.dep,time:r.time||"",owner:own,due:r.st==="DUOT"&&r.dep>=getToday()})});
   left.sort(function(a,b){return a.dep<b.dep?-1:a.dep>b.dep?1:bdiRoomNum(a.room)-bdiRoomNum(b.room)});
   var al=bdiReportAlertRows(start,end).filter(function(r){return r.st!=="ok"});
@@ -10155,7 +10155,7 @@ function bdiTrPoss(w){w=String(w||"").trim();var v=(w.toLocaleLowerCase("tr-TR")
 function bdiRpOff(){try{return localStorage.getItem("bdi_roompick_off")==="1"}catch(e){return false}}
 function bdiBulkToggle(){_bdiBulk.on=!_bdiBulk.on;try{localStorage.setItem("bdi_roompick_off",_bdiBulk.on?"0":"1")}catch(e){}renderBdiBulk()}
 function bdiBulkAuto(){if(!_bdiBulk.on&&!bdiRpOff()&&(document.getElementById("bdiButler")||{}).value){_bdiBulk.on=true;_bdiBulk.fl="mine"}} // kat dagilimi yoksa render "Tum katlar"a doner
-function bdiBulkInRooms(){var ri=document.getElementById("bdiRoom");return bdiParseRooms(ri?ri.value:"").filter(function(r){return /^\d{3,4}$/.test(r)}).map(function(r){return ("000"+r).slice(-4)})}
+function bdiBulkInRooms(){var ri=document.getElementById("bdiRoom");return bdiParseRooms(ri?ri.value:"").filter(function(r){return /^\d{4}$/.test(r)})}
 function bdiBulkSetRooms(list){var ri=document.getElementById("bdiRoom");if(!ri)return;var seen={},out=[];list.forEach(function(r){if(!seen[r]){seen[r]=1;out.push(r)}});
   out.sort(function(x,y){return bdiRoomNum(x)-bdiRoomNum(y)});ri.value=out.join(", ");try{showVacGuest()}catch(e){}updateBdiPreview()}
 function bdiBulkRooms(){
@@ -10311,7 +10311,7 @@ function bdiParseRooms(raw){var s={};return (raw||"").split(/[,;\s]+/).filter(Bo
 function addDidIt(){
   var roomInput=document.getElementById("bdiRoom");
   var rooms=bdiParseRooms(roomInput.value);
-  if(rooms.some(function(r){return !/^\d{4}$/.test(r)})){bdiFieldErr("bdiRoom","Oda numarası rakam olmalı (ör. 1903)");return}if(rooms.length===1)roomInput.value=rooms[0];
+  if(rooms.some(function(r){return !/^\d{4}$/.test(r)})){bdiFieldErr("bdiRoom","Oda numarası 3 ya da 4 rakam olmalı (ör. 1903)");return}if(rooms.length===1)roomInput.value=rooms[0];
   if(rooms.length<=1){
     var entry=buildBdiTouchEntry(true);
     if(!entry)return;
@@ -11402,16 +11402,8 @@ function importBdiBackup(files){
             }
             continue;
           }
-          if(key.indexOf("_occ_")>=0||key.indexOf("_archive_")>=0){
-            // Occupied counts and archives: keep if not exists
-            if(!BdiKV.get(key)){
-              BdiKV.set(key,typeof data[key]==="string"?data[key]:JSON.stringify(data[key]));
-            }
-            continue;
-          }
-
-          // 2026-11-06: yalniz gun kayitlari (bdi_YYYY-MM-DD) asagidaki dizi yoluna girer; diger anahtarlar (ayarlar, prep, devir...) bu bilgisayarda YOKSA aynen yazilir (dizi yolunda kirpiliyordu); bdi_me bu bilgisayarin
-          if(!BDI_DAY_KEY_RE.test(key)){if(key!=="bdi_me"&&BdiKV.get(key)===null)BdiKV.set(key,typeof data[key]==="string"?data[key]:JSON.stringify(data[key]));continue}
+          // 2026-11-06: yalniz gun kayitlari (bdi_YYYY-MM-DD) asagidaki dizi yoluna girer; diger anahtarlar (doluluk, arsiv, ayarlar, prep, devir...) bu bilgisayarda YOKSA aynen yazilir (dizi yolunda kirpiliyordu); bdi_me bu bilgisayarin
+          if(!BDI_DAY_KEY_RE.test(key)){if(key!=="bdi_me"&&!BdiKV.get(key))BdiKV.set(key,typeof data[key]==="string"?data[key]:JSON.stringify(data[key]));continue}
           // Daily log arrays: deduplicate by date+time+butler+room+action+note+sentence
           var incoming3=data[key];
           if(typeof incoming3==="string"){try{incoming3=JSON.parse(incoming3)}catch(ex){continue}}
@@ -13364,7 +13356,7 @@ function bdiGuestDetailHtml(g){
     var rn=Object.keys(g.rawNames||{});
     if(rn.length>1)h+='<div class="bd-gissue">Gösterilen isim: <select onchange="bdiGMSetName(\''+esc(g.gid)+'\',this.value)">'+rn.map(function(n){return '<option'+(n===g.name?' selected':'')+'>'+esc(n)+'</option>'}).join("")+'</select></div>';
   }
-  h+='<h4 class="bd-h4">Notlar ve tercihler</h4><textarea class="bd-ta" data-gnote="'+esc(g.gid)+'" onchange="bdiGMSaveNote(this.getAttribute(\'data-gnote\'),this)" placeholder="Tercihler, özel istekler (sağlık / inanç bilgisi yazma)">'+esc((_bdiGM.notes[g.gid]||{}).t||"")+'</textarea>';
+  h+='<h4 class="bd-h4">Notlar ve tercihler</h4><textarea class="bd-ta" data-gnote="'+esc(g.gid)+'" onchange="bdiGMSaveNote(this.getAttribute(\'data-gnote\'),this)" placeholder="Tercihler, özel istekler (tıbbi ya da inanç bilgisi yazma)">'+esc((_bdiGM.notes[g.gid]||{}).t||"")+'</textarea>';
   h+='<button type="button" class="bd-btn bd-btn-ghost bd-btn-sm" data-gname="'+esc(g.name)+'" onclick="exportGuestProfile(this.getAttribute(\'data-gname\'))">Profil PDF indir</button>';
   h+=' <button type="button" class="bd-link bd-link-danger" onclick="bdiGMForget(\''+esc(g.gid)+'\')" title="KVKK silme talebi ya da hatalı kayıt için; yönetici şifresi ister">Misafir kaydını sil (yönetici)</button>';
   h+='</div>';
@@ -13783,10 +13775,10 @@ var BDI_DNA_SECS=[["addr","1","Hitap ve iletişim"],["rhythm","2","Ritim"],["del
 var BDI_DNA_EN={addr:"ADDRESS",rhythm:"RHYTHM",delight:"DELIGHTS",avoid:"AVOID",sens:"SENSITIVITY",moments:"MOMENTS",bond:"RELATIONSHIP",break:"PAST ISSUES"};
 var BDI_DNA_HINT={rhythm:"İngilizce yaz. ör. Breakfast in room around 07:30",delight:"İngilizce yaz. ör. Prefers fresh pomegranate juice",avoid:"İngilizce yaz. ör. Being in the room during turndown",sens:"Sadece neye karşı hassas olduğunu İngilizce yaz (ör. nuts, strong fragrances). Kayıt: Guest is highly sensitive towards X.",moments:"İngilizce yaz. ör. Wedding anniversary on 30/10",bond:"ör. Warm rapport with butler Tuna",break:"ör. 2025: corridor noise; room move worked"};
 var BDI_DNA_STALE_DAYS=1095;
-var BDI_KVKK_RE=/allerg|alerj|anaphyla|intoleran|diabet|diyabet|epipen|pregnan|hamile|\bgebe|medic|\bila[cç]|disease|hastal|illness|cancer|kanser|asthma|\bast[ıi]m|celiac|[cç][oö]lyak|halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|\boru[cç]|ramadan|ramazan|\bchurch(es)?\b|kilise|mosque|\bcami\b|synagog|sinagog|faith|\binan[cç]|fasting/i;
+var BDI_KVKK_RE=/allerg|alerj|anaphyla|intoleran|diabet|diyabet|epipen|pregnan|hamile|\bgebe|\bmedic(al|ally|ation|ations|ine|ines|ated)?\b|\bila[cç]|disease|hastal|illness|cancer|kanser|asthma|\bast[ıi]m|celiac|[cç][oö]lyak|halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|\boru[cç]|ramadan|ramazan|\bchurch(es)?\b|kilise|mosque|\bcami\b|synagog|sinagog|faith|\binan[cç]|fasting/i;
 // 2026-11-06 KVKK: JS /i buyuk İ'yi i saymaz (DİYABET, HAMİLE kaciyordu); test oncesi İ -> I. toLocaleLowerCase('tr-TR') kullanma (ILLNESS -> ıllness)
 function bdiKvkkHit(t){return BDI_KVKK_RE.test(String(t||"").replace(/İ/g,"I"))}
-function bdiKvkkBad(f){var el=typeof f==="string"?document.getElementById(f):f;if(!el||!bdiKvkkHit(el.value))return false;bdiFieldErr(el,"KVKK: tıbbi ya da inanç kelimesi yazma (alerji, hastalık, ilaç, din...). Sadece kaçınılacak öğeyi yaz (ör. nuts).");return true}
+function bdiKvkkBad(f){var el=typeof f==="string"?document.getElementById(f):f;if(!el||!bdiKvkkHit(el.value))return false;bdiFieldErr(el,"KVKK: tıbbi ya da inanç kelimesi yazma (alerji, hastalık, ilaç, din...). Tercihte yalnız kaçınılacak öğeyi yaz (ör. nuts), notta olayı operasyonel dille anlat.");return true}
 function bdiKvkkOk(t,sens){
   if(!bdiKvkkHit(t||""))return true;
   alert("KVKK: tıbbi ya da inanç kelimesi yazma (alerji, hastalık, ilaç, din...)."+(sens?"\nSadece kaçınılacak öğeyi yaz (ör. nuts, strong fragrances); kayıt \"Guest is highly sensitive towards X.\" kalıbında tutulur (Protel'de WARNING).":"\nGerekiyorsa 5. bölüme sadece kaçınılacak öğeyi yaz."));
@@ -15916,7 +15908,7 @@ var _bdiShiftT=null,_bdiShiftF=null;
 function bdiShiftNoteDeb(el){var date=document.getElementById("bdiDate").value||bdiYmd(new Date()),key=_bdiShift||bdiDefaultShift(),slot=date+"|"+key;
   if(_bdiShiftF&&_bdiShiftF.slot!==slot)_bdiShiftF();clearTimeout(_bdiShiftT);
   var f=function(){_bdiShiftF=null;var t=String(el.value||"").trim(),st=document.getElementById("bdiHandoverSaved");
-    if(t&&bdiKvkkHit(t)){if(st)st.textContent="sağlık / inanç kelimesi var: kaydedilmedi, düzelt";return}
+    if(t&&bdiKvkkHit(t)){if(st)st.textContent="tıbbi ya da inanç kelimesi var: kaydedilmedi, düzelt";return}
     var all=bdiGetHandover();all[slot]={t:t,by:bdiWho()||bdiMe(),u:Date.now()};BdiKV.set("bdi_handover_v1",JSON.stringify(all));if(typeof schedulePyAutoSync==="function")schedulePyAutoSync();
     if(st)st.textContent="kaydedildi "+bdiNowTime(new Date())};
   f.slot=slot;_bdiShiftF=f;_bdiShiftT=setTimeout(f,700)}
@@ -21379,7 +21371,7 @@ var STD=(G.insp&&G.insp.length)?G.insp:[{t:"Düzen ve temizlik",en:"room present
 var NA=(G.inspNa&&G.inspNa.length)?G.inspNa:[{l:"Rahatsız etmeyin (DND)",en:"Do Not Disturb was on"},{l:"Misafir odada",en:"Guest was in the room"},{l:"HSK servisi bekleniyor",en:"Housekeeping service was pending"}];
 var MS=[];
 var KVKK=null;try{if(G.kvkk)KVKK=new RegExp(G.kvkk,"i")}catch(e){}
-if(!KVKK)KVKK=/allerg|alerj|anaphyla|intoleran|diabet|diyabet|epipen|pregnan|hamile|\bgebe|medic|\bila[cç]|disease|hastal|illness|cancer|kanser|asthma|\bast[ıi]m|celiac|[cç][oö]lyak|halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|\boru[cç]|ramadan|ramazan|\bchurch(es)?\b|kilise|mosque|\bcami\b|synagog|sinagog|faith|\binan[cç]|fasting/i;
+if(!KVKK)KVKK=/allerg|alerj|anaphyla|intoleran|diabet|diyabet|epipen|pregnan|hamile|\bgebe|\bmedic(al|ally|ation|ations|ine|ines|ated)?\b|\bila[cç]|disease|hastal|illness|cancer|kanser|asthma|\bast[ıi]m|celiac|[cç][oö]lyak|halal|helal|kosher|ko[sş]er|relig|\bdin\b|namaz|\bpray|\bdua\b|\boru[cç]|ramadan|ramazan|\bchurch(es)?\b|kilise|mosque|\bcami\b|synagog|sinagog|faith|\binan[cç]|fasting/i;
 var KVKK0=KVKK;KVKK={test:function(t){return KVKK0.test(String(t||"").replace(/İ/g,"I"))}}; /* 2026-11-06 KVKK: buyuk İ (HAMİLE) de yakalanir */
 
 /* ---------- depolama (try/catch: hafiza kapaliysa uygulama yine acilir) ---------- */
@@ -21805,7 +21797,7 @@ document.addEventListener("click",function(e){
   if(d.x==="saveIssue"){
     var itx=(document.getElementById("iTxt").value||"").replace(/\s+/g," ").trim(),idid=(document.getElementById("iDid").value||"").replace(/\s+/g," ").trim(),iw=document.getElementById("iWarn");
     if(!itx){document.getElementById("iTxt").focus();return}
-    if(KVKK.test(itx+" "+idid)){iw.innerHTML='<div class="warn">KVKK: sağlık ya da inanç kelimesi yazma. Olayı operasyonel dille anlat.</div>';return}
+    if(KVKK.test(itx+" "+idid)){iw.innerHTML='<div class="warn">KVKK: tıbbi ya da inanç kelimesi yazma. Olayı operasyonel dille anlat.</div>';return}
     var tp=document.querySelector("#tpOpts .opt.on"),is=document.querySelector("#isOpts .opt.on"),gi=guests().map[d.g];
     addEv({type:"issue",gid:d.g,pid:gi.pid||"",room:gi.room,gname:gi.name,topic:tp?tp.dataset.tp:"",text:itx,did:idid,status:is?is.dataset.is:"resolved"});closeSheet();toast("Sorun kaydedildi.");return}
   if(d.x==="saveTnote"){
