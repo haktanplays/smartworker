@@ -8391,7 +8391,7 @@ function bdiAutoType(){
 // Protel'de ETD varsa (varis raporu ETD, in-house raporu EDT) tek tikla kullanilir. Excel ciktisi ekibin dosyasiyla ayni bicimde.
 var BDI_IRCI_KEY="bdi_irci_v1",BDI_IRCI_DEF=/in-?room\s*check|check-?in/i,_bdiIrciDate="";
 function bdiIrciActs(){try{var a=JSON.parse(localStorage.getItem("bdi_irci_acts")||"null");if(Array.isArray(a))return a}catch(e){}return getBdiActions().map(function(x){return x.label}).filter(function(l){return BDI_IRCI_DEF.test(l)})}
-function bdiIrciToggle(label,on){var a=bdiIrciActs().filter(function(x){return x!==label});if(on)a.push(label);localStorage.setItem("bdi_irci_acts","bdi_protel_skip",JSON.stringify(a));renderIrciActs();renderProtelSkipActs();try{renderBdiIrci()}catch(e){}}
+function bdiIrciToggle(label,on){var a=bdiIrciActs().filter(function(x){return x!==label});if(on)a.push(label);localStorage.setItem("bdi_irci_acts",JSON.stringify(a));renderIrciActs();try{renderBdiIrci()}catch(e){}}
 function renderIrciActs(){
   var el=document.getElementById("irciActs");if(!el)return;var on=bdiIrciActs();
   el.innerHTML=getBdiActions().map(function(a){var c=on.indexOf(a.label)>=0;return '<label class="kw-tag" style="cursor:pointer;'+(c?'background:#e6f1ee;color:#0f5446;font-weight:600':'')+'"><input type="checkbox" value="'+esc(a.label)+'"'+(c?' checked':'')+' onchange="bdiIrciToggle(this.value,this.checked)" style="margin:0 5px 0 0;vertical-align:-1px">'+esc(a.label)+'</label>'}).join("");
