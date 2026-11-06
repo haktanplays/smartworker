@@ -2407,7 +2407,7 @@ label{color:var(--sw-ink-2)}
 
 <div class="section">
 <h3>Guest Preference alanı</h3>
-<p class="hint">Kayıt ekranında tercih işlemi seçilince açılan <b>Tercih kategorisi</b> listesi. Departman, tercihin Misafirler › İçgörüler'de hangi ekibe gideceğini belirler; örnek, detay kutusunda soluk yazı olarak görünür. <b>Sensitivity</b> sabittir: Protel'de WARNING olur, tıbbi ya da inanç kelimesi yazılmaz.</p>
+<p class="hint">Kayıt ekranında tercih işlemi seçilince açılan <b>Tercih kategorisi</b> listesi. Departman, tercihin Misafirler › İçgörüler'de hangi ekibe gideceğini belirler. <b>Cümle başı</b> kayıt cümlesinin ve Protel notunun başıdır: boş bırakırsan <i>Guest prefers …</i>, örneğin Used Products için <i>Guest uses</i> yazarsan <i>Guest uses Diptyque body lotion.</i> olur. Örnek, detay kutusunda soluk yazı olarak görünür. <b>Sensitivity</b> sabittir: Protel'de WARNING olur, tıbbi ya da inanç kelimesi yazılmaz.</p>
 <div id="bdiCfg_pref"></div>
 <div id="bdiCfg_dept" style="margin-top:14px"></div>
 </div>
@@ -8446,7 +8446,7 @@ var BDI_CFG={
     {l:"Turndown",d:"HSK",ex:"no turndown after 9 pm"},{l:"Dietary",d:"F&B",ex:"vegetarian options"},
     {l:"Room Setup",d:"HSK",ex:"desk cleared for laptop work"},{l:"Communication",d:"BUT",ex:"WhatsApp rather than the room phone"},
     {l:"Sensitivity",d:"SENSITIVITY",ex:"strong fragrances in the room",fixed:1},{l:"Other",d:"BUT",ex:""}],
-    cols:[{f:"l",ph:"Kategori (İngilizce)",w:"170px"},{f:"d",selFn:bdiDeptOpts,w:"190px",fixedTxt:"WARNING (Protel)"},{f:"ex",ph:"Detay kutusundaki örnek",flex:1}]},
+    cols:[{f:"l",ph:"Kategori (İngilizce)",w:"170px"},{f:"d",selFn:bdiDeptOpts,w:"190px",fixedTxt:"WARNING (Protel)"},{f:"p",ph:"Cümle başı (boşsa: Guest prefers)",w:"220px",fixedTxt:"Guest is highly sensitive towards"},{f:"ex",ph:"Detay kutusundaki örnek",flex:1}]}, // p: 2026-11-06 kategoriye ozel cumle basi (Used Products -> "Guest uses")
   bdi_depts:{el:"bdiCfg_dept",title:"Departmanlar (tercih hangi ekibe gidecek)",add:"+ Departman ekle",def:[
     {l:"BUT",n:"Butler"},{l:"HSK",n:"Housekeeping"},{l:"F&B",n:"Food & Beverage"},{l:"PBR",n:"Private Bar"},{l:"CON",n:"Concierge"},{l:"REC",n:"Reception"}],
     cols:[{f:"l",ph:"Kod (ör. PBR)",w:"110px"},{f:"n",ph:"Departman adı (ör. Private Bar)",flex:1}]},
@@ -8572,9 +8572,11 @@ function bdiCfgFillForm(){
   fill("bdiOccasionTiming",bdiCfg("bdi_occ_timing"),function(x){return x.l.charAt(0).toUpperCase()+x.l.slice(1)});
   bdiPrefHint();bdiOccHint();
 }
-function bdiPrefHint(){var sl=document.getElementById("bdiPrefCategory"),i=document.getElementById("bdiPrefDetail");if(!sl||!i)return;var c=bdiCfg("bdi_pref_cats").filter(function(x){return x.l===sl.value})[0];i.placeholder=c&&c.ex?c.ex:"guest prefers ..."}
+function bdiPrefHint(){var sl=document.getElementById("bdiPrefCategory"),i=document.getElementById("bdiPrefDetail");if(!sl||!i)return;var c=bdiCfg("bdi_pref_cats").filter(function(x){return x.l===sl.value})[0];i.placeholder=(c?bdiPrefLead(c.l)+" … ":"Guest prefers … ")+(c&&c.ex?"(örn. "+c.ex+")":"")}
 function bdiOccHint(){var sl=document.getElementById("bdiOccasionType"),i=document.getElementById("bdiArrangement");if(!sl||!i)return;var c=bdiCfg("bdi_occ_types").filter(function(x){return x.l===sl.value})[0];i.placeholder=c&&c.ex?c.ex:"what was prepared"}
 // Tercihin departmani (Misafirler › Icgoruler): once ayar, sonra eski sabit tablo
+function bdiPrefLead(cat){var n=normTR(cat||""),c=bdiCfg("bdi_pref_cats").filter(function(x){return normTR(x.l)===n})[0],p=c&&String(c.p||"").replace(/\s+/g," ").trim().replace(/[.:,;\s]+$/,"");return p||"Guest prefers"}
+function bdiPrefSentence(cat,det){var ld=bdiPrefLead(cat),d=String(det||"").trim().replace(/\.+$/,"");return normTR(d).indexOf(normTR(ld))===0?ld+d.slice(ld.length):ld+" "+d} // "Guest uses Diptyque body lotion" (yazilan detay ayni basla basliyorsa tekrar etmez)
 function bdiPrefDept(cat){var n=normTR(cat||""),c=bdiCfg("bdi_pref_cats").filter(function(x){return normTR(x.l)===n})[0];return c&&c.d?c.d:(BDI_PREF_DEPT[n]||"BUT")}
 // Kayit ekranindan Issues'a: oda ve butler dolu yeni issue formu
 function bdiGoIssue(){
@@ -9710,12 +9712,19 @@ function bdiGetServiceAction(){
 }
 
 function updateBdiPreview(){
-  if(_bdiBulk&&_bdiBulk.on){try{renderBdiBulk()}catch(e){}} // toplu panel: secilen islem / butler basliga gelsin
-  var preview=document.getElementById("bdiPreview");
-  if(!preview)return;
-  var built=buildBdiTouchEntry(false);
+  if(_bdiBulk&&_bdiBulk.on){try{renderBdiBulk()}catch(e){}} // toplu panel: secilen islem / butler basliga gelsin (onizlemeyi de o yazar)
+  else bdiPreviewDraw();
+}
+// 2026-11-06: toplu touch'ta oda kutusu bos (odalar panelden secilir); ornek cumle secili ilk odayla (yoksa listedeki ilk odayla) kurulur
+function bdiPreviewDraw(){
+  var preview=document.getElementById("bdiPreview");if(!preview)return;
+  var ri=document.getElementById("bdiRoom"),bulk=!!(_bdiBulk&&_bdiBulk.on),built=null,r0="",sel=[];
+  if(bulk&&ri&&!String(ri.value||"").trim()){
+    sel=Object.keys(_bdiBulk.sel).sort(function(a,b){return bdiRoomNum(a)-bdiRoomNum(b)});r0=sel[0]||((bdiBulkRooms()[0]||{}).room||"");
+    if(r0){var old=ri.value;ri.value=r0;try{built=buildBdiTouchEntry(false)}finally{ri.value=old}}
+  }else built=buildBdiTouchEntry(false);
   if(!built||!built.sentence){preview.textContent="";return}
-  preview.innerHTML='<b>Onizleme:</b> '+esc(built.sentence);
+  preview.innerHTML=(bulk&&r0?'<b>Örnek cümle</b> <span class="bd-sub">('+esc(r0)+(sel.length>1?'; seçili '+sel.length+' odanın her birine kendi misafir adıyla':sel.length?'':'; oda seçince her odaya kendi misafir adıyla')+')</span>: ':'<b>Onizleme:</b> ')+esc(built.sentence);
 }
 
 function buildBdiSentence(butler,label,verb,room,note,guestName,template){
@@ -9835,7 +9844,7 @@ function buildBdiTouchEntry(strict){
     action=_al||"Guest Preference";
     note=cat+": "+detail;
     var guestDisplay2=guestName||"our guest";
-    sentence="Butler "+butler+" collected guest preference from "+guestDisplay2+" staying at Room "+room+". Guest prefers "+detail+".";
+    sentence="Butler "+butler+" collected guest preference from "+guestDisplay2+" staying at Room "+room+". "+bdiPrefSentence(cat,detail)+".";
     touchCategory="Preference";
     meta.preferenceCategory=cat;meta.preferenceDetail=detail;meta.guestProfileSignal=true;
     sentence=bdiCleanSentence(sentence);
@@ -10065,7 +10074,7 @@ function bdiBulkRooms(){
 function bdiBulkAct(){var v=(document.getElementById("bdiAction")||{}).value||"",a=/^\d+$/.test(v)?getBdiActions()[+v]:null;return a?a.label:""}
 function renderBdiBulk(){
   var el=document.getElementById("bdiBulkPanel"),btn=document.querySelector(".bd-bulk-tg");if(!el)return;if(btn)btn.classList.toggle("on",_bdiBulk.on);
-  if(!_bdiBulk.on){el.style.display="none";el.innerHTML="";return}
+  if(!_bdiBulk.on){el.style.display="none";el.innerHTML="";try{bdiPreviewDraw()}catch(e){}return}
   var rooms=bdiBulkRooms(),act=bdiBulkAct(),D=(document.getElementById("bdiDate")||{}).value||getToday(),done={};
   if(act)loadBdiArrayForDate(D).forEach(function(l){if(l&&l.action===act)done[("000"+String(l.room||"").replace(/\D/g,"")).slice(-4)]=1});
   var fls={};rooms.forEach(function(x){if(x.fl)fls[x.fl]=1});var flk=Object.keys(fls).sort(function(a,b){return a-b});
@@ -10081,6 +10090,7 @@ function renderBdiBulk(){
   if(!vis.length)h+='<p class="bd-sub">Oda listesi yok: Kayıt\'ta VAC ya da in-house raporu yüklü olmalı.</p>';
   h+='</div><div class="bd-bulk-foot"><span><b>'+nSel+'</b> oda seçili</span><span style="flex:1"></span><button type="button" class="bd-btn bd-btn-primary bd-btn-sm" onclick="bdiBulkSave()"'+(nSel?'':' disabled')+'>'+nSel+' odaya kaydet</button></div>';
   el.innerHTML=h;el.style.display="block";
+  try{bdiPreviewDraw()}catch(e){}
 }
 function bdiBulkFloor(f){_bdiBulk.fl=f;renderBdiBulk()}
 function bdiBulkMine(){var D=(document.getElementById("bdiDate")||{}).value||getToday(),b=(document.getElementById("bdiButler")||{}).value||"",plan=bdiFloorPlan(D),fl={};(plan&&plan.blocks||[]).forEach(function(k){if(k.butler===b)for(var f=k.from;f<=Math.min(k.to,40);f++)fl[f]=1});
@@ -10117,7 +10127,7 @@ function swBulkDef(id){
   if(SW_BULK[id])return SW_BULK[id];
   var m=/^cfg:(.+)$/.exec(id),C=m&&BDI_CFG[m[1]];if(!C)return null;
   var head=C.cols.map(function(c){return c.f==="l"?(c.ph||"Ad").replace(/\s*\(.*$/,""):c.selFn||c.sel?(c.f==="d"?"Departman kodu":c.f==="t"?"Tür (seçim / butler / metin)":"Seçim"):(c.ph||c.f).replace(/^örn\.\s*/i,"").replace(/:.*$/,"")});
-  var exl={bdi_pref_cats:"Private Bar | PBR | still water and cola zero only\nNewspaper | BUT | Financial Times daily",bdi_depts:"ENG | Engineering\nSPA | Spa",bdi_occ_types:"Proposal | rose petals and candles\nBaby Moon | baby blanket and card",bdi_occ_timing:"during turndown\nafter breakfast",bdi_nt_reasons:"Sleeping | Misafir uyuyordu, rahatsız edilmedi.\nLate checkout | Geç çıkış, oda boş değildi.",bdi_nc_by:"Duty Manager kapattı | Closed by Duty Manager",bdi_nt_fields:"Follow-up time | metin"}[m[1]]||"";
+  var exl={bdi_pref_cats:"Private Bar | PBR | | still water and cola zero only\nUsed Products | BUT | Guest uses | Diptyque body lotion",bdi_depts:"ENG | Engineering\nSPA | Spa",bdi_occ_types:"Proposal | rose petals and candles\nBaby Moon | baby blanket and card",bdi_occ_timing:"during turndown\nafter breakfast",bdi_nt_reasons:"Sleeping | Misafir uyuyordu, rahatsız edilmedi.\nLate checkout | Geç çıkış, oda boş değildi.",bdi_nc_by:"Duty Manager kapattı | Closed by Duty Manager",bdi_nt_fields:"Follow-up time | metin"}[m[1]]||"";
   return {t:C.title||"",fmt:"Her satıra bir tane"+(C.cols.length>1?"; sütunlar "+head.map(function(h){return "\u201c"+h+"\u201d"}).join(" | ")+" sırasıyla, | ile (Excel'den kopyalarsan sekme de olur). Boş bıraktığın sütun varsayılanı alır.":""),ex:exl,cfg:m[1]};
 }
 function swBulkOpen(id,btn){
@@ -10148,6 +10158,7 @@ function swBulkCfg(key,lines){
   var C=BDI_CFG[key],a=bdiCfgRaw(key),have={},add=0,dup=0,warn=[];a.forEach(function(x){if(x&&x.l)have[normTR(x.l)]=1});
   var tmap={"seçim":"select","secim":"select","liste":"select","select":"select","butler":"butler","metin":"text","serbest":"text","text":"text"};
   lines.forEach(function(ln){var p=ln.split(ln.indexOf("\t")>=0?"\t":"|").map(function(y){return y.trim()});if(!p[0])return;
+    if(key==="bdi_pref_cats"&&p.length===3)p=[p[0],p[1],"",p[2]]; // eski bicim: cumle basi bos (Guest prefers)
     if(have[normTR(p[0])]){dup++;return}var o={};
     C.cols.forEach(function(c,ix){var v=p[ix]||"",so=c.selFn?c.selFn():c.sel;
       if(so){var nv=normTR(v),m=so.filter(function(q){var ql=normTR(q[1]);return normTR(q[0])===nv||ql===nv||ql.replace(/\s*\([^)]*\)\s*$/,"")===nv||ql.indexOf("("+nv+")")>=0})[0];
@@ -10161,7 +10172,7 @@ function swBulkCfg(key,lines){
 // Ornek: listedeki bir ogenin kayitta / raporda nasil gorunecegi (yalniz ciktisi cumleye ya da rapora gidenlerde)
 var SW_CFG_PV={
   bdi_pref_cats:function(x){var b=bdiAbc(getKW("butler")||[])[0]||"Ayşe";
-    return '<div>Kayıt cümlesi: <i>Butler '+esc(b)+' collected guest preference from our guest Mr. Smith staying at Room 1903. Guest prefers '+esc(x.ex||"…")+'.</i></div>'+(x.l==="Sensitivity"?'<div>Protel\'e <b>WARNING</b> olarak gider; tıbbi ya da inanç kelimesi yazılmaz.</div>':'<div>Misafirler › İçgörüler: <b>'+esc(bdiDeptName(x.d||"BUT"))+'</b> ekibine gider</div>')},
+    return '<div>Kayıt cümlesi: <i>Butler '+esc(b)+' collected guest preference from our guest Mr. Smith staying at Room 1903. '+esc(bdiPrefSentence(x.l,x.ex||"…"))+'.</i></div>'+(x.l==="Sensitivity"?'<div>Protel\'e <b>WARNING</b> olarak gider; tıbbi ya da inanç kelimesi yazılmaz.</div>':'<div>Misafirler › İçgörüler: <b>'+esc(bdiDeptName(x.d||"BUT"))+'</b> ekibine gider</div>')},
   bdi_occ_types:function(x){var b=bdiAbc(getKW("butler")||[])[0]||"Ayşe",tm=(bdiCfg("bdi_occ_timing")[0]||{}).l||"prior to arrival";
     return '<div>Kayıt cümlesi: <i>Butler '+esc(b)+' prepared '+esc(bdiArticle(x.l))+' '+esc(String(x.l).toLowerCase())+' arrangement for our guest Mr. Smith staying at Room 1903. The setup included '+esc(x.ex||"…")+', placed '+esc(tm)+'.</i></div>'},
   bdi_occ_timing:function(x){return '<div>Cümlenin sonu: <i>…, placed '+esc(x.l)+'.</i></div>'},
@@ -13456,7 +13467,7 @@ function bdiComputeInsights(p){
     var it=g.items,last=it[it.length-1],st=staysOf(it.map(function(x){return x.e})),cat=last.cat;
     var sens=normTR(cat)==="sensitivity";
     add({id:"pref:"+g.k.replace(/\s+/g,"_"),type:"pref",title:sens?"Hassasiyet":"Tercih: "+cat,dept:bdiPrefDept(cat),conf:st>=2?3:2,
-      note:(sens?"Sensitivity: avoid "+bdiSensMask(last.det).replace(/\.$/,"")+"; confirm with guest":"Prefers "+last.det.replace(/\.$/,""))+(st>=2?" (confirmed over "+st+" stays)":""),
+      note:(sens?"Sensitivity: avoid "+bdiSensMask(last.det).replace(/\.$/,"")+"; confirm with guest":bdiPrefLead(cat)==="Guest prefers"?"Prefers "+last.det.replace(/\.$/,""):bdiPrefSentence(cat,last.det))+(st>=2?" (confirmed over "+st+" stays)":""),
       evidence:it.map(function(x){var v=bdiEvid(x.e);if(sens)v.text=bdiSensMask(v.text);return v})});
   });
   // B) tekrar eden istekler (notlu, rutin olmayan)
