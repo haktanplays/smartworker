@@ -6884,7 +6884,7 @@ async function downloadPY(){
 // ===== BUTLER DID IT =====
 var bdiLogs=[];
 var vacRooms={};// {roomNo: "LastName, FirstName"}
-var bdiRoomNow={},_bdiRoomNowAt=0; // 2026-11-07: oda (4 hane) -> simdiki konaklama {room,name,arr,dep,time,due,src}; rebuildVacRooms kurar
+var bdiRoomNow={},_bdiRoomNowAt=0,_bdiNowK=new WeakMap(); // 2026-11-07: oda (4 hane) -> simdiki konaklama {room,name,arr,dep,time,due,src}; rebuildVacRooms kurar. _bdiNowK: kayit -> misafir anahtari (bdiInhNow)
 var bdiPdfRooms={};// VAC PDF kaynakli oda-misafir eslesmeleri
 var bdiVacParserReport=null;// Son VAC PDF parser kalite raporu
 // 2026-10-29 (Haktan: "degistirilene kadar mevcut kalsin"): VAC eslesmeleri BdiKV'de (bdi_vac_v1) saklanir, sayfa yenilense de
@@ -6946,8 +6946,9 @@ function rebuildVacRooms(){
   else{_bdiRoomNowAt=_bdiVacAt||0;var gb=bdiGihByRoom();Object.keys(bdiPdfRooms).forEach(function(k){var v=bdiVacSt[k]||{},gr=gb[k4(k)],nm=bdiPdfRooms[k];
     put(k,nm,{arr:v.arr||"",dep:v.dep||bdiPdfDep[k]||"",time:gr&&bdiNameNear(bdiGihPerson(gr.name),bdiGihPerson(nm))?gr.depTime||"":"",due:/due\s*in/i.test(v.res||""),src:"vac"})})}
   try{bdiDepApplyToRooms()}catch(e){console.warn("Cikis raporu oda listesine uygulanamadi:",e)} // cikis saati gecen odadan duser
-  try{swArrFor(t).forEach(function(g){var ad=bdiVacDate(String(g.arrDate||"").replace(/\//g,"-")),nm=g.lastName+", "+g.firstName;if(!g.roomNo||(ad&&ad!==t)||bdiRoomNow[k4(g.roomNo)]||bdiInhNow(nm))return;
-    put(String(g.roomNo),nm,{arr:t,dep:bdiVacDate(String(g.depDate||"").replace(/\//g,"-")),time:g.etd||"",due:true,src:"arr"})})}catch(e){} // bugun gelenler: bos odaya, listede baska odada degilse
+  // bugun gelenler: bos odaya, raporda baska odada degilse (once hepsi rapora bakilir: ayni adla iki oda varsa ikisi de girer)
+  try{swArrFor(t).filter(function(g){var ad=bdiVacDate(String(g.arrDate||"").replace(/\//g,"-"));return g.roomNo&&!(ad&&ad!==t)&&!bdiInhNow(g.lastName+", "+g.firstName)}).forEach(function(g){
+    if(!bdiRoomNow[k4(g.roomNo)])put(String(g.roomNo),g.lastName+", "+g.firstName,{arr:t,dep:bdiVacDate(String(g.depDate||"").replace(/\//g,"-")),time:g.etd||"",due:true,src:"arr"})})}catch(e){}
   applyPmRooms();
   Object.keys(bdiRoomNow).forEach(function(r){var a=prevNow[r],b=bdiRoomNow[r];if(!a||!a.name||!b.name)return;var pa=bdiGihPerson(a.name),pb=bdiGihPerson(b.name);
     if(bdiGuestKey(pa)===bdiGuestKey(pb)||!bdiNameTypo(pa,pb)||(a.arr&&b.arr&&a.arr!==b.arr))return;
@@ -6958,17 +6959,18 @@ function rebuildVacRooms(){
   if(typeof _bdiGMProf!=="undefined")_bdiGMProf=null;
 }
 // Odanin simdiki konaklamasi {room,name,arr,dep,time,due,src} (oda listesiyle ayni kaynaktan); listenin ani
-function bdiNowOf(room){return bdiRoomNow[("000"+String(room||"").replace(/\D/g,"")).slice(-4)]||null}
-function bdiRoomNowAt(){return _bdiRoomNowAt}
+function bdiNowOf(room){return bdiRoomNow[bdiPlanR4(room)]||null}
 // Misafir simdi listede nerede: ayni odada (yakin ad) ya da tek bir odada ayni kisi (takip / issue tasima ile ayni kimlik kurali)
+// Kaydin misafir anahtari bir kez hesaplanir (_bdiNowK): rapor donemi boyunca her cikis satiri icin butun oda listesi taranir.
 function bdiInhNow(name,room){
   var e=room?bdiNowOf(room):null,pn=bdiGihPerson(name);if(e&&bdiNameNear(bdiGihPerson(e.name),pn))return e;
   var gid=bdiGMGid(bdiGuestKey(pn));if(!gid)return null;
-  var hits=Object.keys(bdiRoomNow).filter(function(r){return bdiGMGid(bdiGuestKey(bdiGihPerson(bdiRoomNow[r].name)))===gid});
+  var key=function(x){var k=_bdiNowK.get(x);if(k===undefined){k=bdiGuestKey(bdiGihPerson(x.name));_bdiNowK.set(x,k)}return k};
+  var hits=Object.keys(bdiRoomNow).filter(function(r){return bdiGMGid(key(bdiRoomNow[r]))===gid});
   return hits.length===1?bdiRoomNow[hits[0]]:null;
 }
 // 2026-11-07: varis raporundaki misafir simdi hangi odada (oda listesinde baska odaya gectiyse o oda; yoksa ARR odasi)
-function bdiArrRoom(a){var r=String((a&&a.roomNo)||"").replace(/\D/g,""),e=bdiInhNow((a.lastName||"")+", "+(a.firstName||""),r);return e?e.room:r?("000"+r).slice(-4):""}
+function bdiArrRoom(a){var r=bdiPlanR4(a&&a.roomNo),e=bdiInhNow((a.lastName||"")+", "+(a.firstName||""),r);return e?e.room:r}
 // 2026-11-07: cikis raporunda "cikacak" (DUOT) ama daha yeni oda raporu konaklamayi uzatti: misafir kaliyor
 function bdiDepStill(r){if(!r||r.st==="CKOT")return false;var e=bdiInhNow(bdiDepName(r),r.room);return !!(e&&e.dep&&e.dep>r.dep)}
 // 2026-11-07: odada hala ayni konaklama var mi (paylasan misafir: oda listesinde tek ad yazar; gelis bilinmiyorsa var sayilir)
@@ -6977,9 +6979,9 @@ function bdiSameStay(room,arr){var c=bdiNowOf(room);return !!(c&&!c.due&&(!c.arr
 // froms: eski adlar (Ad Soyad), to: yeni ad, o: {room: yalniz o odanin kayitlari, raw: rapordaki yazim, gm:false = hafizaya dokunma, src: "manual" = elle}.
 // Eslesen kayit yoksa hicbir sey yazilmaz (sayfa yenilenince ayni degisiklik tekrar gorulse de).
 function bdiGuestRename(froms,to,o){
-  o=o||{};var fk={},now=Date.now(),t=getToday(),r4=o.room?("000"+o.room).slice(-4):"",tk=bdiGuestKey(to);
+  o=o||{};var fk={},now=Date.now(),t=getToday(),r4=bdiPlanR4(o.room),tk=bdiGuestKey(to);
   froms.forEach(function(n){var k=bdiGuestKey(n);if(k&&k!==tk)fk[k]=1});if(!tk||!Object.keys(fk).length)return;
-  var mine=function(g,room){return !bdiGuestBad(g)&&fk[bdiGuestKey(g)]&&(!r4||("000"+String(room||"").replace(/\D/g,"")).slice(-4)===r4)};
+  var mine=function(g,room){return !bdiGuestBad(g)&&fk[bdiGuestKey(g)]&&(!r4||bdiPlanR4(room)===r4)};
   if(o.gm!==false)(async function(){await bdiGMLoad();var tg=bdiGMGid(tk),P=bdiGMProfiles().byGid,fg=Object.keys(fk).map(bdiGMGid).filter(function(g,i,a){return g!==tg&&P[g]&&a.indexOf(g)===i});
     if(!fg.length)return;await bdiGMMerge(fg,tg);await bdiGMSetName(tg,to)})().catch(function(e){console.warn("Misafir hafizasi birlestirilemedi:",e)});
   var fa=bdiFuAll(),fn=0;Object.keys(fa).forEach(function(id){var f=fa[id];if(f&&mine(f.guest,f.room)){f.guest=to;f.u=now;fn++}});if(fn)bdiFuSave(fa);
@@ -7213,14 +7215,13 @@ function bdiNameNearK(ka,kb){
 }
 // Cikis raporu oda listesine: cikis saati gecmis misafir odadan duser (o odaya bugun gelen varsa rebuildVacRooms yazar).
 function bdiDepApplyToRooms(){
-  var t=getToday(),now=Date.now(),freed={};
+  var t=getToday(),now=Date.now();
   bdiDepRows(t).forEach(function(r){
     var out=bdiDepOut(r);if(!out||out>now)return;
     var k=r.room,cur=vacRooms[k]!=null?k:(vacRooms[String(+k)]!=null?String(+k):"");if(!cur)return;
     if(!bdiNameNear(bdiGihPerson(vacRooms[cur]),bdiDepName(r)))return;
-    delete vacRooms[cur];delete bdiRoomNow[("000"+k).slice(-4)];freed[k]=r;
+    delete vacRooms[cur];delete bdiRoomNow[("000"+k).slice(-4)];
   });
-  return freed; // bosalan odaya bugun gelen misafiri rebuildVacRooms yazar (listede baska odada degilse)
 }
 // Belirli gun ve saatte bu odada kim vardi (cikis + in-house raporlarindan). Bulamazsa "".
 function bdiGuestAt(room,ymd,ts){
@@ -7390,7 +7391,7 @@ function bdiIssueDue(is){
   var S=bdiIssueStay(is);if(!S)return null;
   S.n=Math.round((Date.parse(S.dep+"T12:00:00")-Date.parse(getToday()+"T12:00:00"))/864e5);S.gone=!!(S.out&&S.out<=Date.now());
   // 2026-11-07: daha yeni oda raporunda misafir hicbir odada yok (VAC'ta oda bos, cikis raporu gelmeden): cikti. Bugun gelecek olan haric.
-  if(!S.gone&&S.src!=="dep"&&!(S.arr&&S.arr>=getToday())&&Object.keys(bdiRoomNow).length&&bdiRoomNowAt()>(S.at||0)&&!bdiInhNow(is.guest,S.room||is.room)&&!bdiSameStay(S.room||is.room,S.arr)){S.gone=true;S.out=bdiRoomNowAt()}
+  if(!S.gone&&S.src!=="dep"&&!(S.arr&&S.arr>=getToday())&&Object.keys(bdiRoomNow).length&&_bdiRoomNowAt>(S.at||0)&&!bdiInhNow(is.guest,S.room||is.room)&&!bdiSameStay(S.room||is.room,S.arr)){S.gone=true;S.out=_bdiRoomNowAt}
   return S;
 }
 function bdiIssueStayLine(is,st,S){
@@ -12860,7 +12861,7 @@ function bdiRefreshDerived(){
 // Atolye sayisi burada (bdiRefreshDerived'de degil): tum profillerin Protel satirlarini hesaplar (~0.3 sn), misafir hafizasi degisince anlamli.
 var _bdiRfT=null,_bdiRfIn=false;
 function bdiRefreshSoon(){if(_bdiRfIn)return;clearTimeout(_bdiRfT);_bdiRfT=setTimeout(function(){
-  bdiGMIngest().catch(function(){}).then(function(){_bdiGMProf=null;_bdiRfIn=true;try{bdiRefreshDerived()}catch(e){}try{bdiProtelBadge()}catch(e){}_bdiRfIn=false})},150)}
+  bdiGMIngest().catch(function(){}).then(function(r){_bdiGMProf=null;_bdiRfIn=true;try{bdiRefreshDerived()}catch(e){}try{bdiProtelBadge()}catch(e){}try{bdiGMRedraw(r)}catch(e){}_bdiRfIn=false})},150)}
 
 // ---------- MISAFIR HAFIZASI (2026-10-23 v3): IndexedDB'de kalici profil ----------
 // NEDEN: profil eskiden her acilista localStorage gun kayitlarindan yeniden hesaplaniyordu; site verisi
@@ -13014,13 +13015,14 @@ async function bdiGMIngest(){
 function bdiGMSchedule(){
   clearTimeout(_bdiGMTimer);
   _bdiGMTimer=setTimeout(function(){
-    bdiGMIngest().then(function(r){
-      if(r&&(r.put||r.del)){
-        var gt=document.getElementById("bdiTab_guests");if(gt&&gt.style.display!=="none")filterGuestLibrary();
-        try{showVacGuest()}catch(e){}
-      }
-    }).catch(function(e){console.warn("Misafir hafizasi guncellenemedi:",e)});
+    bdiGMIngest().then(bdiGMRedraw).catch(function(e){console.warn("Misafir hafizasi guncellenemedi:",e)});
   },1200);
+}
+// Misafir hafizasi degistiyse acik Misafirler listesi ve Kayit'taki misafir kutusu (bdiGMSchedule ve bdiRefreshSoon ayni yol)
+function bdiGMRedraw(r){
+  if(!r||!(r.put||r.del))return;
+  var gt=document.getElementById("bdiTab_guests");if(gt&&gt.style.display!=="none")filterGuestLibrary();
+  try{showVacGuest()}catch(e){}
 }
 // ----- profil hesabi (olaylardan) -----
 function bdiGMProfiles(){
@@ -15253,7 +15255,7 @@ function bdiFeedHtml0(){
   var VE=[];try{VE=bdiVacEvents(today).filter(function(e){return mine(e.room)||(e.from&&mine(e.from))})}catch(e){}
   if(VE.length){var vk="vacev",vo=!!_bdiFeedGrp[vk],vShow=vo?VE:VE.slice(0,8);
     var vb=vShow.map(function(e){var win=bdiHm(e.t0)+'–'+bdiHm(e.t1)+' arası',x=rooms[e.room]||null,
-        wl=e.type==="in"?bdiKatDone(e.room,/welcome|check-?in|meet/i):null,tc=bdiKatTouches(e.from||e.room).length;
+        wl=e.type==="in"?bdiKatDone(e.room,bdiWelcomeActs()):null,tc=bdiKatTouches(e.from||e.room).length;
       var tag=e.type==="out"?"Çıktı":e.type==="in"?"Giriş":"Oda",cls=e.type==="out"?"t-dep":e.type==="in"?"t-arr":"t-mo";
       var main=e.type==="move"?'<b>'+esc(e.from)+' → '+esc(e.room)+'</b> '+esc(e.name):'<b>'+esc(e.room)+'</b> '+esc(e.name);
       var right=e.type==="in"?(wl?'<span class="bd-fd-st ok">&#10003; karşılandı</span>':'<span class="bd-fd-st warn">karşılanmadı</span>'):e.type==="out"?(tc?'':'<span class="bd-fd-st">bugün temas yok</span>'):'';
@@ -19153,7 +19155,7 @@ function buildAlertList(parsedGuests, traceList){
   var _kept=_prev.filter(function(a){if(!(a&&a.roomNo&&!a.manual&&!_nr[a.roomNo]&&!_later[bdiGuestKey(String(a.guest||"").split(",").reverse().join(" "))]))return false;
     var k=bdiGuestKey(a.guest||""),to=k&&_ng[k];if(!to||!to.length)return true;
     var t=to[0];if(t.visited!==true&&t.visited!==false)["visited","visitedBy","notVisitedReason","linkedTouch","visitedVia"].forEach(function(f){if(a[f]!==undefined&&a[f]!==null&&a[f]!=="")t[f]=a[f]});
-    t.movedFrom=a.roomNo;return false});
+    var mf=a.movedFrom||a.roomNo;if(+mf!==+t.roomNo)t.movedFrom=mf;return false}); // 2026-11-07: eski satir zaten tasinmissa ilk oda ("once" kendi odasi olmaz)
   var _list=manuals.concat(newAlerts,_kept);_list.forEach(alertNormalizeEntry);_list.sort(function(a,b){return a.roomNo-b.roomNo});
   try{bdiOAlertApply(_ad,_list)}catch(e){} // Opera Alerts (CALBUTIN) sebepleri
   try{if(_live)_list=bdiAlertDedupeStale(_list).list}catch(e){}
@@ -19654,7 +19656,7 @@ function saveAlertSnapshot(){
 function bdiAlertRoomAt(){
   var t=getToday(),g=bdiGih();
   var today=bdiGihInUse()?!!(g&&g.day===t):(bdiVacDay===t&&Object.keys(bdiPdfRooms||{}).length&&!(bdiVacPrintedAt&&bdiYmd(new Date(bdiVacPrintedAt))<t));
-  return today?(bdiRoomNowAt()||1):0; // 2026-11-07: oda listesinin tabani olan raporun ani
+  return today?(_bdiRoomNowAt||1):0; // 2026-11-07: oda listesinin tabani olan raporun ani
 }
 function bdiAlertDedupeStale(list){
   var out={list:list,n:0};if(!Array.isArray(list)||getAlertDate()!==getToday()||!Object.keys(vacRooms||{}).length)return out;
@@ -19685,7 +19687,7 @@ function bdiAlertDedupeStale(list){
     var hits=rk.filter(function(x){return x.r&&bdiNameNearK(x.k,k)}).map(function(x){return x.r}).filter(function(r,i,arr){return arr.indexOf(r)===i});
     if(hits.length!==1||hits[0]===parseInt(a.roomNo,10))return;
     if(have[hits[0]]){mv++;return} // o odada zaten bir satir var: ayni misafirse asagidaki birlestirme halleder
-    delete have[parseInt(a.roomNo,10)];if(!a.movedFrom)a.movedFrom=a.roomNo;a.roomNo=hits[0];have[hits[0]]=1;out.n++;mv++;
+    delete have[parseInt(a.roomNo,10)];if(!a.movedFrom)a.movedFrom=a.roomNo;a.roomNo=hits[0];if(+a.movedFrom===a.roomNo)delete a.movedFrom;have[hits[0]]=1;out.n++;mv++;
   });
   if(mv)merge(); // tasinan satir, misafirin oda raporundaki odada zaten duran satirla birlesir (905 + 906 -> 804)
   if(out.n)out.list.sort(function(a,b){return a.roomNo-b.roomNo});
