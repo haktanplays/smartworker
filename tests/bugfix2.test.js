@@ -1,0 +1,45 @@
+const {chromium}=require('playwright');
+let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
+(async()=>{const b=await chromium.launch();const ctx=await b.newContext({timezoneId:'Europe/Istanbul',viewport:{width:1320,height:1000},deviceScaleFactor:1.5});const p=await ctx.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));p.on('dialog',d=>d.accept());
+ await p.clock.install({time:new Date('2026-11-02T15:00:00+03:00')});await p.goto('file://'+__dirname+'/t/SmartWorker3.html');
+ await p.evaluate(()=>{localStorage.clear();localStorage.setItem('sw_setup_snooze','2026-11-02');localStorage.setItem('sw_dayfix','2026-11-02');localStorage.setItem('kw_butler',JSON.stringify(['Beyza Nur Çırak','Onur Kaya']))});await p.reload();await p.waitForTimeout(1300);
+ await p.evaluate(async()=>{const KV=__ev('BdiKV');await KV.ready();
+   KV.set('bdi_gih_v1',JSON.stringify({day:'2026-11-02',at:Date.now(),file:'g.pdf',rows:[{room:'1007',name:'Bexley,Andrea,Ms',arr:'2026-11-02',dep:'2026-11-06',acc:[],spec:[],notes:[]}]}));__ev('_bdiGih=null');__ev('rebuildVacRooms()');
+   const L=(id,d,room,guest,act,t)=>({id,butler:'Beyza Nur Çırak',room,guest,action:act,touchCategory:'Service',patternType:'service',note:'',time:t,sentence:'x',ts:new Date(d+'T'+t+':00+03:00').getTime(),countsAsTouch:true});
+   KV.set('bdi_2026-10-31',JSON.stringify([L('o1','2026-10-31','1007','Cihan Gokalp','Welcome Drink','22:11'),L('o2','2026-10-31','1007','','Turndown','21:00')]));
+   KV.set('bdi_2026-11-01',JSON.stringify([L('s1','2026-11-01','1505','Andrea Bexley','Shoeshine','10:00'),L('v1','2026-11-01','0901','Ergun Tuncel','Turndown','20:00')]));
+   KV.set('bdi_2026-11-02',JSON.stringify([L('n1','2026-11-02','1007','','Welcome / In-room Check-in','12:00')]));
+   __ev('showPage("didit")');__ev('switchBdiTab("entry")')});
+ await p.fill('#bdiRoom','1007');await p.waitForTimeout(150);
+ const T=await p.evaluate(()=>{const t=document.getElementById('bdiTimeline');return {vis:t.style.display,txt:t.innerText}});
+ console.log('  '+T.txt.replace(/\n/g,' | '));
+ ok(/Andrea Bexley — Misafir timeline/.test(T.txt)&&!/31\.10/.test(T.txt)&&!/Welcome Drink/.test(T.txt),'1007 Andrea Bexley timeline\'inda onceki misafirin 31.10 kayitlari (Welcome Drink, isimsiz turndown) YOK');
+ ok(/02\.11/.test(T.txt)&&/Welcome \/ In-room Check-in/.test(T.txt)&&/01\.11/.test(T.txt)&&/Rm 1505/.test(T.txt)&&/başka oda/.test(T.txt),'bu konaklamanin isimsiz kaydi (02.11) ve ayni misafirin baska odadaki kaydi (1505) var');
+ await p.fill('#bdiRoom','0901');await p.waitForTimeout(150);
+ const T2=await p.evaluate(()=>({vis:document.getElementById('bdiTimeline').style.display,hint:document.getElementById('bdiGuestHint').innerText}));
+ ok(T2.vis==='none'&&/bugün misafir görünmüyor/.test(T2.hint),'2026-11-03 (misafir timeline): bugun misafiri olmayan odada eski misafirlerin gecmisi gosterilmez, "Bu odada bugün misafir görünmüyor"');
+ // Log takvimi -> Kayit bugune doner
+ await p.fill('#bdiRoom','');
+ await p.evaluate(()=>__ev('switchBdiTab("log")'));await p.click('#bdiCalBtn');await p.waitForTimeout(150);await p.evaluate(()=>__ev('bdiCalMove(-1)'));
+ await p.click('#bdiCal .bd-cal-d[onclick*="2026-10-31"]');await p.waitForTimeout(200);
+ const L1=await p.evaluate(()=>({d:document.getElementById('bdiDate').value,rows:document.querySelectorAll('#bdiTab_log table tbody tr').length}));
+ ok(L1.d==='2026-10-31'&&L1.rows===2,'Log takvimi: 31.10 kayitlari gorunuyor (2)');
+ await p.evaluate(()=>__ev('switchBdiTab("entry")'));await p.waitForTimeout(150);
+ const wi=await p.evaluate(()=>String(__ev('getBdiActions()').findIndex(a=>a.label==='Turndown')));
+ await p.selectOption('#bdiButler','Beyza Nur Çırak');await p.fill('#bdiRoom','1709');await p.selectOption('#bdiAction',wi);await p.click('#bdiAddBtn');await p.waitForTimeout(250);
+ const D=await p.evaluate(()=>({d31:JSON.parse(__ev('BdiKV').get('bdi_2026-10-31')).length,d02:JSON.parse(__ev('BdiKV').get('bdi_2026-11-02')).map(l=>l.room).join(','),date:document.getElementById('bdiDate').value}));
+ ok(D.date==='2026-11-02'&&D.d31===2&&/1709/.test(D.d02),'Kayit\'a donunce tarih bugune dondu; yeni touch 02.11\'e yazildi, 31.10 degismedi');
+ // elle gecmis tarih: uyari + "Bugune don"
+ await p.evaluate(()=>{const e=document.getElementById('bdiDate');e.value='2026-11-01';e.dispatchEvent(new Event('change'))});await p.waitForTimeout(150);
+ const W=await p.evaluate(()=>{const w=document.getElementById('bdiDateWarn');return {vis:w.style.display,t:w.textContent}});
+ ok(W.vis==='flex'&&/Kayıtlar 01\.11\.2026 tarihine girilecek \(bugün değil\)/.test(W.t),'elle gecmis tarih secilince Kayit\'ta uyari: '+W.t);
+ await (await p.$('#bdiTab_entry .bd-panel')).screenshot({path:__dirname+'/did/datewarn.png',clip:undefined}).catch(()=>{});
+ await p.click('#bdiDateWarn .bd-btn');await p.waitForTimeout(150);
+ const W2=await p.evaluate(()=>({d:document.getElementById('bdiDate').value,vis:document.getElementById('bdiDateWarn').style.display}));
+ ok(W2.d==='2026-11-02'&&W2.vis==='none','"Bugüne dön" calisiyor');
+ // elle secilen gecmis tarih Log'a gidip donunce korunur mu? (bilerek secildi: korunur, uyari durur)
+ await p.evaluate(()=>{const e=document.getElementById('bdiDate');e.value='2026-11-01';e.dispatchEvent(new Event('change'));__ev('switchBdiTab("issues")');__ev('switchBdiTab("entry")')});
+ const W3=await p.evaluate(()=>({d:document.getElementById('bdiDate').value,vis:document.getElementById('bdiDateWarn').style.display}));
+ ok(W3.d==='2026-11-01'&&W3.vis==='flex','Kayit\'ta elle bilerek secilen gecmis tarih korunur (uyari gorunur)');
+ ok(errs.length===0,'JS hatasi yok '+JSON.stringify(errs));
+ await b.close();console.log(fails?fails+' FAIL':'ALL PASS');process.exit(fails?1:0)})();

@@ -1,0 +1,16 @@
+const {chromium}=require('playwright');
+(async()=>{const br=await chromium.launch();const p=await br.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));p.on('dialog',d=>d.accept());
+ await p.goto('file://'+__dirname+'/t/SmartWorker3.html');
+ await p.evaluate(()=>{localStorage.clear();localStorage.setItem('sw_setup_snooze','2099-01-01')});await p.reload();await p.waitForTimeout(1500);
+ await p.evaluate(()=>{try{__ev('closeSetupModal()')}catch(e){};showPage('settings')});await p.waitForTimeout(300);
+ await p.evaluate(()=>{const el=document.getElementById('bdiCfg_pref');const b=el.closest('.settings-body');if(b)b.style.display='block';el.scrollIntoView()});
+ await p.click('#bdiCfg_pref button:has-text("+ Kategori ekle")');await p.waitForTimeout(200);
+ const foc=await p.evaluate(()=>document.activeElement&&document.activeElement.outerHTML.slice(0,160));console.log('odak:',foc);
+ await p.keyboard.type('Private Bar');await p.waitForTimeout(100);
+ const before=await p.evaluate(()=>localStorage.getItem('bdi_pref_cats'));console.log('yazarken kayit:',(JSON.parse(before||'[]').map(x=>x.l)).join(','));
+ await p.keyboard.press('Tab');await p.waitForTimeout(300);
+ const after=await p.evaluate(()=>({ls:JSON.parse(localStorage.getItem('bdi_pref_cats')||'[]').map(x=>x.l+'/'+x.d).join(','),rows:[...document.querySelectorAll('#bdiCfg_pref input[data-f="l"]')].map(i=>i.value),form:[...document.querySelectorAll('#bdiPrefCategory option')].map(o=>o.textContent).join(',')}));
+ console.log('Tab sonrasi:',JSON.stringify(after,null,1));
+ await p.reload();await p.waitForTimeout(1500);
+ const rl=await p.evaluate(()=>({ls:JSON.parse(localStorage.getItem('bdi_pref_cats')||'[]').map(x=>x.l).join(','),idb:(()=>{try{return (window.__ev('BdiKV').get('bdi_pref_cats')||'').slice(0,80)}catch(e){return 'x'}})()}));
+ console.log('yenileme sonrasi:',JSON.stringify(rl));console.log('errs',errs);await br.close()})();

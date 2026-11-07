@@ -1,0 +1,16 @@
+const {chromium}=require('playwright');
+let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
+(async()=>{const br=await chromium.launch();const p=await br.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
+ await p.goto('file://'+__dirname+'/t/SmartWorker3.html');
+ await p.evaluate(()=>{localStorage.clear();localStorage.setItem('sw_setup_snooze','2099-01-01');localStorage.setItem('kw_butler',JSON.stringify(['Zafer Karagaçtı','Ömer Çelik','Ayşe Demir','Çağla Yıldız','Mert Mumcu','İlker Şahin','Onur Can Kaya']))});await p.reload();await p.waitForTimeout(1200);
+ const R=await p.evaluate(()=>{__ev('showPage("didit")');__ev('initDidIt()');const t=s=>[...document.querySelectorAll(s+' option')].map(o=>o.textContent).filter(x=>!/^(Sec|Seç)/.test(x));
+   const tr=new Intl.Collator('tr',{sensitivity:'base'});const sorted=a=>a.every((x,i)=>!i||tr.compare(a[i-1],x)<=0||/^(other|diğer|diger)/i.test(x));
+   const acts=t('#bdiAction').filter(x=>!/^Diğer \(serbest\)/.test(x));const nc=[...new DOMParser().parseFromString('<select>'+__ev('bdiNcOptsHtml')('')+'</select>','text/html').querySelectorAll('option')].map(o=>o.textContent);
+   const bo=[...new DOMParser().parseFromString('<select>'+__ev('bdiButlerOptions')('','x')+'</select>','text/html').querySelectorAll('option')].slice(1).map(o=>o.textContent);
+   return {b:t('#bdiButler'),bs:sorted(t('#bdiButler')),acts:acts.slice(0,8),as:sorted(acts),nc,ncs:sorted(nc),bo,bos:sorted(bo),last:t('#bdiAction').pop(),val:document.querySelector('#bdiAction option:nth-child(2)').value,lbl:__ev('getBdiActions')()[+document.querySelector('#bdiAction option:nth-child(2)').value].label,first:document.querySelector('#bdiAction option:nth-child(2)').textContent}});
+ console.log('  butler: '+R.b.join(', ')+'\n  işlem (ilk 8): '+R.acts.join(', ')+'\n  temassız: '+R.nc.join(', '));
+ ok(R.bs&&R.b.join(',')==='Ayşe Demir,Çağla Yıldız,İlker Şahin,Mert Mumcu,Onur Can Kaya,Ömer Çelik,Zafer Karagaçtı','butler listesi Türkçe harf sırasıyla (Ç, İ, Ö doğru yerde)');
+ ok(R.as&&R.last==='Diğer (serbest)'&&R.lbl===R.first,'İşlem listesi alfabetik, "Diğer (serbest)" en sonda, seçilen değer doğru işleme gidiyor');
+ ok(R.ncs&&R.bos,'temassız kapatma nedenleri ve diğer butler seçimleri alfabetik');
+ ok(errs.length===0,'JS hatası yok '+JSON.stringify(errs));
+ await br.close();console.log(fails?fails+' FAIL':'ALL PASS');process.exit(fails?1:0)})();

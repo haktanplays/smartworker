@@ -1,0 +1,11 @@
+const {chromium}=require('playwright');
+(async()=>{const b=await chromium.launch();const p=await (await b.newContext({timezoneId:'Europe/Istanbul',viewport:{width:1320,height:1000}})).newPage();p.on('dialog',d=>d.accept());
+ await p.clock.install({time:new Date('2026-11-02T15:00:00+03:00')});await p.goto('file://'+__dirname+'/'+(process.argv[2]||'t2')+'/SmartWorker3.html');
+ await p.evaluate(()=>{localStorage.clear();localStorage.setItem('sw_setup_snooze','2026-11-02');localStorage.setItem('sw_dayfix','2026-11-02');localStorage.setItem('kw_butler',JSON.stringify(['Beyza Nur Çırak']))});await p.reload();await p.waitForTimeout(1300);
+ await p.evaluate(async()=>{await __ev('BdiKV').ready();__ev('showPage("didit")');__ev('switchBdiTab("log")')});
+ await p.click('#bdiCalBtn');await p.waitForTimeout(150);await p.evaluate(()=>__ev('bdiCalMove(-1)'));await p.click('#bdiCal .bd-cal-d[onclick*="2026-10-31"]');await p.waitForTimeout(200);
+ await p.evaluate(()=>__ev('switchBdiTab("entry")'));
+ const wi=await p.evaluate(()=>String(__ev('getBdiActions()').findIndex(a=>a.label==='Turndown')));
+ await p.selectOption('#bdiButler','Beyza Nur Çırak');await p.fill('#bdiRoom','1709');await p.selectOption('#bdiAction',wi);await p.click('#bdiAddBtn');await p.waitForTimeout(250);
+ console.log(process.argv[2],JSON.stringify(await p.evaluate(()=>({d31:JSON.parse(__ev('BdiKV').get('bdi_2026-10-31')||'[]').length,d02:JSON.parse(__ev('BdiKV').get('bdi_2026-11-02')||'[]').length,bdiDate:document.getElementById('bdiDate').value}))));
+ await b.close()})();

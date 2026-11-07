@@ -1,0 +1,11 @@
+const {chromium}=require('playwright');let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
+(async()=>{const br=await chromium.launch();const d=await (await br.newContext({timezoneId:'Europe/Istanbul',viewport:{width:1366,height:900},deviceScaleFactor:2})).newPage();const errs=[];d.on('pageerror',e=>errs.push(e.message));d.on('dialog',x=>x.accept());
+ await d.clock.install({time:new Date('2026-11-05T15:30:00+03:00')});await d.goto('file://'+__dirname+'/t/SmartWorker3.html?demo');
+ await d.waitForFunction(()=>sessionStorage.getItem('swdemo:__seeded'),null,{timeout:120000});await d.waitForLoadState('load');await d.waitForTimeout(3500);
+ await d.evaluate(()=>{__ev('showPage("didit")');__ev('switchBdiTab("nat")')});await d.waitForTimeout(500);
+ const t=await d.evaluate(()=>({txt:document.getElementById('bdiTab_nat').innerText,badge:document.getElementById('bdiNatTabCount').textContent,w:__ev('swWarnCollect')().filter(x=>x.g==='Özel günler').map(x=>x.t)}));
+ console.log('  uyarı: '+JSON.stringify(t.w));
+ ok(/Demo: Körfez misafirleri kahve günü/.test(t.txt)&&t.badge==='1'&&t.w.length===1,'demoda 2 gün sonraki örnek özel gün: sekme sayacı 1, Uyarılar\'da madde');
+ ok(/Uyruk dağılımı/.test(t.txt)&&/Birleşik Krallık/.test(t.txt),'demoda uyruk dağılımı dolu');
+ await d.screenshot({path:__dirname+'/ui/show/6_uyruklar.png'});
+ ok(errs.length===0,'JS hatası yok '+JSON.stringify(errs.slice(0,3)));await br.close();console.log(fails?fails+' FAIL':'ALL PASS');process.exit(fails?1:0)})();

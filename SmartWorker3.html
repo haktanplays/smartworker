@@ -6992,7 +6992,7 @@ async function bdiPdfLines(pdf,pn){
   return lines;
 }
 async function bdiGihDetect(pdf){try{var L=await bdiPdfLines(pdf,1);return L.some(function(l){return l.some(function(x){return /GIH01102|Guests in House/i.test(x.t)})})}catch(e){return false}}
-function bdiGihPerson(s){var p=String(s||"").split(",").map(function(x){return x.trim()});return (p[1]?p[1]+" ":"")+(p[0]||"")} // "Demirkol, Simay" -> "Simay Demirkol"
+function bdiGihPerson(s){var p=String(s||"").split(",").map(function(x){return x.trim()});return (p[1]?p[1]+" ":"")+(p[0]||"")} // "Demirkol, Ada" -> "Ada Demirkol"
 async function bdiGihParse(pdf){
   var rows=[],cur=null,lab="",day="",C={name:47,comp:163,arr:321,dep:354,type:388,adl:418,chl:437,pay:454};
   var LBL=/^(Accompanying Names|Res\. Comments|Profile Notes|Specials|Preferences|Traces|Membership|Alerts|Comments)\s*:$/;
@@ -7070,7 +7070,7 @@ async function bdiGihLoad(pdf,file){ // VAC'in (oda durumu) listesine dokunmaz: 
 
 // ---------- CIKIS RAPORU (DEP01100 "Departures all by Room", 2026-10-31) ----------
 // Oda, misafir, varis/cikis tarihi, CKOT (cikti, gercek saat) / DUOT (bugun cikacak, beklenen saat). Company, acente,
-// blok, fiyat ve odeme sutunlari OKUNMAZ (KVKK). Isim satir sonunda kirilabilir ("Ardent,Kamal" + "Charles,Mr.").
+// blok, fiyat ve odeme sutunlari OKUNMAZ (KVKK). Isim satir sonunda kirilabilir ("Ardent,Leon" + "Charles,Mr.").
 // bdi_dep_v1 {days:{yyyy-mm-dd:{at,file,printed,rows:[{room,name,arr,dep,st,time}],total:{adl,chl,rooms}}}} - 21 gun tutulur.
 // Kullanim: oda listesinden cikanlar duser (oda cakismasi), Sen yokken cikanlar, issue'larda "cikti", rapor istatistikleri.
 var BDI_DEP_KEY="bdi_dep_v1",_bdiDepAll=null;
@@ -7136,11 +7136,11 @@ async function bdiDepLoad(pdf,file){
   try{bdiAwayRefresh();renderBdiIssues();if(document.getElementById("bdiBriefBody")&&_bdiBriefMode)renderBdiBriefTab()}catch(e){}
   return {rows:res.rows.length,ck:ck,du:du,total:res.total,printed:res.printed,past:_past,fix:_fx,fixT:_fxT};
 }
-// Isim yakinligi: ayni anahtar, ya da kisa olanin tum kelimeleri uzun olanda (Alhaddi,Mohammed ~ Mohammed Mubarak Alhaddi),
+// Isim yakinligi: ayni anahtar, ya da kisa olanin tum kelimeleri uzun olanda (Alhaddi,Omar ~ Omar Faisal Alhaddi),
 // ya da 1-2 harflik yazim farki (Rhaman/Rahman). Yalniz oda/tarih de tutan yerlerde kullanilir.
 function bdiLev(a,b){if(a===b)return 0;var m=a.length,n=b.length;if(!m||!n)return m||n;var p=[],i,j;for(j=0;j<=n;j++)p[j]=j;for(i=1;i<=m;i++){var prev=p[0];p[0]=i;for(j=1;j<=n;j++){var t=p[j];p[j]=Math.min(p[j]+1,p[j-1]+1,prev+(a.charAt(i-1)===b.charAt(j-1)?0:1));prev=t}}return p[n]}
-// Yazim farki: ayni sayida kelime, tek kelimede 1-2 harf fark (Fuad/Suad Demirtas, Alhadi/Alhaddi). Biri digerini
-// kapsayan isimler (Mohammed Alhaddi ~ Mohammed Mubarak Alhaddi) yazim hatasi sayilmaz.
+// Yazim farki: ayni sayida kelime, tek kelimede 1-2 harf fark (Fuat/Suat Demirtas, Alhadi/Alhaddi). Biri digerini
+// kapsayan isimler (Omar Alhaddi ~ Omar Faisal Alhaddi) yazim hatasi sayilmaz.
 function bdiNameTypo(a,b){
   var ta=bdiGuestKey(a).split(" ").filter(Boolean),tb=bdiGuestKey(b).split(" ").filter(Boolean);
   if(!ta.length||ta.length!==tb.length||ta.join(" ")===tb.join(" "))return "";
@@ -12077,7 +12077,7 @@ function bdiIssueEditFields(id){
   if(oldG!==g)bdiGMLoad().then(function(){var ok=bdiGuestKey(oldG),nk=bdiGuestKey(g);if(ok&&nk&&ok!==nk){_bdiGM.aliases[ok]={g:bdiGMGid(nk),u:now};_bdiGMProf=null;return _gmPutMeta("aliases",_bdiGM.aliases)}}).then(function(){bdiGMBackupSoon();bdiGMSchedule()}).catch(function(e){console.warn(e)});
   renderBdiIssues();bdiRefreshDerived();
 }
-// Issue'daki isim, o saatte odada kalan misafirin (Opera) adindan yalnizca yazimla farkliysa onu oner (Fuad -> Suad Demirtas)
+// Issue'daki isim, o saatte odada kalan misafirin (Opera) adindan yalnizca yazimla farkliysa onu oner (Fuat -> Suat Demirtas)
 function bdiIssueOccupantTypo(is){
   if(!is||!is.room||bdiGuestBad(is.guest))return "";
   var ts=is.createdAt||Date.now(),occ=bdiGuestAt(is.room,bdiYmd(new Date(ts)),ts);
@@ -20688,7 +20688,7 @@ async function bdiTrcParse(pdf){
         last={td:td,name:inC(C.name,C.room),room:rm?("000"+rm).slice(-4):"",type:inC(C.type,C.arr),arr:bdiTrcDate(arr),dep:bdiTrcDate(inC(C.dep,C.prs)),prs:parseInt(inC(C.prs,C.res),10)||0,res:inC(C.res,C.dept),dept:dept,text:inC(C.text,C.st),vip:"",cmt:""};
         rows.push(last);continue}
       if(!last)continue;
-      var cx=C.cmt||(C.name+110),nm=inC(C.name,cx),cm=inC(cx,C.room),tx=inC(C.text,C.st); // ayni satirda isim devami + metin devami olabilir ("Harlow,HISEX | room with ...")
+      var cx=C.cmt||(C.name+110),nm=inC(C.name,cx),cm=inC(cx,C.room),tx=inC(C.text,C.st); // ayni satirda isim devami + metin devami olabilir ("Harlow,JENSX | room with ...")
       if(nm){if(/^\S{1,4}$/.test(nm)&&!/,/.test(nm))last.vip=nm;else last.name+=" "+nm}
       if(cm)last.cmt+=(last.cmt?" ":"")+cm;
       if(tx)last.text+=(last.text?"\n":"")+tx;

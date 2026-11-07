@@ -1,0 +1,11 @@
+const {chromium}=require('playwright');require('fs').mkdirSync(__dirname+'/ui/show',{recursive:true});
+(async()=>{const br=await chromium.launch();const d=await (await br.newContext({timezoneId:'Europe/Istanbul',viewport:{width:1366,height:860},deviceScaleFactor:2})).newPage();d.on('dialog',x=>x.accept());
+ await d.clock.install({time:new Date('2026-11-04T15:30:00+03:00')});await d.goto('file://'+__dirname+'/t/SmartWorker3.html?demo');
+ await d.waitForFunction(()=>sessionStorage.getItem('swdemo:__seeded'),null,{timeout:120000});await d.waitForLoadState('load');await d.waitForTimeout(4000);
+ const go=async(js,name,y)=>{await d.evaluate(js);await d.waitForTimeout(600);await d.evaluate(()=>document.querySelectorAll('.bd-toast,.bd-react').forEach(e=>e.remove()));await d.evaluate(y=>window.scrollTo(0,y||0),y);await d.waitForTimeout(200);await d.screenshot({path:__dirname+'/ui/show/'+name+'.png'})};
+ await go(()=>{__ev('showPage("didit")');__ev('switchBdiTab("brief")')},'1_brifing');
+ await go(()=>{__ev('switchBdiTab("brief")');[...document.querySelectorAll('#bdiTab_brief .bd-seg button')].find(x=>/Guest Relations/.test(x.textContent)).click()},'2_guest_relations');
+ await go(()=>{__ev('switchBdiTab("alice")')},'3_alice_sorulmadan_yap',0);await d.evaluate(()=>{const h=[...document.querySelectorAll('#bdiTab_alice *')].find(e=>e.children.length<3&&/^Sorulmadan yap/.test(e.textContent.trim()));if(h){const y=h.getBoundingClientRect().top+scrollY-420;scrollTo(0,y)}});await d.waitForTimeout(300);await d.screenshot({path:__dirname+'/ui/show/3_alice_sorulmadan_yap.png'});
+ await go(()=>{__ev('switchBdiTab("fu")')},'4_takip');
+ await go(()=>{__ev('showPage("radar")')},'5_radar');
+ await br.close()})();
