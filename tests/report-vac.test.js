@@ -1,6 +1,6 @@
 // Oda durumu raporu (HSK01124 VAC) ritmi: gun icinde saat basi VAC, iki VAC arasindaki hareketler (cikti / giris / oda degisti),
 // Brifing kaynak satiri, Rapor Merkezi gunluk ritim ve gun sonu raporlari. Sahte Opera raporlari, isimler kurgu (KVKK).
-// (Gercek raporlu vacrhythm testinin yerine, 2026-11-07.)
+// Bos / bozuk PDF'te Turkce mesaj. (Gercek raporlu vacrhythm ve fx_plan-entry K7'nin yerine, 2026-11-07.)
 const H=require('./h.js'),R=require('./opera/reports.js');
 const D='2026-11-06',Y='2026-11-05',J=JSON.stringify;
 const at=(p,hm)=>p.clock.setSystemTime(new Date(D+'T'+hm+':00+03:00'));
@@ -44,5 +44,9 @@ const vacRows=occ=>ROOMS.map(r=>{const o=occ[r];if(!o)return {room:r,fo:'VAC',hk
  // 22:00: cikis raporu hala yok
  await at(p,'22:00');RM=await rep();
  ok(/^gün sonu bekleniyor/.test(RM.rows[kDep]||''),'Rapor Merkezi 22:00: çıkış raporu "gün sonu bekleniyor" ('+RM.rows[kDep]+')');
+ // bos ve bozuk PDF: Turkce mesaj
+ const e1=await H.ingest(p,Buffer.alloc(0),'HSK01124.pdf'),e2=await H.ingest(p,Buffer.from('%PDF-1.4\n1 0 obj << /Type /Catalog >> bozuk'),'HSK01124.pdf');
+ ok(e1==='Okunamadı: dosya boş ya da bozuk PDF','boş PDF: Türkçe mesaj ("'+e1+'")');
+ ok(e2==='Okunamadı: dosya boş ya da bozuk PDF','bozuk PDF: aynı Türkçe mesaj ("'+e2+'")');
  await done();
 })();

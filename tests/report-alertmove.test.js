@@ -81,5 +81,25 @@ let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
  T=await table(p);
  ok(T.some(x=>/^707.*önce 709/.test(x.room))&&T.some(x=>/^1504.*önce 1109/.test(x.room)),'tabloda oda numarasının altında "önce 709" / "önce 1109" notu '+J(T.map(x=>x.room)));
  ok(dlg.length===0,'uyarı penceresi yok '+J(dlg));
+ ok(S.errs.length===0,'JS hatası yok (2. bölüm) '+J(S.errs));await S.br.close();
+
+ // ---- 3) varis raporu yenilenince / yarinin raporu gelince alert isaretleri (alertfix) ----
+ S=await H.open({today:D,time:'07:00',butlers:['Can Demir'],me:'Can Demir'});({br,p,dlg}=S);
+ const WA=await p.evaluate(()=>__ev('bdiAlertLinkActs()')[0]);
+ await H.seed(p,{logs:{[D]:[H.log('w1',D,'06:50','0709','Rhea Abernathy',WA)]}}); // liste kurulmadan once girilen karsilama
+ await H.ingest(p,await R.arr({day:D,time:'06:30',rows:arrRows({'0709':'ab','1109':'ca','1201':'qu'})},br),'ARR01102.pdf');
+ await H.tab(p,'alert');L=await AL(p);
+ const v709=await p.evaluate(()=>{const a=__ev('alertList').find(x=>x.roomNo===709)||{};return {v:a.visited,by:a.visitedBy,via:a.visitedVia}});
+ ok(v709.v===true&&v709.by==='Can Demir'&&v709.via===WA,'liste kurulmadan önce girilen 0709 "'+WA+'" -> alert otomatik "karşılandı" '+J(v709));
+ await p.evaluate(r=>{const L=__ev('alertList'),i=L.findIndex(a=>a.roomNo===1109);__ev('alertNvPick')(i,r)},R0);
+ await p.evaluate(()=>{const v=(i,x)=>document.getElementById(i).value=x;v('alertManualRoom','1305');v('alertManualGuest','Marlowe, Ines');v('alertManualReason','VIP');__ev('addManualAlert()')});
+ // 12:00 varis raporu yenilendi, Quill (1201) artik raporda yok
+ await at(p,'12:00');await H.ingest(p,await R.arr({day:D,time:'11:50',rows:arrRows({'0709':'ab','1109':'ca'})},br),'ARR01102.pdf');
+ L=await AL(p);
+ ok(rooms(L)==='709,1109,1201,1305'&&A(709).v===true&&A(1109).v===false&&A(1109).why===R0&&A(1305).man,'rapor yenilendi (1201 raporda yok): alertler kaldı, işaretler ve elle eklenen duruyor '+J(L.map(a=>a.r+':'+a.v+(a.why?'/'+a.why:''))));
+ // 19:00 yarinin varis raporu: yarinin alert listesi ayri hazirlanir, bugunku degismez
+ await at(p,'19:00');m=await H.ingest(p,await R.arr({day:'2026-11-07',time:'18:50',rows:[{room:'0801',name:'Ashdown,Perrin,Mr.',arr:'2026-11-07',dep:'2026-11-12'},{room:'0803',name:'Belcourt,Yara,Ms.',arr:'2026-11-07',dep:'2026-11-08'}]},br),'ARR01102.pdf');
+ const TM=await p.evaluate(()=>({t:JSON.parse(localStorage.getItem('alert_2026-11-07')||'[]').map(a=>a.roomNo).join(','),d:JSON.parse(localStorage.getItem('alert_2026-11-06')||'[]').map(a=>a.roomNo).join(',')}));
+ ok(TM.t==='801'&&TM.d==='709,1109,1201,1305'&&rooms(await AL(p))==='709,1109,1201,1305','yarının listesi ayrı hazırlandı (07.11: '+TM.t+'), bugünün listesi değişmedi ('+TM.d+')');
  ok(S.errs.length===0,'JS hatası yok '+J(S.errs));await S.br.close();console.log(fails?fails+' FAIL':'ALL PASS');process.exit(fails?1:0);
 })();

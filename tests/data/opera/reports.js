@@ -77,11 +77,12 @@ async function arr(o,br){
   return render(792,594,paginate(rows,428,60),head,page([6,375],46),br);
 }
 
-// DEP01100 Departures all by Room (yatay). rows: [{room, name:'Soyad,Ad,Unvan', arr, dep, st?:'CKOT'(cikti)|'DUOT'(cikacak), time:'10:30', adl?, chl?, type?}]
+// DEP01100 Departures all by Room (yatay). rows: [{room, name:'Soyad,Ad,Unvan', arr, dep, st?:'CKOT'(cikti)|'DUOT'(cikacak), time:'10:30', adl?, chl?, type?,
+//   name2?:'Unvan,Mr.' (Opera gibi satir sonunda kirilan ismin devami, alt satirda), comp?:'sirket / acente', rate?:'rate code', pay?:'CA'}]
 // Sonda Opera'nin "Total" satiri (yetiskin, cocuk, oda, gece) da basilir.
 async function dep(o,br){
   const R=o.rows.map(r=>Object.assign({adl:1,chl:0,st:'CKOT'},r));
-  const rows=R.map(r=>({h:13,items:[[8,0,r.room],[37,0,r.name],[310,0,D(r.arr)],[349,0,D(r.dep)],[401,0,String(r.adl)],[420,0,String(r.chl)],[442,0,'1'],[466,0,nights(r.arr,r.dep)],[476,0,r.type||'KGA'],[578,0,r.st],[612,0,r.time]]}));
+  const rows=R.map(r=>({h:r.name2?21:13,items:[[8,0,r.room],[37,0,r.name],[124,0,r.comp],[310,0,D(r.arr)],[349,0,D(r.dep)],[401,0,String(r.adl)],[420,0,String(r.chl)],[442,0,'1'],[466,0,nights(r.arr,r.dep)],[476,0,r.type||'KGA'],[539,0,r.rate],[578,0,r.st],[612,0,r.time],[644,0,r.pay],[37,8,r.name2]]}));
   const sum=k=>String(R.reduce((a,r)=>a+(+r[k]||0),0));
   rows.push({h:13,items:[[283,4,'Total'],[396,4,sum('adl')],[419,4,sum('chl')],[438,4,String(R.length)],[462,4,String(R.reduce((a,r)=>a+(+nights(r.arr,r.dep)||0),0))]]});
   const head=top3(792,o.day,o.time,'DEP01100 Departures all by Room',569,325,309).concat([
