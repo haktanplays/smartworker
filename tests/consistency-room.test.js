@@ -229,7 +229,7 @@ async function checkAll(S,E){
  let S=await start();
  try{
   await at(S.p,'11:00');console.log('  VAC 11:00: '+await ingest(S.p,await R.vac({day:D,time:'11:00',rows:vacRows(occ({'1403':['halv','Checked In']}))},S.br),'HSK01124.pdf'));
-  const B=await S.p.evaluate(()=>({vr:__ev('vacRooms'),fu:__ev('bdiFuList')().map(f=>f.room+' '+f.guest+' '+f.owner),al:(__ev('alertList')||[]).map(a=>a.roomNo+' '+a.guest)}));
+  const B=await S.p.evaluate(()=>({vr:__ev('vacRooms'),fu:__ev('bdiFuList')().map(f=>f.room+' '+f.guest+' '+__ev('bdiFuOwner')(f)),al:(__ev('alertList')||[]).map(a=>a.roomNo+' '+a.guest)}));
   ok(B.vr['1406']&&/Meyer/.test(B.vr['1406'])&&/Halvorsen/.test(B.vr['1403']||''),'A ön koşul: 11:00 Meyer 1406, Halvorsen 1403 ('+J(B.vr)+')');
   ok(B.fu.some(x=>/^1406 Anna Meyer Can Demir/.test(x))&&B.al.some(x=>/^1403 Halvorsen/.test(x)),'A ön koşul: takip 1406 (Can), alert 1403 ('+J(B)+')');
   await at(S.p,'14:00');

@@ -297,7 +297,7 @@ async function scenarioButlers(){
   await run(T,'Issues',async()=>{await H.tab(p,'issues');await p.evaluate(()=>{const a=[...document.querySelectorAll('article.bd-issue')].find(x=>/0704/.test(x.textContent));if(a&&!a.querySelector('select[id^="bdiIsB_"]'))a.querySelector('.bd-issue-top').click()});await p.waitForTimeout(300);
     const o=await p.evaluate(()=>{const s=document.querySelector('#bdiIssuePanel select[id^="bdiIsB_"], select[id^="bdiIsB_"]');return s?[...s.options].map(o=>o.text):null});
     ok(o&&has(o,SEL)&&!has(o,NAZ),T+' Issues › 0704 kartı butler seçimi = '+J(o))});
-  await run(T,'iPad rehberi',async()=>{const b=await p.evaluate(d=>__ev('bgdBuild')(d).butlers,A);ok(has(b,SEL)&&!has(b,NAZ),T+' iPad rehberi (oluşturulan): butler seçim listesi = '+J(b))});
+  await run(T,'iPad rehberi',async()=>{const b=await p.evaluate(d=>__ev('bgdBuild')(d).butlers,A);ok(has(b,SEL)&&has(b,NAZ),T+' iPad rehberi (oluşturulan): butler seçim listesi = '+J(b)+' (beklenen Selin var; Nazlı Erten kalır: bugünün Kat 12+ sahibi, kat turundaki gibi)')});
   await run(T,'Kat turu',async()=>{await H.tab(p,'brief');await p.evaluate(()=>{__ev('bdiBriefSetMode("feed")')});await p.waitForTimeout(400);
     const o=await p.evaluate(()=>[...document.querySelectorAll('#bdiBriefBody .bd-fd-sel button')].map(b=>(b.firstChild||{}).textContent.trim()));
     ok(has(o,NAZ),T+' Brifing › Günün akışı (kat turu): butler düğmeleri = '+J(o)+' (beklenen Nazlı Erten kalır: bugünün Kat 12+ sahibi)')});

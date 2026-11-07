@@ -36,9 +36,10 @@ async function seed(p,o){
 // Bir log kaydi (Kayit ekraninin yazdigi bicim)
 function log(id,day,time,room,guest,action,o){return Object.assign({id,ts:Date.parse(day+'T'+time+':00+03:00'),time,butler:'Can Demir',room,guest,action,touchCategory:'Service',sentence:'Butler performed '+action+'.',note:'',meta:{}},o||{})}
 
-// Rapor Merkezi yolu: dosyayi uygulamaya birakir, uygulamanin mesajini dondurur
+// Rapor Merkezi yolu: dosyayi uygulamaya birakir, uygulamanin mesajini dondurur. Dosya saati sayfanin (sabit) saati: gercek saat
+// olsaydi varis raporundan gelen satirlar (srcAt) testteki oda raporlarindan yeni gorunurdu (2026-11-07).
 async function ingest(p,buf,name){
-  return p.evaluate(async([b64,n])=>{const f=new File([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],n);const r=await __ev('swRepIngest')([f],'elle');return r.map(x=>x.msg).join(' | ')},[Buffer.from(buf).toString('base64'),name]);
+  return p.evaluate(async([b64,n])=>{const f=new File([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],n,{lastModified:Date.now()});const r=await __ev('swRepIngest')([f],'elle');return r.map(x=>x.msg).join(' | ')},[Buffer.from(buf).toString('base64'),name]);
 }
 
 // Butler Did It sekmesini acar (entry, log, nt, irci, guests, brief, atelier, fu, issues ...)

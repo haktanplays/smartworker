@@ -51,7 +51,7 @@ async function start(){
   await at(p,'09:00');m=await ingest(p,await R.vac({day:D,time:'09:00',rows:vacRows()},br),'HSK01124.pdf');console.log('  VAC 09:00: '+m);
   await at(p,'12:40');m=await ingest(p,await R.dep({day:D,time:'12:40',rows:[{room:G.pem.room,name:G.pem.name,arr:G.pem.arr,dep:D,time:'10:12'}]},br),'DEP01100.pdf');console.log('  DEP 12:40: '+m);
   // 13:30 iki acik issue (biri "follow-up" istiyor: kendiliginden takip, sahibi kaydedilmez), Takip sekmesinden uc elle takip
-  // (elle takipte sahip, eklenince o saatin kat sorumlusu olarak kaydedilir: bdiFuQuickAdd)
+  // (2026-11-07: elle takipte de sahip kaydedilmez; kat dagilimindan okunur: bdiFuQuickAdd / bdiFuOwner)
   await at(p,'13:30');
   await p.evaluate(()=>{const now=Date.now(),I=(id,room,guest,c)=>({id,room,guest,concern:c,createdAt:now,u:now,events:[{id:id+'e0',ts:now,type:'import'}]});
     __ev('bdiSaveIssues')(__ev('bdiGetIssues()').concat([I('iA','1402','Lotte Achterberg','Shower drain is slow'),I('iH','2102','Brigid Halloran','Minibar was not refilled, needs follow-up this evening')]))});

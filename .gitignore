@@ -1,2 +1,3 @@
 tests/.build/
 tests/private/
+__pycache__/
