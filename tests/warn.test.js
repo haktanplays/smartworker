@@ -59,7 +59,9 @@ let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
  ok(G.tab==='block'&&G.open&&G.modal==='none','Uyarılar > "Git": issue karti acildi');
  // rapor oncesi kontrol
  await p.evaluate(()=>{window.__dl=[];__ev('dl=function(h,n){window.__dl.push(n)}');__ev('switchBdiTab("log")');__ev('setBdiView("day")')});
- await p.click('#bdiTab_log button:has-text("PDF")');await p.waitForTimeout(200);
+ // 2026-11-07: raporlar "Rapor al" sekmesinde; Log'daki "Rapor al" ayni gunu getirir
+ await p.click('#bdiTab_log button:has-text("Rapor al")');await p.waitForTimeout(200);
+ await p.click('#bdiRpt_did button:has-text("PDF")');await p.waitForTimeout(200);
  const Gt=await p.evaluate(()=>({modal:document.getElementById('swWarnModal').style.display,title:(document.querySelector('#swWarnModal h3')||{}).textContent,dl:window.__dl.length}));
  ok(Gt.modal==='flex'&&/^Rapordan önce: \d+ eksik \(03\.11\)/.test(Gt.title)&&Gt.dl===0,'PDF\'e basinca once kontrol: "'+Gt.title+'" (rapor henuz inmedi)');
  await p.click('#swWarnModal button:has-text("Yine de indir")');await p.waitForTimeout(250);
