@@ -7,8 +7,13 @@
 //     (bdiCfgEdit); Didn't Do It sebepleri (yeni satir + Enter, "Sil"); Butler Isimleri (Ekle / x). Sonra ust menuden Butler Did It.
 // Raporlar sahte Opera PDF'leriyle (tests/data/opera/reports.js) Rapor Merkezi'ne birakilir. Isimler kurgu (KVKK). Saat sabit.
 // Otel: 7. ve 12. kat, Kat 7-11 Can Demir, Kat 12+ Nazli Erten. Gun A = 07.11.2026, gece yarisindan sonra B = 08.11.2026.
+// Senaryolar (her biri ayri tarayici):
+//   gece          A 23:50'de Kayit acik (oda listesi acik), saat 00:10'a ilerler; tiklamadan gorunenler + her sekmeye tiklayinca
+//   gece/<sekme>  ayni gece yarisi, o sekme ekranda acik kalmis (fu, brief=Plan, issues, nt, nat): tiklamadan ne gorunuyor
+//   islem adi     "Welcome / In-room Check-in" -> "Arrival Greeting"; "Amenity Delivery" (balonu gizli, tipi Special Occasion) -> "Amenity Drop"
+//   tercih dep.   Pillow: HSK -> BUT;  sebepler: "Guest asleep" eklenir, kullanilan "Late arrival" silinir;  butler: Selin eklenir, Nazli silinir
 // Her yer icin tek ok(): ok(yeni degeri gosteriyor, '<yer>: <ne> = <deger>'). Uygulama bugun yanlissa FAIL bulgudur,
-// duzeltmeden sonra regresyon testi olur. Karsilastirilacak deger yoksa SKIP.
+// duzeltmeden sonra regresyon testi olur. Karsilastirilacak deger yoksa SKIP. Gelistirirken tek senaryo: ONLY='gece/fu' node consistency-day.js
 const H=require('./h.js'),R=require('./opera/reports.js');
 const A='2026-11-07',B='2026-11-08',Y='2026-11-06',Y2='2026-11-05';
 const CAN='Can Demir',NAZ='Nazlı Erten',SEL='Selin Kaya';
@@ -163,6 +168,10 @@ async function scenarioMidnightOn(tab){
     else ok(/bugün/i.test(m),T+' Issues (açık ekran, tıklamadan): 0704 kartında çıkış = "'+m+'" (beklenen "bugün çık…")');
     await H.tab(p,'issues');const c2=await p.evaluate(()=>{const a=[...document.querySelectorAll('article.bd-issue')].find(x=>/0704/.test(x.textContent));return a?a.textContent.replace(/\s+/g,' '):''});const m2=(/(bugün|yarın)[^.·]{0,12}çık/i.exec(c2)||[])[0]||'';
     ok(/bugün/i.test(m2),T+' Issues (sekmeye tıklayınca): 0704 kartında çıkış = "'+m2+'" (beklenen "bugün çık…")')});
+  if(tab==='nat')await run(T,'Uyruklar',async()=>{const c=await p.evaluate(()=>{const e=[...document.querySelectorAll('#bdiTab_nat .bd-nat-ev')].find(x=>/Polonya/.test(x.textContent));
+      return {d:(document.getElementById('bdiNatDate')||{}).value,soon:e?e.classList.contains('soon'):null,when:e?((e.querySelector('.bd-fd-sub')||{}).textContent||'').split(' · ')[0]:''}});
+    ok(c.d===B,T+' Uyruklar (açık ekran, tıklamadan): Gün = '+c.d+' (beklenen '+B+')');
+    ok(c.soon===true,T+' Uyruklar (açık ekran, tıklamadan): 11.11 Polonya günü = "'+c.when+'", 3 gün kala işareti '+c.soon+' (beklenen 3 gün sonra, işaretli)')});
   if(tab==='nt')await run(T,"Didn't Do It",async()=>{const d=await p.evaluate(()=>(document.querySelector('#bdiNtPanel input[type=date]')||{}).value);ok(d===B,T+" Didn't Do It (açık ekran, tıklamadan): Tarih = "+d+' (beklenen '+B+')')});
   }
 
@@ -175,8 +184,9 @@ async function scenarioAction(){
   // once: "Amenity Delivery" balonu gizle, touch tipini Special Occasion yap (Ayarlar'daki dugme / secim)
   await p.evaluate(l=>{const b=[...document.querySelectorAll('#bdiChipToggleWrap button')].find(x=>x.textContent.replace('✓','').trim()===l);b.click()},OLDB);
   await p.evaluate(l=>{const s=document.querySelector('#bdiamList select.bdiam-cat[data-l="'+l+'"]');s.value='occasion';s.dispatchEvent(new Event('change',{bubbles:true}))},OLDB);await p.waitForTimeout(200);
-  const pre=await p.evaluate(l=>({hid:JSON.parse(localStorage.getItem('bdi_chip_hidden')||'[]'),cat:__ev('bdiActionCatOf')(l)}),OLDB);
-  ok(pre.hid.includes(OLDB)&&pre.cat==='occasion','[işlem adı] ön koşul: "'+OLDB+'" balonu gizli, touch tipi = '+pre.cat);
+  const pre=await p.evaluate(([l,a])=>{const o=id=>{const r={};document.querySelectorAll('#'+id+' label').forEach(x=>{r[x.textContent.trim()]=!!(x.querySelector('input')||{}).checked});return r};
+    return {hid:JSON.parse(localStorage.getItem('bdi_chip_hidden')||'[]'),cat:__ev('bdiActionCatOf')(l),irci:o('irciActs')[a],link:o('alertLinkActs')[a]}},[OLDB,OLDA]);
+  ok(pre.hid.includes(OLDB)&&pre.cat==='occasion'&&pre.irci===true&&pre.link===true,'[işlem adı] ön koşul: "'+OLDB+'" balonu gizli, touch tipi = '+pre.cat+'; "'+OLDA+'" In-room listesinde '+pre.irci+', alert otomatik tikte '+pre.link);
   // ad degisikligi: sihirbazda "Duzenle" -> ad -> Kaydet
   const rename=async(o,n)=>{await p.evaluate(o=>{const lab=[...document.querySelectorAll('#bdiamList div')].find(d=>d.children.length===0&&d.textContent.trim()===o),row=lab.parentElement.parentElement;[...row.querySelectorAll('button')].find(b=>/Duzenle/.test(b.textContent)).click()},o);
     await p.waitForTimeout(150);await p.fill('#bdiamLabel',n);await p.click('#bdiamForm button.btn-primary');await p.waitForTimeout(250)};
@@ -203,8 +213,9 @@ async function scenarioAction(){
   await run(T,'In-room Check-in',async()=>{await H.tab(p,'irci');const r=await p.evaluate(()=>[...document.querySelectorAll('#bdiIrciPanel tbody tr')].map(tr=>tr.textContent.replace(/\s+/g,' ').trim()));
     ok(r.some(x=>/0706/.test(x)),T+' In-room Check-in: 0706 "'+NEWA+'" satırı = '+J(r)+' (beklenen 0706 Marchetti)')});
   await run(T,'In-room rozet',async()=>{const b=await p.evaluate(()=>document.getElementById('bdiIrciTabCount').textContent);ok(b==='1',T+' Sekme rozeti In-room Check-in = '+J(b)+' (beklenen "1")')});
-  await run(T,'Butler Alert',async()=>{await H.tab(p,'alert');const a=await p.evaluate(()=>{const x=(__ev('alertList')||[]).find(a=>+a.roomNo===706);return x?{v:x.visited,by:x.visitedBy,via:x.visitedVia||''}:null});
-    ok(a&&a.v===true,T+' Butler Alert: 0706 alert\'i "'+NEWA+'" girilince gidildi = '+J(a)+' (beklenen visited true; eski adla otomatik tikleniyordu)')});
+  await run(T,'Butler Alert',async()=>{await H.tab(p,'alert');await p.evaluate(()=>__ev('setAlertFilter("all")'));await p.waitForTimeout(200);
+    const a=await p.evaluate(()=>{const tr=[...document.querySelectorAll('#bdiTab_alert table tbody tr')].find(t=>(t.children[0]||{}).textContent.trim()==='706');return tr?{done:!!tr.querySelector('button[title="Sıfırla"]'),t:tr.textContent.replace(/\s+/g,' ').trim().slice(0,60)}:null});
+    ok(a&&a.done,T+' Butler Alert: 0706 satırı "'+NEWA+'" girilince ✅ = '+J(a)+' (eski adla girilince kendiliğinden ✅ oluyordu)')});
   await run(T,'Plan',async()=>{await H.tab(p,'brief');await p.evaluate(()=>{__ev('_bdiPlanF="all"');__ev('bdiBriefSetMode("plan")')});await p.waitForTimeout(500);
     const c=await p.evaluate(()=>{const g=[...document.querySelectorAll('#bdiBriefBody .bd-pl2-g')].find(g=>(g.querySelector('.bd-pl2-rm')||{}).textContent==='0706');if(!g)return null;const it=[...g.querySelectorAll('.bd-pl2-it')].find(x=>/Karşıla/.test(x.textContent));return it?{dn:it.classList.contains('dn'),t:it.textContent.replace(/\s+/g,' ').slice(0,80)}:null});
     ok(c&&c.dn,T+' Brifing › Plan: 0706 "Karşıla" işi '+NEWA+' girilince bitti = '+J(c))});
@@ -283,6 +294,9 @@ async function scenarioButlers(){
     ok(o&&has(o,SEL)&&!has(o,NAZ),T+' Brifing › Plan: "Kime" seçimi = '+J(o))});
   await run(T,'Butler Alert',async()=>{await H.tab(p,'alert');const o=await p.evaluate(()=>{const s=[...document.querySelectorAll('#bdiTab_alert table tbody tr select')].find(x=>x.options[0]&&x.options[0].text==='Butler');return s?[...s.options].map(o=>o.text):null});
     ok(o&&has(o,SEL)&&!has(o,NAZ),T+' Butler Alert › gidildi butler seçimi = '+J(o))});
+  await run(T,'Issues',async()=>{await H.tab(p,'issues');await p.evaluate(()=>{const a=[...document.querySelectorAll('article.bd-issue')].find(x=>/0704/.test(x.textContent));if(a&&!a.querySelector('select[id^="bdiIsB_"]'))a.querySelector('.bd-issue-top').click()});await p.waitForTimeout(300);
+    const o=await p.evaluate(()=>{const s=document.querySelector('#bdiIssuePanel select[id^="bdiIsB_"], select[id^="bdiIsB_"]');return s?[...s.options].map(o=>o.text):null});
+    ok(o&&has(o,SEL)&&!has(o,NAZ),T+' Issues › 0704 kartı butler seçimi = '+J(o))});
   await run(T,'iPad rehberi',async()=>{const b=await p.evaluate(d=>__ev('bgdBuild')(d).butlers,A);ok(has(b,SEL)&&!has(b,NAZ),T+' iPad rehberi (oluşturulan): butler seçim listesi = '+J(b))});
   await run(T,'Kat turu',async()=>{await H.tab(p,'brief');await p.evaluate(()=>{__ev('bdiBriefSetMode("feed")')});await p.waitForTimeout(400);
     const o=await p.evaluate(()=>[...document.querySelectorAll('#bdiBriefBody .bd-fd-sel button')].map(b=>(b.firstChild||{}).textContent.trim()));
@@ -290,7 +304,7 @@ async function scenarioButlers(){
   }
 
 (async()=>{
-  const steps=[['gece',scenarioMidnight],['gece/fu',()=>scenarioMidnightOn('fu')],['gece/brief',()=>scenarioMidnightOn('brief')],['gece/issues',()=>scenarioMidnightOn('issues')],['gece/nt',()=>scenarioMidnightOn('nt')],
+  const steps=[['gece',scenarioMidnight],['gece/fu',()=>scenarioMidnightOn('fu')],['gece/brief',()=>scenarioMidnightOn('brief')],['gece/issues',()=>scenarioMidnightOn('issues')],['gece/nt',()=>scenarioMidnightOn('nt')],['gece/nat',()=>scenarioMidnightOn('nat')],
     ['işlem adı',scenarioAction],['tercih departmanı',scenarioPrefDept],["Didn't Do It sebepleri",scenarioReasons],['butler listesi',scenarioButlers]];
   const only=(process.env.ONLY||'').split(',').filter(Boolean); // gelistirirken: ONLY='işlem adı' node consistency-day.js
   for(const [n,f] of steps){if(only.length&&!only.includes(n))continue;console.log('== '+n);try{await f()}catch(e){ok(false,n+' senaryosu çöktü: '+String(e.message||e).split('\n')[0])}

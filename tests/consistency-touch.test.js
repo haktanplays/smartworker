@@ -1,6 +1,6 @@
 // Tutarlilik (bayat veri) testi: TOUCH KAYDI eklendi, silindi, duzeltildi. Kaynak degisince bu touch'i gosteren HER yer yeni durumu gostermeli.
-// Kaynak degisiklikleri gercek yoldan: Kayit formu (alanlari doldur + Enter), Log sekmesindeki x dugmesi, Log'daki Tepki dugmeleri,
-// Issues kartindaki "Yanlis butler" secimi. Opera raporlari sahte PDF (tests/data/opera/reports.js), Rapor Merkezi'ne birakilir.
+// Kaynak degisiklikleri gercek yoldan: Kayit formu (alanlari doldur + Enter), Log sekmesindeki x dugmesi, Log'daki Tepki dugmeleri (+ kalem),
+// Issues kartindaki "Yanlis butler" secimi ve "notu düzelt". Opera raporlari sahte PDF (tests/data/opera/reports.js), Rapor Merkezi'ne birakilir.
 // Isimler kurgu (KVKK). Saat sabit: 2026-11-06 18:00-19:00 (Uyarilar'da Didn't Do It / Alert satirlari 17:00 ve 18:00 sonrasi cikar).
 // Otel: 14. kat (Can Demir) ve 21. kat (Nazli Erten). Misafirler:
 //   Anna Meyer 1406 (dun geldi, hic dokunulmadi: Didn't Do It, Didn't Do It plani -> Takip, Plan'da "Ilk sabah")
@@ -9,7 +9,9 @@
 //   Leonie Brandt 1401 (bugun 09:00 Special Request; tepki duzeltmesi)   Claire Morel 2101 (issue + Can'in issue temasi; butler duzeltmesi)
 //   Iris Fenwick 2105 (hic dokunulmadi, hep Didn't Do It: kontrol)
 // Asamalar: [0 önce] baslangic, [1 Kayıt] uc touch Kayit formundan, [2 Log sil] uc touch Log'dan silindi (her yer [0]'a donmeli),
-//           [3 düzelt] Log'da Brandt'in touch'ina soguk tepki + cumle, Issues'ta Morel temasinin butleri Can -> Nazli.
+//           [3 düzelt] Log'da Brandt'in touch'ina soguk tepki + cumle, Issues'ta Morel temasinin butleri Can -> Nazli ve notu.
+// Sekme sayilari ve ust cubuktaki Uyarilar, degisiklikten HEMEN sonra (baska yere gecmeden) okunur: butler onlari o an gorur.
+// Diger yerler sekme dugmesine tiklanarak acilir (tab()); H.tab yalniz kurulumda ve degisiklikten once (her sey taze olsun diye).
 // Her yer icin tek ok(): ok(yeni durumu gosteriyor, '<yer>: <ne> = <deger>'). Uygulama bugun yanlissa FAIL bulgudur, duzeltmeden sonra regresyon testi olur.
 const H=require('./h.js'),R=require('./opera/reports.js');
 const D='2026-11-06',Y='2026-11-05';
@@ -17,6 +19,8 @@ let fails=0;
 const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
 const at=(p,hm)=>p.clock.setSystemTime(new Date(D+'T'+hm+':00+03:00'));
 const J=JSON.stringify,sp=s=>String(s==null?'':s).replace(/\s+/g,' ').trim();
+// Sekmeye butlerin yaptigi gibi gec: sekme dugmesine tikla (H.tab ayrica showPage -> initDidIt cagirir, o bazi bayat alanlari yeniler ve bulguyu gizler)
+const tab=async(p,n)=>{await p.evaluate(n=>{const b=document.querySelector('#page-didit .bd-tab[data-tab="'+n+'"]');if(b)b.click();else __ev('switchBdiTab("'+n+'")')},n);await p.waitForTimeout(500)};
 // H.ingest ile ayni yol (swRepIngest, 'elle'); dosyanin saati sayfanin sabit saati olsun diye lastModified verilir
 const ingest=(p,buf,name)=>p.evaluate(async([b64,n])=>{const f=new File([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],n,{lastModified:Date.now()});const r=await __ev('swRepIngest')([f],'elle');return r.map(x=>x.msg).join(' | ')},[Buffer.from(buf).toString('base64'),name]);
 
@@ -57,6 +61,8 @@ async function start(){
   await p.selectOption(`#bdiNtPanel tr:has(input.bd-nt-chk[data-g="${gk}"]) select[data-f="f:plan"]`,'Courtesy call');await p.waitForTimeout(300);
   // Kapsam: dolu oda sayisi (elle girilen alan)
   await H.tab(p,'coverage');await p.fill('#bdiOccupied','6');await p.waitForTimeout(300);
+  // Log > Takvim acik (butler ayin gunlerine bakiyor)
+  await H.tab(p,'log');await p.click('#bdiCalBtn');await p.waitForTimeout(200);
   await H.tab(p,'fu');await at(p,'18:20');await H.tab(p,'entry');await p.waitForTimeout(600);
   return S;
 }
@@ -73,11 +79,40 @@ async function logRowBtn(S,room,sel){ // Log sekmesinde o odanin satirindaki dug
   await rows.first().locator(sel).click();await p.waitForTimeout(400);
 }
 
-// ---- aninda gorunenler (gezinmeden: sekme sayilari, Bugun karti, Uyarilar sayisi) ----
+// ---- aninda gorunenler (gezinmeden: sekme sayilari, ust cubuktaki Uyarilar sayisi ve listesi) ----
 async function instant(p){
   return p.evaluate(()=>{const t=i=>((document.getElementById(i)||{}).textContent||'').trim();
     const w=document.getElementById('swWarnBtn')||{},wn=(/(\d+)\s*$/.exec(String(w.textContent||'').trim())||[])[1]||'0';
-    return {nt:t('bdiNtTabCount'),fu:t('bdiFuTabCount'),al:t('bdiAlertTabCount'),irci:t('bdiIrciTabCount'),at:t('bdiProtelCnt'),is:t('bdiIssueTabCount'),warn:+wn,warnT:w.title||''}});
+    return {nt:t('bdiNtTabCount'),fu:t('bdiFuTabCount'),al:t('bdiAlertTabCount'),irci:t('bdiIrciTabCount'),at:t('bdiProtelCnt'),warn:+wn,warnT:w.title||''}});
+}
+
+// Log > Performans (ay): Butler x Islem matrisindeki TOPLAM sutunu
+async function perf(p){
+  await p.evaluate(()=>__ev('setBdiView("perf")'));await p.waitForTimeout(300);
+  const o=await p.evaluate(()=>{const t=[...document.querySelectorAll('#bdi-log-wrap table')].find(x=>/TOPLAM/.test(x.textContent)),o={};if(t)t.querySelectorAll('tbody tr').forEach(r=>{const c=[...r.children].map(x=>x.textContent.trim());o[c[0]]=c[c.length-1]});return o});
+  await p.evaluate(()=>__ev('setBdiView("day")'));return o;
+}
+
+// Misafir kartini acip "Protel notlari" dugmesine basar; acilan penceredeki bloklar (not yoksa '')
+async function protelOf(p,last){
+  await p.evaluate(()=>{__ev('_bdiGMProf=null')});
+  const gid=await p.evaluate(n=>{const P=__ev('bdiGMProfiles')().list.find(y=>y.name.includes(n));return P&&P.gid},last);
+  await p.evaluate(g=>__ev('bdiGuestOpen')(g),gid);await p.waitForTimeout(1500);
+  await p.evaluate(()=>{const m=document.getElementById('bdiProtelModal');if(m){m.classList.remove('on');m.innerHTML=''}});
+  await p.evaluate(()=>{const d=[...document.querySelectorAll('.bd-gdetail')].find(y=>y.style.display!=='none'&&y.textContent.trim());const b=d&&[...d.querySelectorAll('button')].find(x=>x.textContent==='Protel notları');if(b)b.click()});await p.waitForTimeout(300);
+  const t=await p.evaluate(()=>{const m=document.getElementById('bdiProtelModal');return m&&m.classList.contains('on')?[...m.querySelectorAll('pre')].map(x=>x.textContent).join('\n'):''});
+  await p.evaluate(()=>{const m=document.getElementById('bdiProtelModal');if(m)m.classList.remove('on')});return t;
+}
+// Log > Excel (gun): ilk sayfanin satirlari (dosya indirilmez, calisma kitabi yakalanir)
+async function didItXlsx(p){
+  return p.evaluate(()=>{let wb=null;const o=XLSX.writeFile;XLSX.writeFile=w=>{wb=w};try{__ev('downloadDidItXlsx()')}finally{XLSX.writeFile=o}
+    return wb?XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]).map(r=>({b:r.Butler,room:String(r.Room),a:r.Action,g:r.Guest,n:r.Note})):null});
+}
+// Departman > Impact (bu ay): ust KPI'lar ve butler tablosu
+async function impact(p){
+  await tab(p,'dept');await p.evaluate(()=>{const b=document.querySelector('#bdiDeptSeg button[data-m="impact"]');if(b)b.click();else __ev('bdiDeptSetMode("impact")')});await p.waitForTimeout(1200);
+  return p.evaluate(()=>{const k={};document.querySelectorAll('#bdiDeptBody .bd-kpis .bd-kpi').forEach(d=>{k[(d.querySelector('span')||{}).textContent||'']=(d.querySelector('b')||{}).textContent||''});
+    const t={};const tb=[...document.querySelectorAll('#bdiDeptBody table')].find(x=>/Memnun/.test(x.textContent));if(tb)tb.querySelectorAll('tbody tr').forEach(r=>{const c=[...r.children].map(x=>x.textContent.trim());t[c[0]]=c[1]});return {k,t}});
 }
 
 // ---- her yerin okunmasi (DOM / rapor HTML'i) ----
@@ -87,7 +122,7 @@ async function checkAll(S,E,I){
   const run=async(name,fn)=>{try{await fn()}catch(e){ok(false,T+' '+name+': test okuyamadı ('+String(e.message||e).split('\n')[0]+')')}};
   const yn=b=>b?'var':'yok';
 
-  // 0) Aninda: sekme sayilari, Kayit > Bugun karti, Uyarilar sayisi (kaynak degisikliginden hemen sonra, baska sekmeye gecmeden)
+  // 0) Aninda: sekme sayilari ve ust cubuktaki Uyarilar (kaynak degisikliginden hemen sonra, baska sekmeye gecmeden)
   await run('sekme sayıları',async()=>{
     ok(I.nt===(E.meyer?'1':'2'),T+" Sekme sayısı › Didn't Do It = \""+I.nt+'" (beklenen '+(E.meyer?'1: yalnız Fenwick':'2: Fenwick + Meyer')+')');
     ok(I.fu===(E.meyer?'':'1'),T+' Sekme sayısı › Takip = "'+I.fu+'" (beklenen '+(E.meyer?'boş: Meyer\'in Didn\'t Do It takibi touch\'la kapandı':'1: Meyer\'in Didn\'t Do It takibi açık')+')');
@@ -96,21 +131,27 @@ async function checkAll(S,E,I){
     const fr=await p.evaluate(()=>{const it=__ev('swWarnCollect()');return {n:it.length,t:it.length?it.slice(0,6).map(x=>'• '+x.t).join('\n'):'Atlanan bir şey yok'}});
     ok(I.warn===fr.n&&I.warnT===fr.t,T+' Üst çubuk › Uyarılar = '+I.warn+' ['+sp(I.warnT).slice(0,140)+'] (o anki doğru: '+fr.n+' ['+sp(fr.t).slice(0,140)+'])');
   });
-  await p.evaluate(()=>{__ev('showPage("didit")');try{document.getElementById('bdiDate').value=__ev('getToday()')}catch(e){}});
-
   // 1) Log ve rapor: sayi + satirlar, oda gorunumu
-  await run('Log',async()=>{await H.tab(p,'log');await p.evaluate(()=>{__ev('setBdiView("day")')});await p.waitForTimeout(300);
+  await run('Log',async()=>{await tab(p,'log');
+    const cal=await p.evaluate(()=>{const b=document.querySelector('#bdiCal button.today');return b?((b.querySelector('small')||{}).textContent||'0'):'takvim kapalı'});
+    ok(cal===String(E.n),T+' Log › Takvim: bugünün touch sayısı = '+cal+' (beklenen '+E.n+')');
     const L=await p.evaluate(()=>({n:(document.getElementById('bdiLogCount')||{}).textContent,rows:[...document.querySelectorAll('#bdi-log-wrap tbody tr')].map(tr=>({b:tr.children[1].textContent,room:tr.children[2].textContent.replace(/\D.*$/,''),act:tr.children[4].textContent}))}));
     const has=(r,a)=>L.rows.some(x=>x.room===r&&x.act.includes(a));
     ok(L.n===E.n+' kayıt'&&has('1406','Amenity')===E.meyer&&has('1403','Welcome')===E.halv&&has('1408','Inspection')===E.sato,T+' Log: '+L.n+' · 1406 Amenity '+yn(has('1406','Amenity'))+' · 1403 Welcome '+yn(has('1403','Welcome'))+' · 1408 Inspection '+yn(has('1408','Inspection'))+' (beklenen '+E.n+' kayıt, '+yn(E.meyer)+'/'+yn(E.halv)+'/'+yn(E.sato)+')');
     const t=await p.evaluate(d=>{const x=new DOMParser().parseFromString(__ev('bdiRoomGridHtml')(d,'log'),'text/html'),o={};x.querySelectorAll('.bd-rg-t').forEach(t=>{o[t.querySelector('b').textContent]=(t.querySelector('i')||{}).textContent||''});return o},D);
     ok((t['1406']==='1 touch')===E.meyer&&(t['1406']==='—')===!E.meyer,T+' Log › oda görünümü: 1406 kutusu = "'+t['1406']+'" (beklenen '+(E.meyer?'1 touch':'—')+')');
+    const pf=await perf(p),cn=4+(E.meyer?1:0)+(E.halv?1:0)+(E.sato?1:0);
+    ok(pf['Can Demir']===String(cn),T+' Log › Performans (ay): Can Demir TOPLAM = '+pf['Can Demir']+' (beklenen '+cn+')');
   });
 
   // 2) Kayit > oda listesi: islem Amenity Delivery secili iken 1406 kutusu "bugun girildi" (soluk, tik)
-  await run('Kayıt oda listesi',async()=>{await H.tab(p,'entry');
+  await run('Kayıt oda listesi',async()=>{await tab(p,'entry');
     const today=await p.evaluate(()=>((document.getElementById('bdiTodayCard')||{}).textContent||'').replace(/\s+/g,' ').trim());
     ok(today.replace(/\s/g,'').includes(E.n+'touch'+E.n+'misafir'),T+' Kayıt › Bugün kartı = "'+today+'" (beklenen '+E.n+' touch, '+E.n+' misafir)');
+    await p.fill('#bdiRoom','1406');await p.waitForTimeout(400);
+    const rt=await p.evaluate(()=>{const t=document.getElementById('bdiTimeline');return t&&t.style.display!=='none'?t.textContent.replace(/\s+/g,' ').trim():''});
+    ok(/Amenity Delivery/.test(rt)===E.meyer,T+' Kayıt › oda yazınca misafir geçmişi (1406): Amenity Delivery '+yn(/Amenity Delivery/.test(rt))+' ["'+rt.slice(0,90)+'"] (beklenen '+yn(E.meyer)+')');
+    await p.fill('#bdiRoom','');await p.waitForTimeout(200);
     const i=await p.evaluate(()=>String(__ev('getBdiActions()').findIndex(x=>x.label==='Amenity Delivery')));
     await p.selectOption('#bdiAction',i);await p.selectOption('#bdiButler','Can Demir');await p.waitForTimeout(250);
     await p.evaluate(()=>{const P=document.getElementById('bdiBulkPanel');if(!P||P.style.display!=='block')__ev('bdiBulkToggle()');__ev('bdiBulkFloor("")')});await p.waitForTimeout(200);
@@ -123,13 +164,18 @@ async function checkAll(S,E,I){
   await run("Didn't Do It",async()=>{await p.evaluate(d=>{__ev('switchBdiTab("nt")');__ev('bdiNtDateSet')(d)},D);await p.waitForTimeout(300);
     const rows=await p.evaluate(()=>[...document.querySelectorAll('#bdiNtPanel table.bd-nt-tab tbody tr')].map(tr=>(tr.querySelector('td.r')||{}).textContent).filter(Boolean));
     ok(rows.includes('1406')===!E.meyer&&rows.includes('2105'),T+" Didn't Do It sekmesi: satırlar = "+(rows.join(', ')||'yok')+' (beklenen '+(E.meyer?'yalnız 2105':'2105 ve 1406')+')');
+    const cv=await p.evaluate(()=>((document.querySelector('#bdiNtPanel .bd-nt-conv')||{}).textContent||'').replace(/\s+/g,' ').trim());
+    ok(/1406 Anna Meyer/.test(cv)===E.meyer,T+" Didn't Do It › dünkü listeden bugün dokunulan = \""+(cv||'satır yok')+'" (beklenen '+(E.meyer?'1406 Anna Meyer':'satır yok')+')');
     const tiles=await p.evaluate(()=>{const o={};document.querySelectorAll('#bdiNtPanel .bd-rg-t').forEach(t=>{o[t.querySelector('b').textContent]=(t.querySelector('i')||{}).textContent||''});return o});
     ok((tiles['1406']==='dokunuldu')===E.meyer,T+" Didn't Do It › oda görünümü: 1406 kutusu = \""+tiles['1406']+'" (beklenen '+(E.meyer?'dokunuldu':'dokunulmamış')+')');
     const html=await p.evaluate(()=>window.__t.capture(function(){return __ev('downloadDidntDoIt(true)')}));
-    const RP=await p.evaluate(h=>{const d=new DOMParser().parseFromString(h,'text/html');return {sum:((d.querySelector('.summary .item')||{}).textContent||'').replace(/\s+/g,' '),bands:[...d.querySelectorAll('tr.gh')].map(x=>x.textContent.replace(/\s+/g,' '))}},html);
+    const RP=await p.evaluate(h=>{const d=new DOMParser().parseFromString(h,'text/html'),it={};[...d.querySelectorAll('.summary .item')].forEach(e=>{it[((e.querySelector('.lbl')||{}).textContent||'').trim()]=((e.querySelector('.num')||{}).textContent||'').trim()});
+      return {it,bands:[...d.querySelectorAll('tr.gh')].map(x=>x.textContent.replace(/\s+/g,' '))}},html);
     const want=(E.meyer?'1':'2')+'/5'; // toplam = dunku in-house (5 misafir; Halvorsen bugun geldi)
-    ok(RP.sum.startsWith(want)&&RP.bands.some(b=>/Anna Meyer/.test(b))===!E.meyer,T+" Didn't Do It raporu: özet \""+RP.sum+'", Meyer bandı '+yn(RP.bands.some(b=>/Anna Meyer/.test(b)))+' (beklenen '+want+', Meyer '+yn(!E.meyer)+')');
-    await H.tab(p,'coverage');await p.waitForTimeout(200);
+    ok(RP.it['Guests Not Touched']===want&&RP.bands.some(b=>/Anna Meyer/.test(b))===!E.meyer,T+" Didn't Do It raporu: Guests Not Touched "+RP.it['Guests Not Touched']+', Meyer bandı '+yn(RP.bands.some(b=>/Anna Meyer/.test(b)))+' (beklenen '+want+', Meyer '+yn(!E.meyer)+')');
+    ok(RP.it['Converted']===(E.meyer?'1':'0'),T+" Didn't Do It raporu: Converted = "+RP.it['Converted']+' (beklenen '+(E.meyer?'1: Meyer dünkü listedeydi, bugün dokunuldu':'0')+')');
+    ok(RP.it['Alerts Not Welcomed']===(E.halv?'0':'1'),T+" Didn't Do It raporu: Alerts Not Welcomed = "+RP.it['Alerts Not Welcomed']+' (beklenen '+(E.halv?0:1)+')');
+    await tab(p,'coverage');await p.waitForTimeout(200);
     const C=await p.evaluate(()=>({nt:(document.getElementById('bdiNtCov')||{}).textContent||'',cov:(document.getElementById('bdiCoverageDetail')||{}).textContent||'',
       un:(()=>{const b=[...document.querySelectorAll('#bdiAttentionBoard b')].find(x=>/Untouched rooms/.test(x.textContent));return b?b.nextElementSibling.textContent:'yok'})()}));
     ok(new RegExp("Butler Didn't Do It: "+(E.meyer?1:2)+' / 5').test(C.nt),T+' Kapsam › Didn\'t Do It özeti = "'+sp(C.nt).replace(/ aç$/,'')+'" (beklenen '+(E.meyer?1:2)+' / 5)');
@@ -139,7 +185,7 @@ async function checkAll(S,E,I){
   });
 
   // 4) Brifing > Gunun akisi: Dikkat "hic dokunulmadi", Konaklama anlari (ilk sabah), Gelenler (karsilandi), Oteldekiler (kat turu inspection)
-  await run('Brifing akış',async()=>{await H.tab(p,'brief');await p.evaluate(()=>{__ev('bdiBriefSetMode("feed")')});await p.waitForTimeout(500);
+  await run('Brifing akış',async()=>{await tab(p,'brief');await p.evaluate(()=>{__ev('bdiBriefSetMode("feed")')});await p.waitForTimeout(500);
     await p.evaluate(()=>{const g=__ev('_bdiFeedGrp');['inh','aplain','alate','nt','mo-f','mo-l'].forEach(k=>g[k]=1);__ev('bdiFeedRefresh()')});await p.waitForTimeout(400);
     const F=await p.evaluate(()=>{const sp=s=>String(s||'').replace(/\s+/g,' ').trim();
       const rows=[...document.querySelectorAll('#bdiBriefBody .bd-fd-row')].map(b=>({tag:sp((b.querySelector('.bd-fd-tag')||{}).textContent),main:sp((b.querySelector('.bd-fd-main')||{}).textContent),sub:sp((b.querySelector('.bd-fd-sub')||{}).textContent),r:sp((b.querySelector('.bd-fd-r')||{}).textContent)}));
@@ -182,7 +228,7 @@ async function checkAll(S,E,I){
   });
 
   // 8) Butler Alert sekmesi
-  await run('Butler Alert',async()=>{await H.tab(p,'alert');await p.evaluate(()=>__ev('setAlertFilter("all")'));await p.waitForTimeout(200);
+  await run('Butler Alert',async()=>{await tab(p,'alert');await p.evaluate(()=>__ev('setAlertFilter("all")'));await p.waitForTimeout(200);
     const A=await p.evaluate(()=>[...document.querySelectorAll('#bdiTab_alert tbody tr')].map(tr=>{const c=tr.children[5]||document.createElement('td');return {g:(tr.children[1]||{}).textContent||'',st:(c.textContent||'').replace(/\s+/g,' '),pend:!!c.querySelector('select')}}).filter(x=>/Halvorsen/.test(x.g)));
     const a=A[0],vis=!!(a&&!a.pend&&/✅/.test(a.st)&&/Can Demir/.test(a.st));
     ok(a&&vis===E.halv&&a.pend===!E.halv,T+' Butler Alert: Halvorsen durumu = "'+(a?a.st.slice(0,70):'satır yok')+'" (beklenen '+(E.halv?'✅ Can Demir (Welcome kaydıyla)':'bekliyor')+')');
@@ -195,17 +241,21 @@ async function checkAll(S,E,I){
   });
 
   // 10) Takip: Meyer'in Didn't Do It takibi
-  await run('Takip',async()=>{await H.tab(p,'fu');
+  await run('Takip',async()=>{await tab(p,'fu');
     const F=await p.evaluate(()=>({open:[...document.querySelectorAll('#bdiFuPanel .bd-fu-grp .bd-fu-row')].map(r=>r.textContent.replace(/\s+/g,' ')),
       done:[...document.querySelectorAll('#bdiFuPanel details.bd-fu-more')].slice(0,1).flatMap(d=>[...d.querySelectorAll('.bd-fu-row')].map(r=>r.textContent.replace(/\s+/g,' ')))}));
     const o=F.open.some(t=>/Meyer/.test(t)),d=F.done.some(t=>/Meyer/.test(t));
     ok(o===!E.meyer&&d===E.meyer,T+' Takip: Meyer "Didn\'t Do It planı" açık listede '+yn(o)+', "Bugün ilgilenilen"de '+yn(d)+' (beklenen '+(E.meyer?'ilgilenildi':'açık')+')');
+    const html=await p.evaluate(d=>__ev('bdiFuReportHtml')(d,d),D);
+    const sec=await p.evaluate(x=>{const d=new DOMParser().parseFromString(x,'text/html'),s=[...d.querySelectorAll('.isec')].find(e=>/Meyer/.test(e.textContent));return s?(s.querySelector('h2')||{}).textContent:'satır yok'},html);
+    ok(sec===(E.meyer?'Done on Time':'Still Open'),T+' Takip raporu (Butler Follow-ups): Meyer bölümü = "'+sec+'" (beklenen '+(E.meyer?'Done on Time':'Still Open')+')');
   });
 
   // 11) Misafirler listesi ve misafir karti (+ Protel notlari)
-  await run('Misafirler',async()=>{await p.evaluate(()=>{__ev('_bdiGMProf=null')});await H.tab(p,'guests');await p.waitForTimeout(1300);
+  await run('Misafirler',async()=>{await p.evaluate(()=>{__ev('_bdiGMProf=null')});await tab(p,'guests');await p.waitForTimeout(1300);
     const GL=await p.evaluate(()=>{const r=[...document.querySelectorAll('.bd-grow')].find(x=>/Anna Meyer/.test((x.querySelector('.bd-g-name')||{}).textContent||''));return r?{last:r.children[3].textContent,n:(r.querySelector('.bd-num')||{}).textContent,flags:(r.querySelector('.bd-flags')||{}).textContent}:null});
-    ok(GL&&GL.n===(E.meyer?'1':'0')&&/18:3\d/.test(GL.last)===E.meyer,T+' Misafirler listesi: Meyer touch = '+(GL?GL.n+', son temas "'+GL.last+'"':'satır yok')+' (beklenen '+(E.meyer?'1, bugün 18:30':'0, bugün temas yok')+')');
+    ok(GL&&GL.n===(E.meyer?'1':'0')&&/18:3\d/.test(GL.last)===E.meyer,T+' Misafirler listesi: Meyer touch = '+(GL?GL.n+', son temas "'+GL.last+'"':'satır yok')+' (beklenen '+(E.meyer?'1, bugün 18:30':'0, saat yok')+')');
+    ok(GL&&/Bugün temas yok/.test(GL.flags)===!E.meyer,T+' Misafirler listesi: Meyer işaretleri = "'+(GL?GL.flags:'')+'" (beklenen '+(E.meyer?'"Bugün temas yok" yok':'"Bugün temas yok"')+')');
     const gid=await p.evaluate(()=>{const P=__ev('bdiGMProfiles')().list.find(y=>/Meyer/.test(y.name));return P&&P.gid});
     await p.evaluate(g=>__ev('bdiGuestOpen')(g),gid);await p.waitForTimeout(1500);
     const C=await p.evaluate(()=>{const d=[...document.querySelectorAll('.bd-gdetail')].find(y=>y.style.display!=='none'&&y.textContent.trim());if(!d)return null;
@@ -223,7 +273,7 @@ async function checkAll(S,E,I){
   });
 
   // 12) Atolye > Protel'e girilecekler + sekme sayisi tutarliligi
-  await run('Atölye',async()=>{await H.tab(p,'atelier');await p.evaluate(()=>{__ev('_bdiAtMode="out"');__ev('_bdiPlView="p"');__ev('renderBdiAtelier()')});await p.waitForTimeout(900);
+  await run('Atölye',async()=>{await tab(p,'atelier');await p.evaluate(()=>{__ev('_bdiAtMode="out"');__ev('_bdiPlView="p"');__ev('renderBdiAtelier()')});await p.waitForTimeout(900);
     const A=await p.evaluate(()=>{const g=[...document.querySelectorAll('#bdiProtelBody .bd-pl-g')].find(x=>/Meyer/.test(x.textContent));
       const seg=[...document.querySelectorAll('#bdiProtelBody .bd-seg button')].find(b=>/Atılmadı/.test(b.textContent));
       return {rows:g?[...g.querySelectorAll('.bd-pl-row')].map(r=>r.textContent.replace(/\s+/g,' ')):[],pend:seg?seg.querySelector('b').textContent:'',badge:(document.getElementById('bdiProtelCnt')||{}).textContent}});
@@ -240,6 +290,13 @@ async function checkAll(S,E,I){
     ok(RP.it['Total Touches']===String(E.n),T+' Butler Did It raporu › Total Touches = '+RP.it['Total Touches']+' (beklenen '+E.n+')');
     ok(RP.meyer===E.meyer&&RP.sato===E.sato,T+' Butler Did It raporu › satırlar: Meyer amenity '+yn(RP.meyer)+', Sato inspection '+yn(RP.sato)+' (beklenen '+yn(E.meyer)+'/'+yn(E.sato)+')');
     ok(al&&RP.it[al]===(E.halv?'1/1':'0/1'),T+' Butler Did It raporu › Butler Alerts Visited = '+(al?RP.it[al]:'yok')+' (beklenen '+(E.halv?'1/1':'0/1')+')');
+    const X=await didItXlsx(p),xm=!!(X&&X.some(r=>r.room==='1406'&&/Amenity/.test(r.a)));
+    ok(X&&X.length===E.n&&xm===E.meyer,T+' Butler Did It Excel: '+(X?X.length+' satır, Meyer amenity '+yn(xm):'dosya yok')+' (beklenen '+E.n+' satır, '+yn(E.meyer)+')');
+  });
+
+  // 13b) Departman > Impact (ay): touch sayisi
+  await run('Impact',async()=>{const M=await impact(p),want=String(5+(E.meyer?1:0)+(E.halv?1:0)+(E.sato?1:0));
+    ok(M.k['touch']===want,T+' Departman › Impact (ay): touch = '+M.k['touch']+' (beklenen '+want+')');
   });
 
   // 14) Uyarilar penceresi (bugun)
@@ -276,6 +333,9 @@ async function checkAll(S,E,I){
   await checkAll(S,{tag:'[2 Log sil]',meyer:false,halv:false,sato:false,n:2},await instant(p));
 
   // ===== [3] Duzeltme: Log'da tepki (Brandt), Issues'ta temasin butleri (Morel) =====
+  await H.tab(p,'guests');await p.waitForTimeout(800);
+  const pr0=(/\*\*\*Issues\*\*\*\n([^\n]*)/.exec(await protelOf(p,'Morel'))||[])[1]||'';
+  ok(/ CD$/.test(pr0),'[3 düzelt] ön koşul: düzeltmeden önce Morel Protel Issues imzası = "'+pr0+'" (CD)');
   await at(p,'18:50');await H.tab(p,'log');await p.evaluate(()=>__ev('setBdiView("day")'));await p.waitForTimeout(300);
   await logRowBtn(S,'1401','button.bd-react-btn[title="Soğuk"]');
   S.prompt='prefers fewer visits';await logRowBtn(S,'1401','button[title="Tepki cümlesi"]');
@@ -287,23 +347,31 @@ async function checkAll(S,E,I){
   await card.locator('select.bd-tl-sel').first().selectOption('Nazlı Erten');await p.waitForTimeout(500);
   const l3=await p.evaluate(d=>JSON.parse(__ev('BdiKV').get('bdi_'+d)).filter(l=>l.room==='2101').map(l=>l.butler),D);
   ok(l3.join()==='Nazlı Erten','[3 düzelt] ön koşul: Issues kartından Morel temasının butleri Nazlı Erten oldu (Butler Did It kaydı: '+J(l3)+')');
+  // ayni temasin "ne yapildi" notu: kartta "notu düzelt"
+  S.prompt='Plumber cleared the drain';await card.locator('button.bd-tl-note').first().click();await p.waitForTimeout(500);
+  const l4=await p.evaluate(d=>JSON.parse(__ev('BdiKV').get('bdi_'+d)).filter(l=>l.room==='2101').map(l=>l.note),D);
+  ok(l4.join()==='Plumber cleared the drain','[3 düzelt] ön koşul: Issues kartından Morel temasının notu düzeltildi (Butler Did It kaydı: '+J(l4)+')');
   await checkEdit(S);
  }catch(e){ok(false,'senaryo çöktü: '+String(e.stack||e).split('\n').slice(0,3).join(' | '))}
  ok(S.errs.length===0,'JS hatası yok '+J(S.errs));await S.br.close();
  console.log(fails?fails+' FAIL':'ALL PASS');process.exit(fails?1:0);
 })();
 
-// ---- [3] duzeltmeden sonra: tepki ve butler degisikligini gosteren yerler ----
+// ---- [3] duzeltmeden sonra: tepkiyi, temasin butlerini ve notunu gosteren yerler ----
 async function checkEdit(S){
   const p=S.p,T='[3 düzelt]',yn=b=>b?'var':'yok';
   const run=async(name,fn)=>{try{await fn()}catch(e){ok(false,T+' '+name+': test okuyamadı ('+String(e.message||e).split('\n')[0]+')')}};
-  await run('Log',async()=>{await H.tab(p,'log');await p.evaluate(()=>__ev('setBdiView("day")'));await p.waitForTimeout(300);
+  await run('Log',async()=>{await tab(p,'log');await p.evaluate(()=>__ev('setBdiView("day")'));await p.waitForTimeout(300);
     const L=await p.evaluate(()=>[...document.querySelectorAll('#bdi-log-wrap tbody tr')].map(tr=>({b:tr.children[1].textContent,room:tr.children[2].textContent.replace(/\D.*$/,''),re:(tr.querySelector('.bd-react-btn.on')||{}).title||'',rt:(tr.querySelector('.bd-react-t')||{}).textContent||''})));
     const b=L.find(x=>x.room==='1401'),m=L.find(x=>x.room==='2101');
     ok(b&&b.re==='Soğuk'&&b.rt==='prefers fewer visits',T+' Log: 1401 tepki = '+(b?b.re+' "'+b.rt+'"':'satır yok')+' (beklenen Soğuk "prefers fewer visits")');
     ok(m&&m.b==='Nazlı Erten',T+' Log: 2101 Morel temasının butleri = '+(m?m.b:'satır yok')+' (beklenen Nazlı Erten)');
+    const md=await p.evaluate(()=>{const tr=[...document.querySelectorAll('#bdi-log-wrap tbody tr')].find(t=>/2101/.test(t.children[2].textContent));return tr?tr.children[5].textContent.replace(/\s+/g,' '):''});
+    ok(/Plumber cleared the drain/.test(md)&&!/Called engineering/.test(md)&&/Nazlı Erten/.test(md)&&!/Can Demir/.test(md),T+' Log: 2101 Detay = "'+md.slice(0,140)+'" (beklenen Nazlı Erten + "Plumber cleared the drain")');
     const st=await p.evaluate(()=>(document.getElementById('bdiStats')||{}).textContent.replace(/\s+/g,' '));
     ok(/1 Can Demir/.test(st)&&/1 Nazlı Erten/.test(st),T+' Log › butler sayıları = "'+st+'" (beklenen Can Demir 1, Nazlı Erten 1)');
+    const pf=await perf(p);
+    ok(pf['Can Demir']==='3'&&pf['Nazlı Erten']==='2',T+' Log › Performans (ay): TOPLAM Can Demir '+pf['Can Demir']+', Nazlı Erten '+pf['Nazlı Erten']+' (beklenen 3 ve 2)');
   });
   await run('Butler Did It raporu',async()=>{const html=await p.evaluate(d=>{document.getElementById('bdiDate').value=d;__ev('switchBdiTab("log")');__ev('setBdiView("day")');__ev('loadBdiLogs()');return window.__t.capture(function(){return __ev('downloadDidIt()')})},D);
     const RP=await p.evaluate(x=>{const d=new DOMParser().parseFromString(x,'text/html'),th=[...d.querySelectorAll('table.bsum thead th')].map(t=>t.textContent.trim()),o={};
@@ -311,9 +379,11 @@ async function checkEdit(S){
       const is=[...d.querySelectorAll('.iss')].find(s=>/Morel/.test(s.textContent));return {o,iss:is?is.textContent.replace(/\s+/g,' '):''}},html);
     const nz=RP.o['Nazlı Erten']||{},cd=RP.o['Can Demir']||{};
     ok(nz.f==='1'&&cd.f==='0'&&nz.t==='1'&&cd.t==='1',T+' Butler Did It raporu › butler tablosu: Nazlı touch '+nz.t+' / issue follow-up '+nz.f+', Can touch '+cd.t+' / issue follow-up '+cd.f+' (beklenen Nazlı 1/1, Can 1/0)');
-    ok(/Nazlı Erten/.test(RP.iss)&&!/Can Demir/.test(RP.iss),T+' Butler Did It raporu › Guest Issues: Morel bölümü = "'+RP.iss.slice(0,140)+'" (Nazlı Erten olmalı, Can Demir olmamalı)');
+    const X=await didItXlsx(p),xr=X&&X.find(r=>r.room==='2101');
+    ok(xr&&xr.b==='Nazlı Erten'&&xr.n==='Plumber cleared the drain',T+' Butler Did It Excel: 2101 satırı = '+(xr?xr.b+' / "'+xr.n+'"':'yok')+' (beklenen Nazlı Erten / "Plumber cleared the drain")');
+    ok(/Nazlı Erten/.test(RP.iss)&&!/Can Demir/.test(RP.iss)&&/Plumber cleared the drain/.test(RP.iss)&&!/Called engineering/.test(RP.iss),T+' Butler Did It raporu › Guest Issues: Morel bölümü = "'+RP.iss.slice(0,160)+'" (beklenen Nazlı Erten, "Plumber cleared the drain")');
   });
-  await run('Brifing',async()=>{await H.tab(p,'brief');
+  await run('Brifing',async()=>{await tab(p,'brief');
     await p.evaluate(()=>{__ev('_bdiShift="sabah"');__ev('bdiBriefSetMode("shift")')});await p.waitForTimeout(400);
     const V=await p.evaluate(()=>({cards:[...document.querySelectorAll('#bdiBriefBody .bd-bf-bcard')].map(c=>c.textContent.replace(/\s+/g,' ')),open:[...document.querySelectorAll('#bdiBriefBody .bd-bf-open li')].map(l=>l.textContent)}));
     const cd=V.cards.find(c=>/Can Demir/.test(c))||'';
@@ -331,18 +401,28 @@ async function checkEdit(S){
     const fi=await p.evaluate(()=>{const r=[...document.querySelectorAll('#bdiBriefBody .bd-fd-row')].find(b=>/Issue/.test((b.querySelector('.bd-fd-tag')||{}).textContent||'')&&/Morel/.test(b.textContent));return r?(r.querySelector('.bd-fd-r')||{}).textContent:null});
     ok(fi&&/Nazlı Erten/.test(fi)&&!/Can Demir/.test(fi),T+' Brifing › Dikkat › Morel issue: ilgilenen = "'+fi+'" (beklenen Nazlı Erten)');
   });
-  await run('Misafirler',async()=>{await p.evaluate(()=>{__ev('_bdiGMProf=null')});await H.tab(p,'guests');await p.fill('#guestSearchName','');await p.evaluate(()=>__ev('filterGuestLibrary()'));await p.waitForTimeout(800);
+  await run('Misafirler',async()=>{await p.evaluate(()=>{__ev('_bdiGMProf=null')});await tab(p,'guests');await p.fill('#guestSearchName','');await p.evaluate(()=>__ev('filterGuestLibrary()'));await p.waitForTimeout(800);
     const bonds=await p.evaluate(()=>{const r=[...document.querySelectorAll('.bd-grow')].find(x=>/Claire Morel/.test((x.querySelector('.bd-g-name')||{}).textContent||''));return r?r.children[4].textContent.replace(/\s+/g,' '):null});
     ok(bonds&&/Nazlı Erten 2/.test(bonds)&&!/Can Demir/.test(bonds),T+' Misafirler listesi: Morel butler bağları = "'+bonds+'" (beklenen Nazlı Erten 2, Can Demir yok)');
     for(const [nm,re,want] of [['Morel',/Issue Follow-up/,'Nazlı Erten'],['Brandt',/Special Request/,'🙁']]){
       const gid=await p.evaluate(n=>{const P=__ev('bdiGMProfiles')().list.find(y=>y.name.includes(n));return P&&P.gid},nm);
       await p.evaluate(g=>__ev('bdiGuestOpen')(g),gid);await p.waitForTimeout(1500);
       const li=await p.evaluate(re=>{const d=[...document.querySelectorAll('.bd-gdetail')].find(y=>y.style.display!=='none'&&y.textContent.trim());if(!d)return null;const l=[...d.querySelectorAll('.bd-tl-guest li:not(.bd-tl-day)')].find(x=>new RegExp(re).test(x.textContent));return l?{b:(l.querySelector('b')||{}).textContent,t:l.textContent.replace(/\s+/g,' ')}:''},re.source);
-      if(nm==='Morel')ok(li&&li.b===want,T+' Misafir kartı › Zaman çizgisi: Morel issue teması butleri = '+(li?li.b:'satır yok')+' (beklenen Nazlı Erten)');
+      if(nm==='Morel')ok(li&&li.b===want&&/Plumber cleared the drain/.test(li.t)&&!/Called engineering/.test(li.t),T+' Misafir kartı › Zaman çizgisi: Morel issue teması = '+(li?li.b+' "'+li.t.slice(0,110)+'"':'satır yok')+' (beklenen Nazlı Erten, "Plumber cleared the drain")');
       else ok(li&&/🙁/.test(li.t)&&/prefers fewer visits/.test(li.t),T+' Misafir kartı › Zaman çizgisi: Brandt Special Request tepkisi = "'+(li?li.t.slice(0,80):'satır yok')+'" (beklenen 🙁 prefers fewer visits)');
     }
   });
-  await run('Issues',async()=>{await H.tab(p,'issues');await p.waitForTimeout(300);
+  await run('Impact',async()=>{const M=await impact(p),rk=Object.keys(M.k).find(x=>/memnun tepki/.test(x))||'';
+    ok(rk==='memnun tepki (1)'&&M.k[rk]==='0%',T+' Departman › Impact (ay): "'+rk+'" = '+M.k[rk]+' (beklenen memnun tepki (1) = 0%: tek tepki soğuk)');
+    ok(M.t['Can Demir']==='3'&&M.t['Nazlı Erten']==='2',T+' Departman › Impact › Butler bazında touch: Can Demir '+M.t['Can Demir']+', Nazlı Erten '+M.t['Nazlı Erten']+' (beklenen 3 ve 2)');
+  });
+  await run('Protel',async()=>{await tab(p,'guests');await p.waitForTimeout(800);const t=await protelOf(p,'Morel'),is=(/\*\*\*Issues\*\*\*\n([^\n]*)/.exec(t)||[])[1]||'';
+    ok(/Plumber cleared the drain/.test(is)&&/ NE$/.test(is),T+' Protel notları (Morel) › Issues satırı = "'+is+'" (beklenen "...; Plumber cleared the drain, open. ** 06.11.2026 NE")');
+    await tab(p,'atelier');await p.evaluate(()=>{__ev('_bdiAtMode="out"');__ev('_bdiPlView="p"');__ev('renderBdiAtelier()')});await p.waitForTimeout(900);
+    const A=await p.evaluate(()=>{const g=[...document.querySelectorAll('#bdiProtelBody .bd-pl-g')].find(x=>/Morel/.test(x.textContent));return g?[...g.querySelectorAll('.bd-pl-row')].map(r=>r.textContent.replace(/\s+/g,' ')).filter(t=>/drain/i.test(t)):[]});
+    ok(A.length===1&&/ NE/.test(A[0])&&/Plumber cleared/.test(A[0]),T+" Atölye › Protel'e girilecekler (Morel) › issue satırı = "+(A.join(' | ')||'yok')+' (beklenen tek satır: yeni not, imza NE)');
+  });
+  await run('Issues',async()=>{await tab(p,'issues');await p.waitForTimeout(300);
     const t=await p.evaluate(()=>{const a=[...document.querySelectorAll('article.bd-issue')].find(x=>/Claire Morel/.test(x.textContent));return a?[...a.querySelectorAll('.bd-issue-meta .bd-bond')].map(b=>b.textContent.trim()).join(', '):null});
     ok(t==='Nazlı Erten',T+' Issues: Morel kartında ilgilenen butler(lar) = "'+t+'" (beklenen Nazlı Erten)');
   });
