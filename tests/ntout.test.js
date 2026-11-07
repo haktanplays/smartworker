@@ -10,7 +10,7 @@ const DIR=process.argv[2]||'t2';
    const R=(room,name,arr,dep)=>({room,name,arr,dep,depTime:'',type:'KGA',adl:2,chl:0,acc:[],spec:[],notes:[]});
    KV.set('bdi_gih_v1',JSON.stringify({day:'2026-11-02',at:Date.now(),file:'gih.pdf',rows:[
      R('0805','Hollinsby,Kirsten,Mrs.','2026-10-30','2026-11-05'),R('0901','Brodan,Kresimir,Mr.','2026-10-31','2026-11-06'),
-     R('1808','De Gramont,Armand Daniel,Mr.','2026-10-25','2026-11-08'),R('1501','Shooting,Photo','2026-11-01','2026-11-05'),R('1203','Guest,Valued,Mr.','2026-10-31','2026-11-07')]}));
+     R('1808','De Gramont,Armand Beaumont,Mr.','2026-10-25','2026-11-08'),R('1501','Shooting,Photo','2026-11-01','2026-11-05'),R('1203','Guest,Valued,Mr.','2026-10-31','2026-11-07')]}));
    __ev('_bdiGih=null');
    const L=(id,room,guest,d,t)=>({id,butler:'Beyza Nur Çırak',room,guest,action:'Turndown',touchCategory:'Service',patternType:'service',note:'',time:t,sentence:'x',ts:new Date(d+'T'+t+':00+03:00').getTime(),countsAsTouch:true});
    KV.set('bdi_2026-11-02',JSON.stringify([L('a3','0805','Kirsten Hollinsby','2026-11-02','10:00')]));

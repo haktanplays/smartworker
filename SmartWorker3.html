@@ -20843,7 +20843,7 @@ async function swDemoSeed(){
 
   // ---------- 2) kurgusal misafirler ve konaklamalar ----------
   var POOL={EN:{m:["James","William","Henry","George","Thomas","Oliver","Edward","Charles","Arthur","Frederick","Hugo","Rupert","Alistair","Benedict","Julian","Miles"],f:["Olivia","Charlotte","Amelia","Emily","Sophie","Grace","Eleanor","Harriet","Isabel","Florence","Beatrix","Imogen","Rosalind","Clementine","Philippa","Matilda"],l:["Ashby","Bennett","Harrington","Caldwell","Prescott","Langley","Montague","Pembroke","Hale","Thornton","Whitlock","Radcliffe","Kingsley","Ellsworth","Carrington","Hollinsby","Blackwood","Fenwick","Garrick","Lockhart"]},
-    TR:{m:["Ahmet","Murat","Emre","Tolga","Cem","Onur","Kaan","Barış","Arda","Berk","Selim","Umut"],f:["Ayşe","Zeynep","Ece","İpek","Melis","Ela","Nehir","Duru","Ceren","Aslı","Derin","Lara"],l:["Yıldırım","Aksoy","Erdem","Kaplan","Özdemir","Uysal","Karaca","Bozkurt","Güneş","Tunalı","Sezer","Ilgaz","Akın","Durmaz","Erkan","Sönmez","Taşkın","Ünal"]},
+    TR:{m:["Ahmet","Murat","Emre","Tolga","Cem","Onur","Kaan","Barış","Arda","Berk","Selim","Umut"],f:["Ayşe","Zeynep","Ece","İpek","Melis","Ela","Nehir","Duru","Ceren","Aslı","Derin","Lara"],l:["Yıldırım","Aksoy","Erdinc","Kaplan","Özdemir","Uysal","Karaca","Bozkurt","Güneş","Tunalı","Sezer","Ilgaz","Akın","Durmaz","Erkan","Sönmez","Taşkın","Ünal"]},
     AR:{m:["Khalid","Faisal","Omar","Saud","Rashid","Hamad","Sultan","Majid","Nasser","Tariq"],f:["Noura","Mariam","Hessa","Reem","Shamma","Alya","Dana","Lulwa","Maha"],l:["Al Mazrouei","Al Hashimi","Al Nuaimi","Al Suwaidi","Al Mehairbi","Al Kaabi","Al Dhaheri","Al Falasi","Al Shehhi","Al Muhairi","Al Ketbi"]},
     RU:{m:["Sergei","Alexei","Mikhail","Andrei","Pavel"],f:["Anastasia","Ekaterina","Irina","Natalia","Olga"],l:["Sokolov","Orlov","Lebedev","Kuznetsov","Morozov"],lf:["Sokolova","Orlova","Lebedeva","Kuznetsova","Morozova"]},
     DE:{m:["Lukas","Felix","Maximilian","Jonas","Tobias"],f:["Clara","Lena","Johanna","Marie","Greta"],l:["Weber","Brandt","Fischer","Becker","Krüger","Vogel","Hoffmann"]},
@@ -21178,7 +21178,7 @@ function swDemoToggle(){
   var base=String(location.href).split("#")[0].split("?")[0];
   if(SW_DEMO){location.href=base;return}
   var busy=[].slice.call(document.querySelectorAll(".page.active textarea,.page.active input[type=text]")).some(function(x){return x.offsetParent&&String(x.value||"").trim()});
-  if(busy&&!confirm("Yazdığın bir şey var; demoya geçersen kaydedilmemiş kısım kaybolur. Demoya geçilsin mi?"))return;
+  if(busy&&!confirm("Yazdığın bir şey var; demoya geçergun kaydedilmemiş kısım kaybolur. Demoya geçilsin mi?"))return;
   location.href=base+"?demo";
 }
 document.addEventListener("keydown",function(e){

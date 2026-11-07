@@ -8,7 +8,7 @@ let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
    const R=(room,name,arr,dep,acc)=>({room,name,arr,dep,depTime:'',type:'KGA',adl:2,chl:0,acc:acc||[],spec:[],notes:[]});
    KV.set('bdi_gih_v1',JSON.stringify({day:'2026-11-02',at:Date.now(),file:'gih.pdf',rows:[
      R('0805','Hollinsby,Kirsten,Mrs.','2026-10-30','2026-11-05'),R('0901','Brodan,Kresimir,Mr.','2026-10-31','2026-11-06'),
-     R('1004','Uslubas,Baturalp,Mr.','2026-11-01','2026-11-04'),R('1808','De Gramont,Armand Daniel,Mr.','2026-10-25','2026-11-08'),R('2001','Mardanov,Ilyar,Mr.','2026-11-02','2026-11-05')]}));
+     R('1004','Uslubas,Baturalp,Mr.','2026-11-01','2026-11-04'),R('1808','De Gramont,Armand Beaumont,Mr.','2026-10-25','2026-11-08'),R('2001','Mardanov,Ilyar,Mr.','2026-11-02','2026-11-05')]}));
    __ev('_bdiGih=null');
    const L=(id,room,guest,d,t)=>({id,butler:'Beyza Nur Çırak',room,guest,action:'Turndown',touchCategory:'Service',patternType:'service',note:'',time:t,sentence:'x',ts:new Date(d+'T'+t+':00+03:00').getTime(),countsAsTouch:true});
    KV.set('bdi_2026-10-31',JSON.stringify([L('a1','0805','Kirsten Hollinsby','2026-10-31','20:00')]));
@@ -20,7 +20,7 @@ let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
  const H=await p.evaluate(()=>({th:[...document.querySelectorAll('#bdiNtPanel thead th')].map(x=>x.textContent).join('|'),rooms:[...document.querySelectorAll('#bdiNtPanel td.r')].map(x=>x.textContent).join(','),cov:document.getElementById('bdiNtCov').textContent}));
  ok(badge==='3'&&H.rooms==='1808,0901,2001'&&H.th==='|Oda|Misafir|Otelde|Kat|Why not touched|Plan|Who will see|Note','"Didn\'t Do It" sekmesi (3): alanlar Why not touched · Plan · Who will see · Note: '+H.th);
  ok(/Butler Didn't Do It: 3 \/ 5 misafir/.test(H.cov)&&/kapsama %40/.test(H.cov),'Kapsam\'ta yalniz ozet satiri + "aç": '+H.cov);
- const gk=await p.evaluate(()=>({d:__ev('bdiGuestKey')('Armand Daniel De Gramont'),b:__ev('bdiGuestKey')('Kresimir Brodan'),m:__ev('bdiGuestKey')('Ilyar Mardanov')}));
+ const gk=await p.evaluate(()=>({d:__ev('bdiGuestKey')('Armand Beaumont De Gramont'),b:__ev('bdiGuestKey')('Kresimir Brodan'),m:__ev('bdiGuestKey')('Ilyar Mardanov')}));
  const row=k=>`#bdiNtPanel tr:has(input.bd-nt-chk[data-g="${k}"])`;
  await p.selectOption(row(gk.d)+' select[data-f="r"]','DND');await p.waitForTimeout(80);
  await p.selectOption(row(gk.d)+' select[data-f="f:plan"]','Turndown note');await p.waitForTimeout(80);
@@ -49,7 +49,7 @@ let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
  await p.evaluate(()=>{localStorage.removeItem('bdi_nt_fields');__ev('renderBdiNt()')}); // varsayilana don
  // 03.11: 0901'e touch -> donusum; 1808 erken cikti
  await p.evaluate(()=>{const KV=__ev('BdiKV');KV.set('bdi_2026-11-03',JSON.stringify([{id:'c1',butler:'Beyza Nur Çırak',room:'0901',guest:'Kresimir Brodan',action:'Turndown',touchCategory:'Service',patternType:'service',note:'',time:'10:00',sentence:'x',ts:new Date('2026-11-03T10:00:00+03:00').getTime(),countsAsTouch:true}]));
-   KV.set('bdi_dep_v1',JSON.stringify({days:{'2026-11-03':{at:Date.now(),file:'dep.pdf',rows:[{room:'1808',name:'De Gramont,Armand Daniel,Mr.',arr:'2026-10-25',dep:'2026-11-03',st:'CKOT',time:'11:30'}]}}}));__ev('_bdiDepAll=null');__ev('bdiDayHistReset()')});
+   KV.set('bdi_dep_v1',JSON.stringify({days:{'2026-11-03':{at:Date.now(),file:'dep.pdf',rows:[{room:'1808',name:'De Gramont,Armand Beaumont,Mr.',arr:'2026-10-25',dep:'2026-11-03',st:'CKOT',time:'11:30'}]}}}));__ev('_bdiDepAll=null');__ev('bdiDayHistReset()')});
  await p.evaluate(()=>__ev('bdiNtDateSet')('2026-11-03'));await p.waitForTimeout(150);
  const C=await p.evaluate(()=>(document.querySelector('#bdiNtPanel .bd-nt-conv')||{}).textContent||'');
  ok(/1 misafir dünkü listeden bugün dokunuldu: 0901 Kresimir Brodan/.test(C),'donusum: dunun listesinden bugun dokunulan gorunur: '+C);
@@ -63,7 +63,7 @@ let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
  ok(R.h1==="The Butler Didn't Do It."&&/Raffles Istanbul — 02\.11\.2026/.test(R.date),'ayri rapor: "The Butler Didn\'t Do It." basligi');
  ok(/^3\/5Guests Not Touched \| 40%Touch Coverage \| 0Converted \| 0Checked Out Untouched \| 0Alerts Not Welcomed$/.test(R.items)&&/Guest not in room 2\s*·\s*DND 1/.test(R.cats),'ozet seridi (negatif): 3/5 dokunulmadi, %40 kapsama, donusen, cikan, alert + sebep satiri');
  ok(/Zafer Karagaçtı15\+220%/.test(R.bsum)&&/Beyza Nur Çırak7-143167%/.test(R.bsum)&&R.th==='Floor|Why not touched|Plan|Who will see|Note','butler-kat tablosu ve alan sutunlari: '+R.th);
- ok(/Armand Daniel De Gramont18080?since 25\.10 · 8 nights · not touched/.test(R.gh.replace(/\s/g,' '))&&R.rows.some(r=>/^Zafer Karagaçtı \| DND \| Turndown note \| Zafer Karagaçtı \| DND all day, card under door$/.test(r)),'misafir bantlari (koyu serit) ve satirda alanlar');
+ ok(/Armand Beaumont De Gramont18080?since 25\.10 · 8 nights · not touched/.test(R.gh.replace(/\s/g,' '))&&R.rows.some(r=>/^Zafer Karagaçtı \| DND \| Turndown note \| Zafer Karagaçtı \| DND all day, card under door$/.test(r)),'misafir bantlari (koyu serit) ve satirda alanlar');
  const B=await p.evaluate(()=>{document.getElementById('bdiDate').value='2026-11-02';__ev('switchBdiTab("log")');__ev('setBdiView("day")');__ev('loadBdiLogs()');return window.__t.capture(function(){return __ev('downloadDidIt()')})});
  const same=await p.evaluate(([a,b])=>{const s=h=>new DOMParser().parseFromString(h,'text/html').querySelector('style').textContent;return s(a)===s(b)},[html,B]);
  ok(same&&!/ntsec|In-house Not Touched/.test(B),'Butler Did It raporuyla birebir ayni stil; Butler Did It raporunda artik bu bolum yok');

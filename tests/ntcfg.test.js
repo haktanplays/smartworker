@@ -14,7 +14,7 @@ let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
      R('1004','Uslubas,Baturalp,Mr.','2026-11-01','2026-11-04'),R('1102','Al Daroum,Fatima,Ms','2026-10-29','2026-11-02'),
      R('1412','Oztoprak,Mustafa Mellah,Mr.','2026-11-01','2026-11-05'),R('1413','Oztoprak,Mustafa Mellah,Mr.','2026-11-01','2026-11-05'),
      R('1203','Farzanpour,Shahin,Mr.','2026-10-31','2026-11-07',['Leila Farzanpour']),R('1506','Smith,John,Mr.','2026-11-01','2026-11-04'),
-     R('1808','De Gramont,Armand Daniel,Mr.','2026-10-25','2026-11-08'),R('2001','Mardanov,Ilyar,Mr.','2026-11-02','2026-11-05')]}));
+     R('1808','De Gramont,Armand Beaumont,Mr.','2026-10-25','2026-11-08'),R('2001','Mardanov,Ilyar,Mr.','2026-11-02','2026-11-05')]}));
    __ev('_bdiGih=null');
    const L=(id,room,guest,d,t,act)=>({id,butler:'Beyza Nur Çırak',room,guest,action:act||'Turndown',touchCategory:'Service',patternType:'service',note:'',time:t,sentence:'x',ts:new Date(d+'T'+t+':00+03:00').getTime(),countsAsTouch:true});
    KV.set('bdi_2026-10-31',JSON.stringify([L('a1','0805','Kirsten Hollinsby','2026-10-31','20:00'),L('a3','1203','Leila Farzanpour','2026-10-31','21:00')]));
@@ -26,7 +26,7 @@ let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
  ok(!NL.rows.some(r=>/1004|1203|1412|1506|0805/.test(r)),'dokunulmus sayildi: isimsiz oda kaydi (1004), refakatci adiyla (1203 Leila), oda 1413 kaydiyla (Oztoprak 1412/1413), yazim farki (Jonh Smith), isimli (0805)');
  // ---- Kapsam paneli: sebep sec ----
  await p.evaluate(()=>__ev('switchBdiTab("nt")'));await p.waitForTimeout(150);
- const gk=await p.evaluate(()=>({b:__ev('bdiGuestKey')('Kresimir Brodan'),d:__ev('bdiGuestKey')('Armand Daniel De Gramont')}));
+ const gk=await p.evaluate(()=>({b:__ev('bdiGuestKey')('Kresimir Brodan'),d:__ev('bdiGuestKey')('Armand Beaumont De Gramont')}));
  let P0=await p.evaluate(()=>{const e=document.getElementById('bdiNtPanel');return {sum:e.querySelector('.bd-nt-sum').textContent,rooms:[...e.querySelectorAll('td.r')].map(x=>x.textContent).join(','),floor:[...e.querySelectorAll('td.f')].map(x=>x.textContent).join(','),leg:e.querySelector('.bd-nt-leg').textContent}});
  ok(/3 \/ 8 misafir hiç dokunulmadı/.test(P0.sum)&&/3 sebep bekliyor/.test(P0.sum)&&P0.rooms==='1808,0901,2001','Kapsam > Butler Didn\'t Do It: '+P0.sum+' | '+P0.rooms);
  ok(P0.floor==='Zafer Karagaçtı,Beyza Nur Çırak,Zafer Karagaçtı'&&/DND: Kapıda Rahatsız Etmeyin/.test(P0.leg),'kat butleri ve sebep aciklamalari gorunur: '+P0.floor);
@@ -54,12 +54,12 @@ let fails=0;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
  const RR=await p.evaluate(h=>{const d=new DOMParser().parseFromString(h,'text/html');return {cats:(d.querySelector('.cats')||{}).textContent||'',items:[...d.querySelectorAll('.summary .item')].map(x=>x.textContent).join(' | '),gh:[...d.querySelectorAll('tr.gh')].map(x=>x.textContent),rows:[...d.querySelectorAll('table.gtab tbody tr:not(.gh)')].map(r=>[...r.children].map(c=>c.textContent).join(' | '))}},html);
  console.log('  '+RR.items+'\n  '+RR.cats+'\n  '+RR.gh.join(' || ')+'\n  '+RR.rows.join('\n  '));
  ok(/^2\/8Guests Not Touched/.test(RR.items)&&/DND 1\s*·\s*Other 1/.test(RR.cats),'ayri Butler Didn\'t Do It raporu: 2/8 dokunulmadi, DND 1 · Other 1');
- ok(/^Kresimir Brodan0901since 31\.10 · 2 nights · not touched$/.test(RR.gh[0])&&/^Armand Daniel De Gramont1808since 25\.10 · 8 nights · not touched$/.test(RR.gh[1])&&RR.rows.some(r=>/^Zafer Karagaçtı \| Other \| — \| — \| Guest resting, two knocks$/.test(r))&&RR.rows.some(r=>/^Beyza Nur Çırak \| DND/.test(r)),'misafir bantlari: oda, ne zamandir otelde, kat butleri, sebep + not');
+ ok(/^Kresimir Brodan0901since 31\.10 · 2 nights · not touched$/.test(RR.gh[0])&&/^Armand Beaumont De Gramont1808since 25\.10 · 8 nights · not touched$/.test(RR.gh[1])&&RR.rows.some(r=>/^Zafer Karagaçtı \| Other \| — \| — \| Guest resting, two knocks$/.test(r))&&RR.rows.some(r=>/^Beyza Nur Çırak \| DND/.test(r)),'misafir bantlari: oda, ne zamandir otelde, kat butleri, sebep + not');
  const X=await p.evaluate(()=>{let wb=null;const o=XLSX.writeFile;XLSX.writeFile=w=>{wb=w};try{__ev('downloadDidntDoItXlsx(true)')}finally{XLSX.writeFile=o}return {n:wb.SheetNames,a:XLSX.utils.sheet_to_json(wb.Sheets["Butler Didn't Do It"]||{})}});
  ok(X.n.includes("Butler Didn't Do It")&&X.a.length===2&&X.a.some(r=>r['Why not touched']==='Other'&&r.Note==='Guest resting, two knocks'&&r['Floor butler']==='Zafer Karagaçtı'),'Excel: "Butler Didn\'t Do It" sayfasi');
  fs.writeFileSync(__dirname+'/did/ntrep.html',html);
  // ---- ertesi gun (03.11): in-house raporu yok -> 02.11'den tahmin; 1808 cikis raporunda (erken cikti) ----
- await p.evaluate(()=>{const KV=__ev('BdiKV');KV.set('bdi_dep_v1',JSON.stringify({days:{'2026-11-03':{at:Date.now(),file:'dep.pdf',rows:[{room:'1808',name:'De Gramont,Armand Daniel,Mr.',arr:'2026-10-25',dep:'2026-11-03',st:'CKOT',time:'10:30'}]}}}));__ev('_bdiDepAll=null');
+ await p.evaluate(()=>{const KV=__ev('BdiKV');KV.set('bdi_dep_v1',JSON.stringify({days:{'2026-11-03':{at:Date.now(),file:'dep.pdf',rows:[{room:'1808',name:'De Gramont,Armand Beaumont,Mr.',arr:'2026-10-25',dep:'2026-11-03',st:'CKOT',time:'10:30'}]}}}));__ev('_bdiDepAll=null');
    document.getElementById('bdiDate').value='2026-11-03';__ev('loadBdiLogs()');__ev('switchBdiTab("nt")');__ev('bdiNtDateSet')('2026-11-03')});
  const P3=await p.evaluate(()=>{const e=document.getElementById('bdiNtPanel');return {note:(e.querySelector('.bd-note')||{}).textContent||'',rooms:[...e.querySelectorAll('td.r')].map(x=>x.textContent).join(','),n:[...e.querySelectorAll('td.n')].map(x=>x.textContent).join(','),prev:(e.querySelector('.bd-nt-prev')||{}).textContent||''}});
  ok(/02\.11 raporundan tahmin/.test(P3.note)&&P3.rooms==='0901'&&P3.n==='3 gecedir'&&/^02\.11: DND aynısı$/.test(P3.prev),'03.11: tahmini liste (1808 erken cikti, dustu), 0901 3 gecedir, dunun sebebi onerildi: '+P3.prev);

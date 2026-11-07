@@ -20,7 +20,7 @@ const where=p=>p.evaluate(()=>{const f={},i={};__ev('bdiFuList')().forEach(x=>f[
 
 // Didn't Do It tabani (z2_ntout ile ayni): 0805 dokunuldu; 0901, 1808, 1501 (fotograf cekimi), 1203 (valued guest) dokunulmadi
 const BASE=()=>[Rw('0805','Hollinsby,Kirsten,Mrs.','2026-10-30','2026-11-05'),Rw('0901','Brodan,Kresimir,Mr.','2026-10-31','2026-11-06'),
-  Rw('1808','De Gramont,Armand Daniel,Mr.','2026-10-25','2026-11-08'),Rw('1501','Shooting,Photo','2026-11-01','2026-11-05'),Rw('1203','Guest,Valued,Mr.','2026-10-31','2026-11-07')];
+  Rw('1808','De Gramont,Armand Beaumont,Mr.','2026-10-25','2026-11-08'),Rw('1501','Shooting,Photo','2026-11-01','2026-11-05'),Rw('1203','Guest,Valued,Mr.','2026-10-31','2026-11-07')];
 async function nt(br,o){o=o||{};const {ctx,p}=await open(br,'2026-11-02T19:00:00+03:00','2026-11-02',['Beyza Nur Çırak','Zafer Karagaçtı']);
   await p.evaluate(async({rows,dep})=>{const KV=__ev('BdiKV');await KV.ready();
     KV.set('bdi_gih_v1',JSON.stringify({day:'2026-11-02',at:Date.now(),file:'gih.pdf',rows}));
@@ -102,7 +102,7 @@ const setGih=(p,day,rows)=>p.evaluate(([day,rows])=>{__ev('BdiKV').set('bdi_gih_
 
  // (5) E4: konaklama uzadi (ayni varis, cikis 11-05 -> 11-08): 11-06'da gizli ve "Listeden çıkarılanlar"da; yeni varis 11-07 gorunur
  await run('E4',async()=>{const {ctx,p}=await nt(br);await removeBy(p,['Photo Shooting']);
-   await setGih(p,'2026-11-06',[Rw('1501','Shooting,Photo','2026-11-01','2026-11-08'),Rw('1808','De Gramont,Armand Daniel,Mr.','2026-10-25','2026-11-08')]);
+   await setGih(p,'2026-11-06',[Rw('1501','Shooting,Photo','2026-11-01','2026-11-08'),Rw('1808','De Gramont,Armand Beaumont,Mr.','2026-10-25','2026-11-08')]);
    const N=await p.evaluate(()=>{const L=__ev('bdiNtList')('2026-11-06');__ev('bdiNtDateSet')('2026-11-06');const o=document.querySelector('#bdiNtPanel .bd-nt-out');
      return {rows:L.rows.map(g=>g.rooms[0]).join(','),out:o?o.textContent.replace(/\s+/g,' '):''}});
    ok(N.rows==='1808','E4 11-06 (çıkış 11-08\'e uzadı): 1501 listede yok: '+N.rows);
@@ -115,7 +115,7 @@ const setGih=(p,day,rows)=>p.evaluate(([day,rows])=>{__ev('BdiKV').set('bdi_gih_
  // (6) E3: cikis tarihi bos satir: 11-02'de cikarilan misafir 12-04'te (ayni varis, hala otelde) gizli
  await run('E3',async()=>{const rows=BASE().map(r=>r.room==='1203'?Rw('1203','Guest,Valued,Mr.','2026-10-31',''):r);
    const {ctx,p}=await nt(br,{rows});await removeBy(p,['Valued Guest']);
-   await setGih(p,'2026-12-04',[Rw('1203','Guest,Valued,Mr.','2026-10-31',''),Rw('1808','De Gramont,Armand Daniel,Mr.','2026-12-01','2026-12-08')]);
+   await setGih(p,'2026-12-04',[Rw('1203','Guest,Valued,Mr.','2026-10-31',''),Rw('1808','De Gramont,Armand Beaumont,Mr.','2026-12-01','2026-12-08')]);
    const N=await p.evaluate(()=>{const L=__ev('bdiNtList')('2026-12-04');return L?L.rows.map(g=>g.rooms[0]).join(','):'(liste yok)'});
    ok(N==='1808','E3 çıkış tarihi boş, 12-04\'te hâlâ otelde: çıkarılan 1203 gizli, 1808 görünür: '+N);
    errs.push(...p.errs);await ctx.close()});
