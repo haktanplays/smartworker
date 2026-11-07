@@ -1,6 +1,6 @@
 // Tutarlilik (bayat veri) testi: MISAFIRIN ODASI. Kaynak degisince (oda degisikligi) misafirin odasini gosteren HER yer yeni odayi gostermeli.
 // Kullanici bulgusu: VAC yuklendi, misafir tasindi, Atolye eski odayi gosteriyordu. Kaynak degisikligi gercek yoldan: sahte Opera
-// raporlari Rapor Merkezi'ne birakilir (H.ingest). Isimler kurgu (KVKK). Saat sabit: 2026-11-06.
+// raporlari (tests/data/opera/reports.js) Rapor Merkezi'ne birakilir (swRepIngest, H.ingest ile ayni yol). Isimler kurgu (KVKK). Saat sabit: 2026-11-06.
 // Otel: 14. kat (Can Demir) ve 21. kat (Nazli Erten). Tasinanlar:
 //   Anna Meyer   1406 -> 2104 (in-house, hic dokunulmadi: Didn't Do It; takip, issue, Protel notu, in-house notu var)
 //   Ingrid Halvorsen 1403 -> 2106 (bugun geldi, ARR'de 1403, Butler Alert, in-room check-in, issue + issue touch'i)
@@ -13,6 +13,9 @@ let fails=0,errsAll=[];
 const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)fails++};
 const at=(p,hm)=>p.clock.setSystemTime(new Date(D+'T'+hm+':00+03:00'));
 const J=JSON.stringify,sp=s=>String(s||'').replace(/\s+/g,' ').trim();
+// H.ingest ile ayni yol (swRepIngest, 'elle'), yalniz dosyanin saati sayfanin (sabit) saatiyle: File varsayilan olarak gercek saati alir,
+// varis raporundan gelen Butler Alert satirinin srcAt'i (dosya saati) o zaman testteki VAC'tan "yeni" gorunurdu.
+const ingest=(p,buf,name)=>p.evaluate(async([b64,n])=>{const f=new File([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],n,{lastModified:Date.now()});const r=await __ev('swRepIngest')([f],'elle');return r.map(x=>x.msg).join(' | ')},[Buffer.from(buf).toString('base64'),name]);
 
 // ---- uydurma misafirler ----
 const G={
@@ -34,17 +37,16 @@ const occ=(o)=>Object.assign({},BASE,o);
 
 async function start(){
   const S=await H.open({today:D,time:'08:30',butlers:['Can Demir','Nazlı Erten'],me:'Can Demir'});
-  S.p.on('pageerror',()=>{}); // H.open zaten topluyor
   // Dunun kayitlari (Meyer ve Fenwick'e hic dokunulmadi), kat dagilimi
   await H.seed(S.p,{logs:{[Y]:[H.log('y1',Y,'10:00','1401','Leonie Brandt','Touch Call'),H.log('y2',Y,'11:00','1408','Kenji Sato','Touch Call'),
       H.log('y3',Y,'12:00','2101','Claire Morel','Touch Call',{butler:'Nazlı Erten'})]},
     kv:{bdi_floors_v1:{[D]:{blocks:[{from:14,to:14,butler:'Can Demir'},{from:21,to:21,butler:'Nazlı Erten'}],u:Date.now()}}}});
   const {br,p}=S;
   // 08:30 dun aksamin in-house raporu (GIH 05.11) ve bugunun varis raporu (ARR 06.11)
-  let m=await H.ingest(p,await R.gih({day:Y,time:'22:00',rows:gihRows(BASE)},br),'GIH01102.pdf');console.log('  GIH 05.11: '+m);
-  m=await H.ingest(p,await R.arr({day:D,time:'07:50',rows:[{room:'1403',name:G.halv.name,arr:D,dep:G.halv.dep,adl:2}]},br),'ARR01102.pdf');console.log('  ARR 06.11: '+m);
+  let m=await ingest(p,await R.gih({day:Y,time:'22:00',rows:gihRows(BASE)},br),'GIH01102.pdf');console.log('  GIH 05.11: '+m);
+  m=await ingest(p,await R.arr({day:D,time:'07:50',rows:[{room:'1403',name:G.halv.name,arr:D,dep:G.halv.dep,adl:2}]},br),'ARR01102.pdf');console.log('  ARR 06.11: '+m);
   // 09:00 VAC 1
-  await at(p,'09:00');m=await H.ingest(p,await R.vac({day:D,time:'09:00',rows:vacRows(BASE)},br),'HSK01124.pdf');console.log('  VAC 09:00: '+m);
+  await at(p,'09:00');m=await ingest(p,await R.vac({day:D,time:'09:00',rows:vacRows(BASE)},br),'HSK01124.pdf');console.log('  VAC 09:00: '+m);
   // 09:05 Meyer icin takip (Takip sekmesinden, butlerin yazdigi gibi), issue, Protel'e girilecek tercih
   await at(p,'09:05');await H.tab(p,'fu');await p.fill('#bdiFuQ','1406 13:30 su tercihini teyit et');await p.press('#bdiFuQ','Enter');await p.waitForTimeout(300);
   await p.evaluate(async()=>{const now=Date.now(),I=(id,room,guest,c)=>({id,room,guest,concern:c,createdAt:now,u:now,events:[{id:id+'e0',ts:now,type:'import'}]});
@@ -104,7 +106,7 @@ async function checkAll(S,E){
 
   // 3) Log › oda gorunumu
   await run('Log oda görünümü',async()=>{const t=await p.evaluate(d=>{const x=new DOMParser().parseFromString(__ev('bdiRoomGridHtml')(d,'log'),'text/html'),o={};x.querySelectorAll('.bd-rg-t').forEach(t=>{o[t.querySelector('b').textContent]=(t.querySelector('small')||{}).textContent||''});return o},D);
-    for(const x of [m,h].filter(Boolean)){const where=Object.keys(t).filter(k=>t[k]===x.last);ok(where.join()===x.room,T+' Log › oda görünümü: '+x.last+' kutusu = '+(where.join(', ')||'yok')+' (beklenen yalnız '+x.room+')')}
+    for(const x of [m,h].filter(x=>x&&x.old.length)){const where=Object.keys(t).filter(k=>t[k]===x.last);ok(where.join()===x.room,T+' Log › oda görünümü: '+x.last+' kutusu = '+(where.join(', ')||'yok')+' (beklenen yalnız '+x.room+')')}
   });
 
   // 4) In Room Check In Chart
@@ -117,14 +119,17 @@ async function checkAll(S,E){
   await run('Brifing akış',async()=>{await H.tab(p,'brief');await p.evaluate(()=>{__ev('bdiBriefSetMode("feed")')});await p.waitForTimeout(400);
     await p.evaluate(()=>{const g=__ev('_bdiFeedGrp');['inh','aplain','alate','dleft','vacev','nt','mo-f','mo-l'].forEach(k=>g[k]=1);__ev('bdiFeedRefresh()')});await p.waitForTimeout(300);
     const F=await p.evaluate(()=>[...document.querySelectorAll('#bdiBriefBody .bd-fd-row')].map(b=>({tag:(b.querySelector('.bd-fd-tag')||{}).textContent||'',rm:((b.querySelector('.bd-fd-main b')||{}).textContent||''),main:(b.querySelector('.bd-fd-main')||{}).textContent||''})));
+    const MOV=/^(Giriş|Çıktı|Oda)$/; // "Gün içi hareketler": iki VAC arasindaki olay (gecmis), simdiki oda degil
     for(const x of [m,h].filter(Boolean)){
-      const its=F.filter(f=>f.main.includes(x.last)&&!/→/.test(f.rm)),rooms=[...new Set(its.map(f=>f.rm))];
+      const its=F.filter(f=>f.main.includes(x.last)&&!MOV.test(f.tag)),rooms=[...new Set(its.map(f=>f.rm))];
       ok(its.length&&rooms.join()===x.room,T+' Brifing › Günün akışı: '+x.last+' satırlarında oda = '+(rooms.join(', ')||'satır yok')+' ['+its.map(f=>f.tag+':'+f.rm).join(' ')+'] (beklenen yalnız '+x.room+')');
       const kt=its.filter(f=>/^Kat /.test(f.tag)||/^Gelen|^Bekleniyor/.test(f.tag));
       ok(kt.length&&kt.every(f=>f.rm===x.room)&&kt.every(f=>!/^Kat /.test(f.tag)||f.tag==='Kat '+x.room.slice(0,2)),T+' Kat turu (Oteldekiler / Gelenler): '+x.last+' = '+(kt.map(f=>f.tag+':'+f.rm).join(' ')||'yok')+' (beklenen '+x.room+')');
     }
-    if(E.moves){const mv=F.filter(f=>/→/.test(f.rm)&&f.main.includes(m.last)).map(f=>f.rm.replace(/\s/g,''));
-      ok(E.moves.every(x=>mv.includes(x)),T+' Brifing › Gün içi hareketler: '+m.last+' = '+(mv.join(', ')||'yok')+' (beklenen '+E.moves.join(', ')+')')}
+    const nt=await p.evaluate(()=>{const b=[...document.querySelectorAll('#bdiBriefBody .bd-fd-row')].find(r=>/hiç dokunulmadı/.test(r.textContent));return b?((b.querySelector('.bd-fd-sub')||{}).textContent||''):null});
+    ok(nt!==null&&nt.includes(m.room)&&noOld(nt,m),T+' Brifing › Dikkat › "hiç dokunulmadı" oda listesi = "'+(nt===null?'satır yok':sp(nt))+'" ('+m.room+' olmalı, eski oda olmamalı)');
+    for(const x of [m,h].filter(x=>x&&x.moves)){const mv=F.filter(f=>f.tag==='Oda'&&f.main.includes(x.last)).map(f=>f.rm.replace(/\s/g,''));
+      ok(x.moves.every(y=>mv.includes(y))&&mv.length===x.moves.length,T+' Brifing › Gün içi hareketler: '+x.last+' = '+(mv.join(', ')||'yok')+' (beklenen '+x.moves.join(', ')+')')}
   });
   await run('Plan',async()=>{await p.evaluate(()=>{__ev('bdiBriefSetMode("plan")')});await p.waitForTimeout(300);
     const P=await p.evaluate(()=>{const o=[];document.querySelectorAll('#bdiBriefBody .bd-pl2-grp').forEach(gr=>{const b=(gr.querySelector('.bd-pl2-gh b')||{}).textContent||'';gr.querySelectorAll('.bd-pl2-g').forEach(g=>o.push({b,rm:(g.querySelector('.bd-pl2-rm')||{}).textContent,nm:(g.querySelector('.bd-pl2-nm')||{}).textContent||''}))});return o});
@@ -159,10 +164,14 @@ async function checkAll(S,E){
   await run('Misafirler',async()=>{await p.evaluate(()=>{__ev('_bdiGMProf=null')});await H.tab(p,'guests');await p.waitForTimeout(1300);
     const GL=await p.evaluate(()=>{const o={};document.querySelectorAll('.bd-grow').forEach(r=>{const n=(r.querySelector('.bd-g-name')||{}).textContent||'';o[n]=(r.querySelector('.bd-g-rooms')||{}).textContent});return o});
     for(const x of [m,h].filter(Boolean)){const k=Object.keys(GL).find(n=>n.includes(x.last));ok(k&&GL[k]===x.room,T+' Misafirler listesi: '+x.last+' oda = '+(k?GL[k]:'satır yok')+' (beklenen '+x.room+')')}
-    const gid=await p.evaluate(()=>{const P=__ev('bdiGMProfiles')().list.find(x=>/Meyer/.test(x.name));return P&&P.gid});
-    await p.evaluate(g=>__ev('bdiGuestOpen')(g),gid);await p.waitForTimeout(1500);
-    const C=await p.evaluate(()=>{const d=[...document.querySelectorAll('.bd-gdetail')].find(x=>x.style.display!=='none'&&x.textContent.trim());if(!d)return null;const c=d.querySelector('.bd-stay.cur');return {cur:c?c.textContent:'',txt:d.textContent.slice(0,200)}});
-    ok(C&&/\(Oda [^)]*\)/.test(C.cur)&&C.cur.includes(m.room),T+' Misafir kartı: şimdiki konaklama = "'+(C?sp(C.cur):'kart açılmadı')+'" ('+m.room+' içermeli)');
+    for(const x of [m,h].filter(Boolean)){
+      const gid=await p.evaluate(l=>{const P=__ev('bdiGMProfiles')().list.find(y=>y.name.includes(l));return P&&P.gid},x.last);
+      await p.evaluate(g=>__ev('bdiGuestOpen')(g),gid);await p.waitForTimeout(1500);
+      const C=await p.evaluate(()=>{const d=[...document.querySelectorAll('.bd-gdetail')].find(y=>y.style.display!=='none'&&y.textContent.trim());if(!d)return null;const c=d.querySelector('.bd-stay.cur'),r=d.querySelector('select[id^="bdiRtR_"]');
+        return {cur:c?c.textContent.replace(/\s+/g,' ').trim():'',rt:r?r.value:'',opts:r?[...r.options].map(o=>o.value).join(','):''}});
+      if(x===m)ok(C&&/\(Oda [^)]*\)/.test(C.cur)&&C.cur.includes(x.room),T+' Misafir kartı: şimdiki konaklama = "'+(C?C.cur:'kart açılmadı')+'" ('+x.room+' içermeli)');
+      ok(C&&C.rt===x.room,T+' Misafir kartı › Geriye dönük touch (bugün): '+x.last+' oda seçimi = '+(C?C.rt+' ['+C.opts+']':'kart açılmadı')+' (beklenen '+x.room+')');
+    }
   });
 
   // 8) Takip
@@ -171,6 +180,13 @@ async function checkAll(S,E){
     const f=F.find(x=>/Meyer/.test(x.g));
     ok(f&&f.rm===m.room,T+' Takip: Meyer takibinin odası = '+(f?f.rm:'satır yok')+' (beklenen '+m.room+')');
     ok(f&&f.own===m.owner,T+' Takip: Meyer takibi kimde = '+(f?f.own:'satır yok')+' (beklenen yeni katın sorumlusu '+m.owner+')');
+  });
+
+  await run('Takip raporu',async()=>{const html=await p.evaluate(d=>__ev('bdiFuReportHtml')(d,d),D);
+    const RP=await p.evaluate(x=>{const d=new DOMParser().parseFromString(x,'text/html');return {rows:[...d.querySelectorAll('table.atab tbody tr')].map(r=>({rm:(r.querySelector('td.ar')||{}).textContent,g:(r.children[1]||{}).textContent})),
+      b:[...d.querySelectorAll('table.bsum tbody tr')].map(r=>({b:(r.children[0]||{}).textContent,open:+(r.children[5]||{}).textContent}))}},html);
+    const r=RP.rows.find(y=>/Meyer/.test(y.g));ok(r&&r.rm===m.room,T+' Takip raporu (Butler Follow-ups): Meyer satırı oda = '+(r?r.rm:'satır yok')+' (beklenen '+m.room+')');
+    const ob=RP.b.filter(y=>y.open>0).map(y=>y.b);ok(ob.join()===m.owner,T+' Takip raporu: açık takibin butleri = '+(ob.join(', ')||'yok')+' (beklenen '+m.owner+')');
   });
 
   // 9) Issues
@@ -185,7 +201,7 @@ async function checkAll(S,E){
   });
 
   // 10) Butler Alert
-  if(h)await run('Butler Alert',async()=>{await H.tab(p,'alert');await p.waitForTimeout(200);
+  if(h)await run('Butler Alert',async()=>{await H.tab(p,'alert');await p.evaluate(()=>__ev('setAlertFilter("all")'));await p.waitForTimeout(200);
     const A=await p.evaluate(()=>[...document.querySelectorAll('#bdiTab_alert tbody tr')].map(tr=>({rm:(tr.children[0]||{}).textContent||'',g:(tr.children[1]||{}).textContent||''})).filter(x=>x.g));
     const a=A.filter(x=>/Halvorsen/.test(x.g)),rooms=a.map(x=>(/^\s*(\d+)/.exec(x.rm)||[])[1]);
     const dbg=a.length?'':' '+JSON.stringify(await p.evaluate(()=>({n:(__ev('alertList')||[]).length,d:__ev('getAlertDate()'),w:((document.getElementById('alertTableWrap')||{}).textContent||'').slice(0,160)})));
@@ -204,7 +220,7 @@ async function checkAll(S,E){
       const al=[...d.querySelectorAll('.summary .item')].find(e=>/Butler Alerts/.test(e.textContent));return {i,al:al?al.textContent:''}},html);
     const i=RP.i.find(x=>/Halvorsen/.test(x.who));
     ok(i&&i.rm===h.room,T+' Butler Did It raporu › Guest Issues: Halvorsen oda = '+(i?i.rm:'bölüm yok')+' (beklenen '+h.room+')');
-    ok(!h.old.some(o=>RP.al.includes(o)),T+' Butler Did It raporu › Butler Alerts özeti eski oda içermiyor: "'+sp(RP.al)+'"');
+    ok(!h.old.some(o=>RP.al.includes(o)),T+' Butler Did It raporu › Butler Alerts özeti ("not visited" odaları) eski oda içermiyor: "'+sp(RP.al)+'"');
   });
 }
 
@@ -212,14 +228,14 @@ async function checkAll(S,E){
  // ===== A) Yeni VAC: 14:00 Meyer 2104'te, Halvorsen 2106'da =====
  let S=await start();
  try{
-  await at(S.p,'11:00');console.log('  VAC 11:00: '+await H.ingest(S.p,await R.vac({day:D,time:'11:00',rows:vacRows(occ({'1403':['halv','Checked In']}))},S.br),'HSK01124.pdf'));
+  await at(S.p,'11:00');console.log('  VAC 11:00: '+await ingest(S.p,await R.vac({day:D,time:'11:00',rows:vacRows(occ({'1403':['halv','Checked In']}))},S.br),'HSK01124.pdf'));
   const B=await S.p.evaluate(()=>({vr:__ev('vacRooms'),fu:__ev('bdiFuList')().map(f=>f.room+' '+f.guest+' '+f.owner),al:(__ev('alertList')||[]).map(a=>a.roomNo+' '+a.guest)}));
   ok(B.vr['1406']&&/Meyer/.test(B.vr['1406'])&&/Halvorsen/.test(B.vr['1403']||''),'A ön koşul: 11:00 Meyer 1406, Halvorsen 1403 ('+J(B.vr)+')');
   ok(B.fu.some(x=>/^1406 Anna Meyer Can Demir/.test(x))&&B.al.some(x=>/^1403 Halvorsen/.test(x)),'A ön koşul: takip 1406 (Can), alert 1403 ('+J(B)+')');
   await at(S.p,'14:00');
-  const msg=await H.ingest(S.p,await R.vac({day:D,time:'14:00',rows:vacRows(occ({'1403':null,'1406':null,'2104':['meyer','Checked In'],'2106':['halv','Checked In']}))},S.br),'HSK01124.pdf');
+  const msg=await ingest(S.p,await R.vac({day:D,time:'14:00',rows:vacRows(occ({'1403':null,'1406':null,'2104':['meyer','Checked In'],'2106':['halv','Checked In']}))},S.br),'HSK01124.pdf');
   ok(/^6 dolu/.test(msg),'A: 14:00 VAC yüklendi ('+msg+')');await S.p.waitForTimeout(1500);
-  const E={m:{name:'Anna Meyer',last:'Meyer',room:'2104',old:['1406'],owner:'Nazlı Erten'},h:{name:'Ingrid Halvorsen',last:'Halvorsen',room:'2106',old:['1403'],owner:'Nazlı Erten'},moves:['1406→2104']};
+  const E={m:{name:'Anna Meyer',last:'Meyer',room:'2104',old:['1406'],owner:'Nazlı Erten',moves:['1406→2104']},h:{name:'Ingrid Halvorsen',last:'Halvorsen',room:'2106',old:['1403'],owner:'Nazlı Erten',moves:['1403→2106']}};
   await checkAll(S,Object.assign({tag:'[A VAC]'},E));
   // ayni veri, sayfa yenilenince (ertesi acilis / ikinci bilgisayar gibi): oda listesi kayitli VAC'tan yeniden kurulur
   await S.p.reload();await S.p.waitForTimeout(1500);await S.p.evaluate(async()=>{await __ev('BdiKV').ready();try{__ev('closeSetupModal()')}catch(e){}});await S.p.waitForTimeout(1500);
@@ -230,9 +246,9 @@ async function checkAll(S,E){
  // ===== B) Aksam yeni in-house (GIH 06.11, 20:00): Meyer 2104'te, Halvorsen 2106'da; yeni VAC yok =====
  S=await start();
  try{
-  await at(S.p,'11:00');await H.ingest(S.p,await R.vac({day:D,time:'11:00',rows:vacRows(occ({'1403':['halv','Checked In']}))},S.br),'HSK01124.pdf');
+  await at(S.p,'11:00');await ingest(S.p,await R.vac({day:D,time:'11:00',rows:vacRows(occ({'1403':['halv','Checked In']}))},S.br),'HSK01124.pdf');
   await at(S.p,'20:00');
-  const msg=await H.ingest(S.p,await R.gih({day:D,time:'20:00',rows:gihRows(occ({'1403':null,'1406':null,'2104':['meyer','Checked In'],'2106':['halv','Checked In']}))},S.br),'GIH01102.pdf');
+  const msg=await ingest(S.p,await R.gih({day:D,time:'20:00',rows:gihRows(occ({'1403':null,'1406':null,'2104':['meyer','Checked In'],'2106':['halv','Checked In']}))},S.br),'GIH01102.pdf');
   ok(/^6 oda/.test(msg),'B: 20:00 in-house yüklendi ('+msg+')');await S.p.waitForTimeout(1500);
   await checkAll(S,{tag:'[B GIH]',m:{name:'Anna Meyer',last:'Meyer',room:'2104',old:['1406'],owner:'Nazlı Erten'},h:{name:'Ingrid Halvorsen',last:'Halvorsen',room:'2106',old:['1403'],owner:'Nazlı Erten'}});
  }catch(e){ok(false,'B senaryosu çöktü: '+String(e.message||e).split('\n')[0])}
@@ -241,14 +257,14 @@ async function checkAll(S,E){
  // ===== C) Bir gunde iki oda degisikligi: 12:00 1406 -> 1402 (ayni kat), 16:00 1402 -> 2104 =====
  S=await start();
  try{
-  await at(S.p,'12:00');console.log('  VAC 12:00: '+await H.ingest(S.p,await R.vac({day:D,time:'12:00',rows:vacRows(occ({'1403':['halv','Checked In'],'1406':null,'1402':['meyer','Checked In']}))},S.br),'HSK01124.pdf'));
+  await at(S.p,'12:00');console.log('  VAC 12:00: '+await ingest(S.p,await R.vac({day:D,time:'12:00',rows:vacRows(occ({'1403':['halv','Checked In'],'1406':null,'1402':['meyer','Checked In']}))},S.br),'HSK01124.pdf'));
   const M1=await S.p.evaluate(()=>({fu:__ev('bdiFuList')().filter(f=>/Meyer/.test(f.guest)).map(f=>f.room).join(),is:(__ev('bdiGetIssues()').find(x=>x.id==='iM')||{}).room}));
   ok(M1.fu==='1402'&&M1.is==='1402','C ara durum: 12:00 sonrası takip ve issue 1402 ('+J(M1)+')');
-  await at(S.p,'16:00');console.log('  VAC 16:00: '+await H.ingest(S.p,await R.vac({day:D,time:'16:00',rows:vacRows(occ({'1403':['halv','Checked In'],'1406':null,'2104':['meyer','Checked In']}))},S.br),'HSK01124.pdf'));
+  await at(S.p,'16:00');console.log('  VAC 16:00: '+await ingest(S.p,await R.vac({day:D,time:'16:00',rows:vacRows(occ({'1403':['halv','Checked In'],'1406':null,'2104':['meyer','Checked In']}))},S.br),'HSK01124.pdf'));
   await S.p.waitForTimeout(1500);
   const ev=await S.p.evaluate(()=>((__ev('bdiGetIssues()').find(x=>x.id==='iM')||{}).events||[]).filter(e=>e.type==='move').map(e=>e.text));
   ok(ev.join(' | ')==='Oda 1406 → 1402 | Oda 1402 → 2104','C Issues: Meyer issue geçmişinde iki oda değişikliği = '+(ev.join(' | ')||'yok'));
-  await checkAll(S,{tag:'[C iki taşınma]',m:{name:'Anna Meyer',last:'Meyer',room:'2104',old:['1406','1402'],owner:'Nazlı Erten'},h:{name:'Ingrid Halvorsen',last:'Halvorsen',room:'1403',old:[],owner:'Can Demir'},moves:['1406→1402','1402→2104']});
+  await checkAll(S,{tag:'[C iki taşınma]',m:{name:'Anna Meyer',last:'Meyer',room:'2104',old:['1406','1402'],owner:'Nazlı Erten',moves:['1406→1402','1402→2104']},h:{name:'Ingrid Halvorsen',last:'Halvorsen',room:'1403',old:[],owner:'Can Demir'}});
  }catch(e){ok(false,'C senaryosu çöktü: '+String(e.message||e).split('\n')[0])}
  errsAll.push(...S.errs);await S.br.close();
 
